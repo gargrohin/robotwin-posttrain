@@ -185,4 +185,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     on EFS. Startup (imports + model load) takes ~4 min. Loss is printed every 10 steps
     as `{'loss': …}` lines (split the log on `\r`). Checkpoints are in
     `checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-0/RoboTwin-<RUN>-aloha_agilex-joint-0/checkpoint-<step>`.
-- [ ] Steps 5–6: benchmark, hill-climb.
+  - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
+    last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
+- [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
+  checkpoint on `beat_block_hammer`, demo_clean, 2 episodes, on GPU 6 shared with
+  training. Server loads, client connects, episodes run, the arm moves (frames in
+  `outputs/eval_smoke/`), 0/2 success (expected for 200 steps on flawed data). Results
+  go to `RoboTwin/eval_result/<task>/GR00T_N17/<config>/<ckpt>/<timestamp>/`
+  (`_result.txt` plus one mp4 per episode).
+  **Speed concern:** a failing episode runs the full 400 steps, ~5 min on a shared
+  GPU. A full benchmark (5 tasks × 100 eps × clean/randomized) would take days on one
+  GPU, so plan for RoboTwin's `--num_workers` and several GPUs, and re-measure on an
+  unshared GPU.
+- [ ] Step 6: hill-climb.
