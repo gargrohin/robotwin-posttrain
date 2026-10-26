@@ -195,8 +195,14 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     using ~32 GB/GPU, so the ETA is ~6.3 h (≈09:20 UTC) plus saves. LR warmup is 5%
     (1,500 steps).
   - Sanity checkpoint-2000 eval (10 eps, `beat_block_hammer`, demo_clean, GPU 6 shared
-    with the 30k run) started ~03:02 UTC to check that action conventions are right in
-    sim before relying on the 30k run.
+    with the 30k run, ~45 min): **0/10**. But the videos show correct behavior: it
+    reaches the hammer, grasps and lifts it, and swings it toward the block, missing
+    only on precision (`outputs/eval_sanity/ep*_strip.png`). So the camera mapping,
+    state/action layout, gripper and relative-action handling are right, and 2k steps
+    (~1.25 epochs) is just undertrained.
+  - Learning-curve evals of the 30k run's checkpoint-10000 and -20000 (same 10-ep
+    test) are queued by a background watcher. Trainer keeps only the last 5, so 10k
+    must be evaluated before it's deleted.
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
