@@ -295,4 +295,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     the run, replay a few seeds ~5× each to measure per-seed variance and rule out a
     systematic difference (e.g. GPU contention or a checkpoint not fully written when
     the morning eval started).
+  - **2026-10-26 ~16:45 UTC: scaled to 3 GPUs.** With the user's go-ahead (cleared with
+    the owners), other users' idle vLLM servers on GPUs 1 and 5 were stopped by SIGTERM
+    to their `vllm serve` parents (with the owners' OK). No container,
+    so no restart command for them.
+    `gr00t/benchmark_queue.sh` runs one worker per GPU, popping `<task> <config>` lines
+    from `logs/queue_30k.txt` under `flock`. Workers on GPUs 1 and 5 started ~16:45; the
+    GPU 6 worker waits for the `beat_block_hammer` clean run (pid 3803815) to exit.
+    Queue: the 4 remaining clean tasks, then all 5 randomized. Worker logs:
+    `logs/queue_30k_gpu{1,5,6}.log`. Each task is ~3 h on one GPU (4 shards × 25 eps),
+    so ~9 jobs / 3 GPUs ≈ 9–10 h; done ≈ 02:00–03:00 UTC Oct 27 if the GPUs stay free.
+    Results: `python3 gr00t/summarize_eval.py RoboTwin-5task_30k-aloha_agilex-joint-0
+    30000 demo_clean` (or `demo_randomized`).
 - [ ] Step 6: hill-climb.
