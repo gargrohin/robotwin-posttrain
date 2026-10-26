@@ -41,7 +41,7 @@ from envs._GLOBAL_CONFIGS import CONFIGS_PATH
 from envs.utils import UnStableError
 
 env_class = getattr(importlib.import_module(f"envs.{task_name}"), task_name)
-print(f"imports: {time.time() - t:.1f}s", flush=True)
+print(f"imports: {time.time() - t:.1f}s, curobo from {os.path.dirname(sys.modules['curobo'].__file__)}", flush=True)
 
 if shader != "rt":  # _base_task.py hard-codes "rt"; redirect that call for this run only
     _set_shader = sapien.render.set_camera_shader_dir

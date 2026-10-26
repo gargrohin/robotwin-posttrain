@@ -27,6 +27,12 @@ t = time.time()
 cfg = MotionGenConfig.load_from_robot_config(yml, world, interpolation_dt=1 / 250, num_trajopt_seeds=1)
 motion_gen = MotionGen(cfg)
 print(f"MotionGen built: {time.time() - t:.1f}s", flush=True)
+for name, solver in [("ik", motion_gen.ik_solver), ("trajopt", motion_gen.trajopt_solver),
+                     ("finetune", motion_gen.finetune_trajopt_solver)]:
+    for opt in solver.solver.optimizers:  # L-BFGS problem sizes the CUDA kernel sees
+        if hasattr(opt, "use_cuda_kernel"):
+            print(f"  {name} L-BFGS: d_opt={opt.d_opt} history={opt.history} cuda_kernel={opt.use_cuda_kernel}",
+                  flush=True)
 
 t = time.time()
 motion_gen.warmup()

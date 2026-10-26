@@ -59,11 +59,12 @@ env = env_class()
 results = []
 for seed in range(first_seed, first_seed + num_seeds):
     t = time.time()
-    note = ""
     try:
         env.setup_demo(now_ep_num=0, seed=seed, **args)
         env.play_once()
-        ok = bool(env.plan_success and env.check_success() and env.planned_joints_legal()[0])
+        planned, task_ok, joints_ok = env.plan_success, env.check_success(), env.planned_joints_legal()[0]
+        ok = bool(planned and task_ok and joints_ok)
+        note = "" if ok else f" (plan_success={planned} check_success={task_ok} joints_legal={joints_ok})"
     except UnStableError:
         ok, note = False, " (unstable objects)"
     except Exception as e:

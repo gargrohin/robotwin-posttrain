@@ -17,12 +17,13 @@ PY="$ROOT/.venv-lerobot/bin/python"
 GR00T_DIR="$ROOT/RoboTwin/XPolicyLab/policy/GR00T_N17"
 mkdir -p "$HF_LEROBOT_HOME"
 
-# 1. HDF5 -> LeRobot v3.0 with XPolicyLab's official converter (all tasks, one dataset).
+# 1. HDF5 -> LeRobot v3.0 with XPolicyLab's official converter (all tasks, one dataset),
+#    run through convert_to_lerobot.py so video frames aren't dropped and EFS read
+#    errors are retried.
 if [ ! -d "$HF_LEROBOT_HOME/$SRC" ]; then
   patterns=()
   for t in "${TASKS[@]}"; do patterns+=("demo_clean.$t.aloha_agilex"); done
-  "$PY" "$ROOT/RoboTwin/XPolicyLab/scripts/transform_lerobot_v30_format.py" \
-    "${patterns[@]}" --repo_id "$SRC"
+  "$PY" "$ROOT/gr00t/convert_to_lerobot.py" "${patterns[@]}" --repo_id "$SRC"
 fi
 
 # 2. LeRobot v3.0 -> v2.1, the version GR00T reads.
@@ -35,3 +36,7 @@ fi
 
 # 3. GR00T prep: copy, modality.json + modality config, normalization stats.
 GR00T_SRC_DATASET="$SRC" bash "$GR00T_DIR/process_data.sh" RoboTwin "$CKPT_NAME" aloha_agilex joint
+
+# 4. Every episode present, and one video frame per step for every camera.
+"$PY" "$ROOT/gr00t/check_dataset.py" \
+  "$GR00T_LEROBOT_HOME/RoboTwin-$CKPT_NAME-aloha_agilex-joint" $((${#TASKS[@]} * 50))

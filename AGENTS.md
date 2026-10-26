@@ -120,10 +120,22 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   Per episode: `state/` and `action/` hold `{left,right}_arm_joint_states` (6) and
   `{left,right}_ee_joint_states` (1); cameras are `vision/cam_{head,left_wrist,right_wrist}/colors`;
   `instructions` is inside the file. Recorded at 15 Hz (`env_cfg/aloha_agilex.yml`).
-- [ ] Step 3: HDF5 → LeRobot → GR00T format. Don't install `lerobot` into the GR00T
-  venv: a dry run shows the pinned commit would move numpy 1.26.4→2.2.6, av 16.1→15.1
-  and datasets 3.6→4.1, all of which GR00T's pyproject pins. Plan (pending user OK):
-  a separate conversion venv.
+- [~] Step 3: HDF5 → LeRobot → GR00T format via `gr00t/prepare_data.sh` (separate
+  `.venv-lerobot`, approved by the user). The first full run produced a flawed dataset:
+  - **Dropped video frames** in 146/249 episodes. LeRobot's streaming encoder waits
+    0.1 s on a full queue (default 30 frames) and then drops the frame, leaving videos
+    one frame shorter than their episodes.
+  - **One missing episode** (`lift_pot/episode_0000038`): an EFS errno-5 read error,
+    and the converter skips failed files.
+  - Fix: `gr00t/convert_to_lerobot.py` runs the official converter with
+    `encoder_queue_maxsize=1000` (> max episode length 354) and retries on `OSError`.
+    `gr00t/check_dataset.py` (now step 4 of prep) decodes every video and requires
+    frames == steps and 250 episodes. It was confirmed to catch the flawed dataset.
+  - Re-run in progress. The flawed copy is kept as `data/lerobot/RoboTwin-smoke-…`
+    for a training-pipeline smoke test only (`RUN=smoke`, 200 steps). Delete it, and
+    `checkpoints/RoboTwin-smoke-*`, afterwards.
+  - Dataset facts: 15 fps, 240×320 per camera, ~205 steps per episode (106–354),
+    ~51k frames total; one instruction is sampled per episode (213 distinct strings).
 - [ ] Step 4: fine-tune. Plan agreed 2026-10-26 (user away for a few hours):
   - One model on all 5 tasks; GR00T defaults (frozen VLM backbone, train the action
     head, lr 1e-4); GPUs 5+6 (user frees GPU 5; GPU 6 is shared with cuRobo debugging);
