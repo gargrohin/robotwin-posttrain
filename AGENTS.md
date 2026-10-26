@@ -217,7 +217,11 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     with that. `py-spy` can't attach (`ptrace_scope=1`), so profile with
     `torch.profiler` in a short run. Candidates for the next run: bigger per-GPU batch;
     `OMP_NUM_THREADS` 4–8; checkpoints to local NVMe (`/mnt/nvme`, ~4 TB free;
-    EFS saves take 1.5–2.5 min each).
+    EFS saves take 1.5–2.5 min each); `SAVE_ONLY_MODEL=1` in `finetune.sh` (~7 GB vs
+    ~35 GB per checkpoint, but no resume). During a save, rank 1 shows 100% SM util:
+    that's NCCL busy-waiting, not work.
+  - Decision (user, 2026-10-26 ~05:45 UTC): let the 30k run finish unchanged; apply
+    the speedups to the next run and measure them.
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
