@@ -307,4 +307,8 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     so ~9 jobs / 3 GPUs ≈ 9–10 h; done ≈ 02:00–03:00 UTC Oct 27 if the GPUs stay free.
     Results: `python3 gr00t/summarize_eval.py RoboTwin-5task_30k-aloha_agilex-joint-0
     30000 demo_clean` (or `demo_randomized`).
+  - **Result: checkpoint-30000, demo_clean, `beat_block_hammer`: 47/100 = 47%**
+    (shards 11, 13, 13, 10 of 25; 95% CI ≈ 38–57%; no seeds skipped by the expert
+    check; 169 min wall on one GPU, 14:12–17:01 UTC). The earlier 10-ep spot checks
+    (3/10, 4/10) understated it, which fits the large per-episode variance.
 - [ ] Step 6: hill-climb.
