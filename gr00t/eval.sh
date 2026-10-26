@@ -29,6 +29,7 @@ port="$(bash "$XPL/utils/get_free_port.sh")"
 action_dim="$(bash "$XPL/utils/get_action_dim.sh" "$ROOT/RoboTwin" aloha_agilex)"
 mkdir -p "$ROOT/logs"
 log="$ROOT/logs/eval_${CKPT}_ckpt-${CHECKPOINT_NUM}_${TASK}_${TASK_CONFIG}"
+[ "$SEED" = 0 ] || log="${log}_seed${SEED}"  # parallel shards (benchmark.sh)
 
 # 1. GR00T policy server (GR00T venv).
 (
