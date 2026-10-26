@@ -1,8 +1,10 @@
 # robotwin-posttrain: notes for coding agents
 
 Assignment: post-train a VLA (GR00T N1.7 first) on RoboTwin 2.0, benchmark it, then
-hill-climb. **The user is doing this to learn.** Explain, guide and review; only write
-implementation code or run jobs when the user asks.
+hill-climb. The user is learning as we go: explain in plain language. Since
+2026-10-26 the user wants the agent to drive the pipeline (don't wait for approval
+of routine next steps), but to ask before cancelling/restarting running GPU jobs or
+doing anything outward-facing or destructive.
 
 ## Layout
 - `setup/`: our install scripts and renderer checks.
@@ -323,4 +325,15 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
       `'name[.]py'` patterns.
     - Progress anytime, even after exiting Claude: `bash gr00t/benchmark_status.sh`.
     - New ETA: clean ≈ 23:45 UTC, randomized ≈ 03:30–04:00 UTC Oct 27.
+  - **20:17 UTC progress:** the two-arm tasks are much harder for this checkpoint.
+    Logged so far (clean): `lift_pot` 3/33, `handover_block` 1/24,
+    `stack_blocks_two` 3/29; no seeds skipped. Videos (`outputs/bench_check/`) show
+    correct wiring: in lift_pot both arms reach and grasp the handles but the lift
+    fails; in handover_block one arm grasps and lifts, then the handover fails or the
+    second arm never comes. So it's policy quality (coordination/precision), not a bug.
+    Failing episodes run all 400 steps, so these tasks go ~15 eps/h per GPU (~6.5 h per
+    task), vs ~35/h for beat_block_hammer. More shards per GPU won't help (the GPU is
+    ~100% busy rendering). Revised ETA: current 3 tasks ≈ 00:15–00:45 UTC; the 6 queued
+    jobs ≈ 2 more rounds, so everything ≈ 10:00–13:00 UTC Oct 27. GPU 2 was briefly
+    free but another user took it.
 - [ ] Step 6: hill-climb.
