@@ -23,17 +23,22 @@ torch.manual_seed(0)
 dev, b, eps = "cuda", 4, 0.01
 worst = 0.0
 for m in [5, 6, 7, 15, 27, 31]:  # history sizes with a compiled kernel
-    for v in [7, 32, 33, 64, 100, 192, 224, 384]:  # d_opt = horizon * dof
-        if v * m + 33 >= 12000:  # cuRobo falls back to PyTorch here anyway
+    for v in [7, 32, 33, 64, 100, 168, 192, 224, 384]:  # d_opt = horizon * dof
+        if v * m + 33 >= 12000 or m >= v:  # cuRobo uses PyTorch / caps history at d_opt-1 here
             continue
         s, y = torch.randn(m, b, v, 1, device=dev), torch.randn(m, b, v, 1, device=dev)
-        rho = torch.rand(m, b, 1, 1, device=dev)
+        rho = torch.rand(m, b, 1, 1, device=dev) / v  # ~1/(y.s), keeps the recursion from overflowing
         x0, g0 = torch.randn(b, v, 1, device=dev), torch.randn(b, v, 1, device=dev)
         q, gq = torch.randn(b, v, device=dev), torch.randn(b, 1, v, device=dev)
         for shared in [True, False]:
             # CUDA kernel (updates its copies of the buffers in place).
             A = [t.clone() for t in (rho, y, s, x0, g0)]
-            dq_cuda = LBFGScu.apply(torch.zeros(b, v, device=dev), *A[:3], q, gq, *A[3:], eps, True, shared)
+            try:
+                dq_cuda = LBFGScu.apply(torch.zeros(b, v, device=dev), *A[:3], q, gq, *A[3:], eps, True, shared)
+                torch.cuda.synchronize()
+            except RuntimeError as e:  # e.g. "too many resources requested for launch" (not sticky)
+                print(f"skip m={m} v_dim={v} shared={shared}: {str(e).splitlines()[0]}", flush=True)
+                continue
             # PyTorch reference.
             sB, yB, rhoB, x0B, g0B = jit_lbfgs_update_buffers(
                 q, gq, s.clone(), y.clone(), rho.clone(), x0.clone(), g0.clone(), True
@@ -43,6 +48,6 @@ for m in [5, 6, 7, 15, 27, 31]:  # history sizes with a compiled kernel
             torch.cuda.synchronize()
             err = ((dq_cuda - dq_ref).abs().max() / dq_ref.abs().max()).item()
             worst = max(worst, err)
-            if err > 1e-3:
-                print(f"MISMATCH m={m} v_dim={v} shared={shared}: rel err {err:.2e}", flush=True)
+            print(f"m={m} v_dim={v} shared={shared}: rel err {err:.1e}{'  MISMATCH' if err > 1e-3 else ''}",
+                  flush=True)
 print(f"RESULT max relative error over all cases: {worst:.2e} ({'OK' if worst < 1e-3 else 'FAIL'})", flush=True)

@@ -1,8 +1,8 @@
 diff --git a/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu b/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
-index be14450..b747e9a 100644
+index be14450..7cd1a9b 100644
 --- a/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
 +++ b/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
-@@ -78,16 +78,18 @@ namespace Curobo
+@@ -78,16 +78,19 @@ namespace Curobo
          __syncthreads();
  
          int elems      = (m + 31) / 32;
@@ -10,11 +10,11 @@ index be14450..b747e9a 100644
  
          if (threadIdx.x / 32 == 0) // only the first warp will do this work
          {
--          psum_t val2  = data[threadIdx.x % 32];
 +          // All 32 lanes of warp 0 run the shuffles below, so they must use
 +          // FULL_MASK: a lane outside the mask is undefined behaviour and traps
 +          // on sm_90 ("illegal instruction"). Lanes past elems contribute 0.
-+          psum_t val2  = threadIdx.x < elems ? data[threadIdx.x] : (psum_t)0;
+           psum_t val2  = data[threadIdx.x % 32];
++          if (threadIdx.x >= elems) val2 = 0;
            int    shift = 1;
  
            for (int i = elems - 1; i > 0; i /= 2)
@@ -24,7 +24,7 @@ index be14450..b747e9a 100644
              shift *= 2;
            }
  
-@@ -161,17 +163,19 @@ namespace Curobo
+@@ -161,17 +164,20 @@ namespace Curobo
          __syncthreads();
  
          int elems      = (m + 31) / 32;
@@ -32,11 +32,11 @@ index be14450..b747e9a 100644
  
          if (threadIdx.x / 32 == 0) // only the first warp will do this work
          {
--          psum_t val2  = data[threadIdx.x % 32];
 +          // All 32 lanes of warp 0 run the shuffles below, so they must use
 +          // FULL_MASK: a lane outside the mask is undefined behaviour and traps
 +          // on sm_90 ("illegal instruction"). Lanes past elems contribute 0.
-+          psum_t val2  = threadIdx.x < elems ? data[threadIdx.x] : (psum_t)0;
+           psum_t val2  = data[threadIdx.x % 32];
++          if (threadIdx.x >= elems) val2 = 0;
            int    shift = 1;
  
            #pragma unroll
