@@ -168,4 +168,10 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   - Cosmos-Reason2-2B license accepted by the user (HF returns 200).
   - Agent may fix routine issues on its own (logged here and committed). It may apply a
     cuRobo fix that's validated end to end, but must never kill others' processes.
+  - Pipeline smoke test (`RUN=smoke`, flawed data, 200 steps, batch 32, GPUs 5+6):
+    passed. Loss went 1.04 → 0.34 (grad norm 0.1–0.9). Speed was ~2.5 steps/s once warm
+    (~13 samples/s overall, including startup). Each checkpoint save takes ~1.5 min
+    on EFS. Startup (imports + model load) takes ~4 min. Loss is printed every 10 steps
+    as `{'loss': …}` lines (split the log on `\r`). Checkpoints are in
+    `checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-0/RoboTwin-<RUN>-aloha_agilex-joint-0/checkpoint-<step>`.
 - [ ] Steps 5–6: benchmark, hill-climb.
