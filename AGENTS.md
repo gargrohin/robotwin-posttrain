@@ -272,8 +272,19 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   policy server. Shard i uses `SEED=i`, i.e. RoboTwin seeds from 100000·(1+i).
   `gr00t/summarize_eval.py` sums the shards per task. Protocol for our numbers: 4 shards
   × 25 eps = 100 eps per task.
-  - 2026-10-26 ~14:20 UTC: throughput test started, checkpoint-30000 ×
+  - 2026-10-26 14:12 UTC: throughput test started, checkpoint-30000 ×
     `beat_block_hammer` × demo_clean, 4 shards × 25 eps on GPU 6 (GPU 5 is now taken
     by someone else). Log: `logs/benchmark_30k_bbh_throughput.log`. The 10-ep
     learning-curve logs moved to `logs/learning_curve/`.
+  - Measured at 14:26 UTC: 12 episodes done in ~10 min across 4 shards, about 4× the
+    sequential rate, so ~1.5 h per 100-ep task on one GPU. Shard startup (checkpoint
+    load from EFS) takes ~3 min with the GPU idle. After that GPU 6 is ~98% SM busy and
+    52 GB used (~6.1 GB per sim client, ~7 GB per policy server). `nvidia-smi pmon`
+    shows the GPU time goes to the **sim clients** (ray-traced rendering plus cuRobo,
+    12–33% SM each); the policy servers sit near 0%. Each sim client is pinned at
+    ~100% of one CPU core. So the simulator is the bottleneck, not GR00T. Scale with
+    more GPUs; try 5–6 shards per GPU. Don't cut ray-tracing quality (the eval images
+    would no longer match the training data). Client logs are block-buffered through
+    `tee`, so count finished episodes by the mp4s in `RoboTwin/eval_result/...`, not by
+    log lines.
 - [ ] Step 6: hill-climb.
