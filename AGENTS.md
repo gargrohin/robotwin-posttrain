@@ -8,6 +8,15 @@ implementation code or run jobs when the user asks.
 - `setup/`: our install scripts and renderer checks.
 - `gr00t/prepare_data.sh`: demos → LeRobot v3.0 → v2.1 → GR00T dataset
   `data/lerobot/RoboTwin-5task-aloha_agilex-joint`.
+- `gr00t/eval.sh`: evaluate a checkpoint on one task (`CKPT=<run dir name> TASK=..
+  TEST_NUM=.. TASK_CONFIG=demo_clean|demo_randomized CHECKPOINT_NUM=last|<step>
+  POLICY_GPU=.. ENV_GPU=..`). It starts the GR00T policy server and the RoboTwin sim
+  client itself, because XPolicyLab's client does `conda activate` (our env is a uv
+  venv). It also overrides `cosmos_model_path=nvidia/Cosmos-Reason2-2B`: deploy.yml's
+  `shared/Cosmos-Reason2-2B` doesn't exist, and the adapter would treat it as a bogus HF
+  repo id. Logs go to `logs/eval_<CKPT>_ckpt-<N>_<TASK>_<CONFIG>.{server,client}.log`.
+  RoboTwin ignores `--device_id` in single-task eval, so the launcher sets
+  `CUDA_VISIBLE_DEVICES` instead.
 - `gr00t/train.sh`: fine-tuning launcher. Use `RUN=<name> GPUS=5,6 MAX_STEPS=..
   GLOBAL_BATCH_SIZE=..`; checkpoints go to
   `RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-<SEED>/`
@@ -143,7 +152,9 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   Per episode: `state/` and `action/` hold `{left,right}_arm_joint_states` (6) and
   `{left,right}_ee_joint_states` (1); cameras are `vision/cam_{head,left_wrist,right_wrist}/colors`;
   `instructions` is inside the file. Recorded at 15 Hz (`env_cfg/aloha_agilex.yml`).
-- [~] Step 3: HDF5 → LeRobot → GR00T format via `gr00t/prepare_data.sh` (separate
+- [x] Step 3 (done 2026-10-26): `data/lerobot/RoboTwin-5task-aloha_agilex-joint`: 250
+  episodes, 51,352 frames, 0 frame mismatches, no dropped frames, no read retries.
+  History, via `gr00t/prepare_data.sh` (separate
   `.venv-lerobot`, approved by the user). The first full run produced a flawed dataset:
   - **Dropped video frames** in 146/249 episodes. LeRobot's streaming encoder waits
     0.1 s on a full queue (default 30 frames) and then drops the frame, leaving videos
