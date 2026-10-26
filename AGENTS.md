@@ -287,4 +287,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     would no longer match the training data). Client logs are block-buffered through
     `tee`, so count finished episodes by the mp4s in `RoboTwin/eval_result/...`, not by
     log lines.
+  - **Run-to-run variance (14:35 UTC):** the same checkpoint-30000 on the same seeds
+    100000/100002/100003 went 0/3 in the morning learning-curve run and 3/3 in the
+    benchmark's seed-0 shard; first logged benchmark episodes are 9/11. Likely causes:
+    GR00T samples fresh flow-matching noise for every action chunk (no fixed seed), and
+    instructions are sampled per episode. P(0/3 then 3/3) at p≈0.5 is ~1.6%, so after
+    the run, replay a few seeds ~5× each to measure per-seed variance and rule out a
+    systematic difference (e.g. GPU contention or a checkpoint not fully written when
+    the morning eval started).
 - [ ] Step 6: hill-climb.
