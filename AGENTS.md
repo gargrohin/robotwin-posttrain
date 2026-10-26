@@ -148,6 +148,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     downloaded demos. Scripts: `setup/sapien3_render_check.py`,
   `setup/robotwin_task_render_check.py` (`--skip-curobo` stubs the planner for that run),
   `setup/curobo_warmup_check.py`; images and logs are in `outputs/render_check/`.
+  Full write-up of the cuRobo bug and fix: `notes/curobo_h100_lbfgs_bug.md`.
 - [x] Step 2: 50 clean demos per task downloaded and verified (250 HDF5 files, ~2 GB).
   Per episode: `state/` and `action/` hold `{left,right}_arm_joint_states` (6) and
   `{left,right}_ee_joint_states` (1); cameras are `vision/cam_{head,left_wrist,right_wrist}/colors`;
