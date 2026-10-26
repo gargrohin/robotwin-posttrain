@@ -311,4 +311,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     (shards 11, 13, 13, 10 of 25; 95% CI ≈ 38–57%; no seeds skipped by the expert
     check; 169 min wall on one GPU, 14:12–17:01 UTC). The earlier 10-ep spot checks
     (3/10, 4/10) understated it, which fits the large per-episode variance.
+  - **17:45 UTC: workers relaunched detached.** The workers had been started from the
+    Claude session and might not survive it exiting (the eval watcher died after an
+    earlier session restart). They were killed and relaunched with
+    `gr00t/benchmark_detached.sh` (`setsid -f nohup`, PPID 1, own session), losing
+    ~25 min of in-progress `lift_pot`/`handover_block`/`stack_blocks_two` episodes
+    (partial results deleted, jobs re-queued). **The user asked to be consulted
+    before any running GPU job is cancelled or restarted.** Launch long jobs detached
+    from the start.
+    - Gotcha: a `pkill -f` pattern also matches the shell running the pkill. Use
+      `'name[.]py'` patterns.
+    - Progress anytime, even after exiting Claude: `bash gr00t/benchmark_status.sh`.
+    - New ETA: clean ≈ 23:45 UTC, randomized ≈ 03:30–04:00 UTC Oct 27.
 - [ ] Step 6: hill-climb.
