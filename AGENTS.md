@@ -190,7 +190,13 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     Steady ~2.7 steps/s.
   - **30k run started 2026-10-26 ~02:45 UTC**: `RUN=5task_30k`, 30k steps, global batch
     64, `SAVE_STEPS=2500` (fewer slow EFS saves; the last 5 kept = 20k–30k), GPUs 5+6.
-    Log: `logs/train_5task_30k_seed0.log`.
+    Log: `logs/train_5task_30k_seed0.log`. Startup took ~15 min (dataloader workers
+    "Caching shard…" first; that's normal, not a hang). Then 1.32 steps/s at batch 64
+    using ~32 GB/GPU, so the ETA is ~6.3 h (≈09:20 UTC) plus saves. LR warmup is 5%
+    (1,500 steps).
+  - Sanity checkpoint-2000 eval (10 eps, `beat_block_hammer`, demo_clean, GPU 6 shared
+    with the 30k run) started ~03:02 UTC to check that action conventions are right in
+    sim before relying on the 30k run.
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
