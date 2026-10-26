@@ -215,4 +215,14 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   GPU. A full benchmark (5 tasks × 100 eps × clean/randomized) would take days on one
   GPU, so plan for RoboTwin's `--num_workers` and several GPUs, and re-measure on an
   unshared GPU.
+  Parallel-eval options found in the code (not tried yet):
+  - RoboTwin `scripts/eval_policy_xpolicylab.py --eval_batch true --num_workers N`
+    spawns N sim workers that share a seed queue; each opens its own websocket client
+    to the same policy server. `gr00t/eval.sh` currently passes `--eval_batch false`.
+  - The policy server (`XPolicyLab/setup_policy_server.py`) is a single asyncio
+    process, so model calls are likely serialized; the GR00T adapter has
+    `update_obs_batch`/`get_action_batch` for batched inference.
+  - Next: on an unshared GPU, measure per-step time split (policy vs sim+render), then
+    try N workers. Parallelism across GPUs/tasks: `scripts/eval_policy_multitask.py`
+    (sets `CUDA_VISIBLE_DEVICES` per job).
 - [ ] Step 6: hill-climb.
