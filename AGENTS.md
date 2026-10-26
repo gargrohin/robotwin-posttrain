@@ -185,6 +185,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     on EFS. Startup (imports + model load) takes ~4 min. Loss is printed every 10 steps
     as `{'loss': …}` lines (split the log on `\r`). Checkpoints are in
     `checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-0/RoboTwin-<RUN>-aloha_agilex-joint-0/checkpoint-<step>`.
+  - **Sanity run passed** (`RUN=5task_sanity`, clean data, 2k steps, batch 32, GPUs
+    5+6, 25 min): loss 1.05 → 0.026 (step 1000 ≈ 0.05), checkpoint-1000 and -2000 saved.
+    Steady ~2.7 steps/s.
+  - **30k run started 2026-10-26 ~02:45 UTC**: `RUN=5task_30k`, 30k steps, global batch
+    64, `SAVE_STEPS=2500` (fewer slow EFS saves; the last 5 kept = 20k–30k), GPUs 5+6.
+    Log: `logs/train_5task_30k_seed0.log`.
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
