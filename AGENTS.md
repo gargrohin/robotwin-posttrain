@@ -264,4 +264,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   - Next: on an unshared GPU, measure per-step time split (policy vs sim+render), then
     try N workers. Parallelism across GPUs/tasks: `scripts/eval_policy_multitask.py`
     (sets `CUDA_VISIBLE_DEVICES` per job).
+  **Parallel eval: don't use RoboTwin's `--eval_batch true --num_workers N` with one
+  policy server.** Its workers share one server, and the client sends `update_obs` and
+  `get_action` as separate calls (the server locks each call, not the pair), so
+  concurrent workers can get actions computed from another worker's observation. Use
+  `gr00t/benchmark.sh` instead: SHARDS independent `eval.sh` pairs, each with its own
+  policy server. Shard i uses `SEED=i`, i.e. RoboTwin seeds from 100000·(1+i).
+  `gr00t/summarize_eval.py` sums the shards per task. Protocol for our numbers: 4 shards
+  × 25 eps = 100 eps per task.
+  - 2026-10-26 ~14:20 UTC: throughput test started, checkpoint-30000 ×
+    `beat_block_hammer` × demo_clean, 4 shards × 25 eps on GPU 6 (GPU 5 is now taken
+    by someone else). Log: `logs/benchmark_30k_bbh_throughput.log`. The 10-ep
+    learning-curve logs moved to `logs/learning_curve/`.
 - [ ] Step 6: hill-climb.
