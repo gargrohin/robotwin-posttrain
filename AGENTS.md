@@ -203,7 +203,21 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     (~1.25 epochs) is just undertrained.
   - Learning-curve evals of the 30k run's checkpoint-10000 and -20000 (same 10-ep
     test) are queued by a background watcher. Trainer keeps only the last 5, so 10k
-    must be evaluated before it's deleted.
+    must be evaluated before it's deleted. The first watcher died at ~05:38 UTC
+    (cleanup after a Claude session restart) and was relaunched at 05:41; training
+    was unaffected.
+  - Progress at 05:40 UTC: step ~10k at ~1.9 steps/s; ETA ~08:35 UTC. Mean loss per
+    1k steps: 0.27 (0–1k), 0.045, 0.031, 0.028, 0.023, 0.019, 0.017, 0.016, 0.014 (8–9k).
+  - **Throughput diagnosis (05:40 UTC):** GPU SM util averages 64–72% (dips during
+    checkpoint saves and eval startup). The machine is 71% CPU-idle and the dataloader
+    workers sit idle with shards prefetched, so data loading isn't the bottleneck.
+    Each training rank's main thread is ~95% busy (`OMP_NUM_THREADS=1`, set by
+    torchrun): the step loop is CPU-bound (Python and kernel-launch overhead and/or
+    CPU-side ops). Batch 16→32 per GPU raised throughput 85→~120 samples/s, consistent
+    with that. `py-spy` can't attach (`ptrace_scope=1`), so profile with
+    `torch.profiler` in a short run. Candidates for the next run: bigger per-GPU batch;
+    `OMP_NUM_THREADS` 4–8; checkpoints to local NVMe (`/mnt/nvme`, ~4 TB free;
+    EFS saves take 1.5–2.5 min each).
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
