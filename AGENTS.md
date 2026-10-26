@@ -28,8 +28,17 @@ implementation code or run jobs when the user asks.
 - Install packages with `uv pip install` (user preference), on uv's default index
   (public PyPI). No mirror token needed.
 
+## Version control
+Commit every fine-tuning or bug-fix change so it can be reverted (user request).
+- This repo (`main`): our scripts, notes and configs.
+- `RoboTwin/XPolicyLab`: local branch `local/aloha-gr00t` holds our adapter edits (not
+  pushed). Revert with `git -C RoboTwin/XPolicyLab revert <sha>`, or switch back to
+  the detached upstream commit `7074afb`.
+- `RoboTwin/envs/curobo`: local branch `h100-fix`, if the cuRobo fix gets applied.
+
 ## Upstream edits (re-apply if XPolicyLab is updated)
-- `XPolicyLab/policy/GR00T_N17/process_data.sh`: in `write_modality_json` and
+- `XPolicyLab/policy/GR00T_N17/process_data.sh` (commit 8e0e7e4 on
+  `local/aloha-gr00t`): in `write_modality_json` and
   `write_modality_config`, `arx_x5)` → `arx_x5|aloha_agilex)` (same 14-dim layout and
   camera keys). `resolve_src_dataset` is deliberately unchanged, so aloha must set
   `GR00T_SRC_DATASET`. Check with `git -C RoboTwin/XPolicyLab diff`.
@@ -100,4 +109,13 @@ implementation code or run jobs when the user asks.
   venv: a dry run shows the pinned commit would move numpy 1.26.4→2.2.6, av 16.1→15.1
   and datasets 3.6→4.1, all of which GR00T's pyproject pins. Plan (pending user OK):
   a separate conversion venv.
-- [ ] Steps 4–6: fine-tune, benchmark, hill-climb.
+- [ ] Step 4: fine-tune. Plan agreed 2026-10-26 (user away for a few hours):
+  - One model on all 5 tasks; GR00T defaults (frozen VLM backbone, train the action
+    head, lr 1e-4); GPUs 5+6 (user frees GPU 5; GPU 6 is shared with cuRobo debugging);
+    logs local only (no wandb).
+  - Sanity run first: 2k steps, global batch 32. If the loss drops and checkpoints
+    save, run 30k steps at global batch 64. If not, debug and fix.
+  - Needs the user's HF account to have accepted the Cosmos-Reason2-2B license (was 403).
+  - Agent may fix routine issues on its own (logged here and committed). It may apply a
+    cuRobo fix that's validated end to end, but must never kill others' processes.
+- [ ] Steps 5–6: benchmark, hill-climb.
