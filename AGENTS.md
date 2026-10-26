@@ -171,7 +171,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     `checkpoints/RoboTwin-smoke-*`, afterwards.
   - Dataset facts: 15 fps, 240×320 per camera, ~205 steps per episode (106–354),
     ~51k frames total; one instruction is sampled per episode (213 distinct strings).
-- [ ] Step 4: fine-tune. Plan agreed 2026-10-26 (user away for a few hours):
+- [x] Step 4: fine-tune (first 30k run done). Plan agreed 2026-10-26 (user away for a few hours):
   - One model on all 5 tasks; GR00T defaults (frozen VLM backbone, train the action
     head, lr 1e-4); GPUs 5+6 (user frees GPU 5; GPU 6 is shared with cuRobo debugging);
     logs local only (no wandb).
@@ -235,8 +235,9 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     With 10 episodes the uncertainty is roughly ±30%; the full benchmark uses 100. A
     successful episode ends early: the 20k eval took ~28 min vs ~45 min for an
     all-fail one.
-  - At 08:12 UTC: step 21.5k, ~1.98 steps/s, ETA ~09:25 UTC. Mean loss per 5k steps:
-    0.080, 0.016, 0.011, 0.0078.
+  - **30k run finished 09:38 UTC**: 6.8 h (1.22 steps/s overall, 78 samples/s), train
+    loss 0.021 overall. Mean loss per 5k steps: 0.080, 0.016, 0.011, 0.0078, 0.0055,
+    0.0043. Kept checkpoints: 20000, 22500, 25000, 27500, 30000 (~35 GB each).
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
