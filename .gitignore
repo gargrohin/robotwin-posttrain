@@ -1,0 +1,10 @@
+# upstream clone (its own git repo, with venvs and ~15 GB of assets), recreated by
+# setup/install_robotwin.sh
+RoboTwin/
+
+scratch/
+data/
+.venv-lerobot/
+*.log
+__pycache__/
+outputs/
