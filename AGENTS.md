@@ -222,6 +222,21 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     that's NCCL busy-waiting, not work.
   - Decision (user, 2026-10-26 ~05:45 UTC): let the 30k run finish unchanged; apply
     the speedups to the next run and measure them.
+  - **Learning curve** (`beat_block_hammer`, demo_clean, 10 eps, same seeds 100000 and
+    100002–100010, `eval_checkpoints.sh`):
+
+    | checkpoint | success | seeds solved |
+    |---|---|---|
+    | sanity 2k (batch 32) | 0/10 | none |
+    | 30k-run 10k | 0/10 | none |
+    | 30k-run 20k | **4/10** | 100000, 100004, 100006, 100010 |
+    | 30k-run 30k | queued | |
+
+    With 10 episodes the uncertainty is roughly ±30%; the full benchmark uses 100. A
+    successful episode ends early: the 20k eval took ~28 min vs ~45 min for an
+    all-fail one.
+  - At 08:12 UTC: step 21.5k, ~1.98 steps/s, ETA ~09:25 UTC. Mean loss per 5k steps:
+    0.080, 0.016, 0.011, 0.0078.
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
 - [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
