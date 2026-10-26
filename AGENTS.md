@@ -230,9 +230,13 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     | sanity 2k (batch 32) | 0/10 | none |
     | 30k-run 10k | 0/10 | none |
     | 30k-run 20k | **4/10** | 100000, 100004, 100006, 100010 |
-    | 30k-run 30k | queued | |
+    | 30k-run 30k | **3/10** | 100007, 100008, 100010 |
 
-    With 10 episodes the uncertainty is roughly ±30%; the full benchmark uses 100. A
+    20k and 30k solve mostly different seeds (only 100010 overlaps), so 4/10 vs 3/10
+    is noise. Training loss kept falling (0.0078 → 0.0043) while success didn't clearly
+    improve; this may be a plateau or overfitting to the 50 demos per task. A 100-episode
+    eval is needed to tell. With 10 episodes the uncertainty is roughly ±30%; the full
+    benchmark uses 100. A
     successful episode ends early: the 20k eval took ~28 min vs ~45 min for an
     all-fail one.
   - **30k run finished 09:38 UTC**: 6.8 h (1.22 steps/s overall, 78 samples/s), train
