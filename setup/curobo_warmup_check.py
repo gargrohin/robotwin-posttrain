@@ -12,10 +12,12 @@ import time
 
 sys.path.append("./")
 t = time.time()
+import curobo
 import torch
 from curobo.wrap.reacher.motion_gen import MotionGen, MotionGenConfig
 
 print(f"imports: {time.time() - t:.1f}s, torch {torch.__version__}, {torch.cuda.get_device_name(0)}", flush=True)
+print(f"curobo from {os.path.dirname(curobo.__file__)}", flush=True)
 
 yml = os.path.abspath("./assets/embodiments/aloha-agilex/curobo_left.yml")  # must be absolute
 # Same table obstacle as planner.py, with the robot origin at 0 (only the warmup matters here).

@@ -6,6 +6,12 @@ implementation code or run jobs when the user asks.
 
 ## Layout
 - `setup/`: our install scripts and renderer checks.
+- `gr00t/prepare_data.sh`: demos → LeRobot v3.0 → v2.1 → GR00T dataset
+  `data/lerobot/RoboTwin-5task-aloha_agilex-joint`.
+- `gr00t/train.sh`: fine-tuning launcher. Use `RUN=<name> GPUS=5,6 MAX_STEPS=..
+  GLOBAL_BATCH_SIZE=..`; checkpoints go to
+  `RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-<SEED>/`
+  and the log to `logs/train_<RUN>_seed<SEED>.log`.
 - `RoboTwin/`: upstream clone (git-ignored). Avoid editing upstream; any edit goes
   in "Upstream edits" below.
 - `data/lerobot/`: converted LeRobot datasets (git-ignored; `HF_LEROBOT_HOME` and
@@ -22,9 +28,11 @@ implementation code or run jobs when the user asks.
   2.7.1+cu128, flash-attn 2.7.4, gr00t, XPolicyLab. **Never plain `uv run` here**: it
   re-syncs for aarch64 and fails. Use `.venv/bin/python`, `uv run --no-sync`, or
   `UV_NO_SYNC=1`.
-- `.venv-lerobot` (one-time dataset conversion only): py3.10, pinned `lerobot`
-  (commit c75455a, the one GR00T's scripts use), CPU torch, XPolicyLab (editable).
-  It's kept separate because that lerobot would bump numpy/av/datasets past GR00T's pins.
+- `.venv-lerobot` (one-time dataset conversion only): py3.10, `lerobot==0.4.4`, CPU
+  torch, XPolicyLab (editable). XPolicyLab's v3.0 converter needs ≥0.4.4
+  (`streaming_encoding`); GR00T's pinned commit c75455a (0.4.1) lacks it, while 0.4.4
+  still has everything `convert_v3_to_v2.py` imports. It's kept out of the GR00T venv
+  because lerobot bumps numpy/av/datasets past GR00T's pins.
 - Install packages with `uv pip install` (user preference), on uv's default index
   (public PyPI). No mirror token needed.
 
@@ -72,13 +80,20 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   --domain-owner <AWS_ACCOUNT_ID> --repository <REPOSITORY> --region us-west-2`. If it's
   expired, ask the user; don't bypass it.
 - Shared GPUs. Check `nvidia-smi` first; use `CUDA_DEVICE_ORDER=PCI_BUS_ID`. On
-  2026-10-26 GPU 6 was used for step 0 and then another user's vLLM job started on it;
-  GPU 5 has an idle vLLM server the user can free on request.
+  2026-10-26 GPU 6 was used for step 0 and then another user's vLLM job started on it.
+  GPU 5 was freed with the user's OK (after they checked with the team) by
+  stopping their idle vLLM container. The container
+  was kept; bring it back with restarting that container.
 - EFS is slow: cold imports take ~1 min; installs take tens of minutes.
 - EFS can throw a one-off `Input/output error` (errno 5) on reads, especially right
   after files are written. Retry before assuming a file is corrupt.
 - uv uses the mirror only when `UV_INDEX` is set, e.g.
   `export UV_INDEX="$(pip3 config get global.index-url)"`, so it expires with the pip token.
+- Hugging Face: `HF_HOME=/mnt/nvme/.cache/huggingface` (local NVMe, fast, not on EFS)
+  holds the model cache but **no token**. The working token is in
+  `~/.cache/huggingface/token`, so pass it as `HF_TOKEN` (`gr00t/train.sh` does this).
+  Cosmos-Reason2-2B is gated (license accepted by the user). Don't print `env`
+  unfiltered: it contains token variables.
 - RoboTwin's `_install.sh` keeps going after errors; grep its output for `ERROR`.
 - Decode RoboTwin camera bytes only with `decode_image_bit` (no BGR↔RGB swap after it).
 - SAPIEN 2 (SimplerEnv) doesn't render on these H100s. SAPIEN 3 (RoboTwin) renders
@@ -115,7 +130,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     logs local only (no wandb).
   - Sanity run first: 2k steps, global batch 32. If the loss drops and checkpoints
     save, run 30k steps at global batch 64. If not, debug and fix.
-  - Needs the user's HF account to have accepted the Cosmos-Reason2-2B license (was 403).
+  - Cosmos-Reason2-2B license accepted by the user (HF returns 200).
   - Agent may fix routine issues on its own (logged here and committed). It may apply a
     cuRobo fix that's validated end to end, but must never kill others' processes.
 - [ ] Steps 5–6: benchmark, hill-climb.
