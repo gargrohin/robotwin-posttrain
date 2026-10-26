@@ -42,7 +42,9 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 - `RoboTwin/XPolicyLab`: local branch `local/aloha-gr00t` holds our adapter edits (not
   pushed). Revert with `git -C RoboTwin/XPolicyLab revert <sha>`, or switch back to
   the detached upstream commit `7074afb`.
-- `RoboTwin/envs/curobo`: local branch `h100-fix`, if the cuRobo fix gets applied.
+- `RoboTwin/envs/curobo`: local branch `h100-fix` (commit `13d961c`) holds the H100
+  L-BFGS kernel fix. The built `.so` files are git-ignored; see Status, step 0, for the
+  build and revert steps.
 
 ## Upstream edits (re-apply if XPolicyLab is updated)
 - `XPolicyLab/policy/GR00T_N17/process_data.sh` (commit 8e0e7e4 on
@@ -105,15 +107,36 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 
 ## Status (2026-10-26)
 - [x] Envs installed; RoboTwin assets downloaded (~15 GB).
-- [~] Step 0 (2026-10-26, GPU 6): **rendering works** with RoboTwin's default `rt`
+- [x] Step 0 (2026-10-26, GPU 6): **rendering works** with RoboTwin's default `rt`
   (ray-tracing) shader. First frame ~1s, then ~0.01s; 4 task cameras in ~0.2s. **Raster
   shaders (`default`, `minimal`) hang forever** on these H100s, so never switch to them.
-  **Blocker for evals and data collection:** cuRobo crashes in every task's
-  `setup_demo` (`MotionGen.warmup()` → `CUDA error: an illegal instruction`, kernel
-  `lbfgs_step_cu.forward`; built for sm_90 with nvcc 12.1). Not fixed yet; steps 3–4
-  don't need it. A subagent is investigating on GPU 6 with a copy of cuRobo in
-  `scratch/curobo_debug/` (git-ignored); the real env stays untouched until the user
-  approves a fix. Scripts: `setup/sapien3_render_check.py`,
+  **cuRobo crash: fixed and applied (2026-10-26, user-approved).** Every task's
+  `setup_demo` crashed with `CUDA error: an illegal instruction` in
+  `lbfgs_step_cu.forward`.
+  - Root cause: in `lbfgs_step_kernel.cu` (`reduce_v0`/`reduce_v1`), all 32 lanes run
+    `__shfl_down_sync` with a mask covering only lanes `< elems`. That's undefined
+    behaviour; nvcc 12.1 emits `WARPSYNC <reg>`, which H100 traps. It hits every
+    RoboTwin trajectory solve (d_opt=168), not just warmup. Matches RoboTwin #452/#234
+    and cuRobo #481.
+  - Fix: shuffle with `FULL_MASK` and make lanes `≥ elems` contribute 0
+    (`setup/curobo_lbfgs_warp_mask.patch`). It's on branch `h100-fix` (commit
+    `13d961c`, on v0.7.8) in `RoboTwin/envs/curobo`. Rebuilt in place with
+    `CUDA_HOME=/usr/local/cuda-12.1 TORCH_CUDA_ARCH_LIST=9.0 ../../.venv/bin/python
+    setup.py build_ext --inplace`; the editable install already points at `src/`.
+  - Validated in the real env on GPU 6: warmup OK; compute-sanitizer synccheck 0
+    errors; kernel matches PyTorch L-BFGS within 2e-4 (100 cases); `beat_block_hammer`
+    sets up and renders; scripted expert 52/68 seeds succeed. Logs:
+    `outputs/render_check/real_*.log`.
+  - **Don't rebuild with nvcc 12.9 without the patch.** It doesn't crash but returns
+    wrong steps (6/88 cases, rel. error up to 0.98).
+  - No-rebuild fallback: `use_cuda_kernel: False` in the 6 L-BFGS yml files under
+    `envs/curobo/src/curobo/content/configs/task/` (~1.8× slower planning).
+  - Revert: in `envs/curobo`, run `git switch --detach v0.7.8`, then
+    `cp -p <repo>/scratch/curobo_debug/original_build/*.so src/curobo/curobolib/`
+    (SHA256SUMS there), then `rm -rf build`.
+  - `scratch/curobo_debug/` (1.2 GB) can be deleted except `original_build/`.
+  - Data collection was not run: its default output path would overwrite the
+    downloaded demos. Scripts: `setup/sapien3_render_check.py`,
   `setup/robotwin_task_render_check.py` (`--skip-curobo` stubs the planner for that run),
   `setup/curobo_warmup_check.py`; images and logs are in `outputs/render_check/`.
 - [x] Step 2: 50 clean demos per task downloaded and verified (250 HDF5 files, ~2 GB).
