@@ -3,30 +3,54 @@
 # Before popping a job it checks the GPU's free memory and runs as many eval streams
 # (shards) as fit, up to MAX_SHARDS. If not even one fits (other users' jobs), it waits
 # and checks again, so it can sit on a shared GPU and use whatever is left.
+# Free memory is the lowest of 6 samples over ~1 min, with a bigger margin when other
+# users are on the GPU (their memory use moves). After each job it counts the episodes
+# actually recorded; if streams crashed, it requeues the shortfall on new seeds (at most
+# MAX_RETRIES times). It re-execs itself between jobs, so edits to this file apply from
+# the next job without a restart.
 #
 # QUEUES is a space-separated list of queue=ckpt=checkpoint_num entries, popped in
-# order (the first non-empty queue wins). Queue lines: "<task> <config> [eps] [seed_offset]".
+# order (the first non-empty queue wins). Queue lines:
+# "<task> <config> [eps] [seed_offset] [retry]".
 #
 # usage: GPU=3 QUEUES="logs/queue_50task_v2.txt=RoboTwin-50task_60k-aloha_agilex-joint-0=60000" \
 #        gr00t/benchmark_worker.sh
-#   WAIT_PID=<pid>: start only after that process exits (e.g. an older worker on the GPU).
+#   WAIT_PID=<pid>: start only after that process exits (e.g. an older worker's job).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${GPU:?set GPU}" "${QUEUES:?set QUEUES}"
-PER_STREAM_MB="${PER_STREAM_MB:-14000}"  # policy server ~7 GB + sim client ~7 GB
-HEADROOM_MB="${HEADROOM_MB:-4000}"       # room for other users' jobs to grow
-MAX_SHARDS="${MAX_SHARDS:-4}"            # the GPU is ~100% busy rendering at 4
+PER_STREAM_MB="${PER_STREAM_MB:-14000}"        # policy server ~7 GB + sim client ~7 GB
+HEADROOM_MB="${HEADROOM_MB:-4000}"             # margin on a GPU only we use
+SHARED_HEADROOM_MB="${SHARED_HEADROOM_MB:-10000}"  # margin when other users are on it
+MAX_SHARDS="${MAX_SHARDS:-4}"                  # the GPU is ~100% busy rendering at 4
+MAX_RETRIES="${MAX_RETRIES:-2}"
 
 if [ -n "${WAIT_PID:-}" ]; then
   while kill -0 "$WAIT_PID" 2>/dev/null; do sleep 30; done
 fi
+unset WAIT_PID
 
 log() { echo "[worker gpu$GPU] $(TZ=America/New_York date '+%F %H:%M ET') $*"; }
 
+others_on_gpu() {  # number of other users' processes on this GPU
+  local uuid pid n=0
+  uuid=$(nvidia-smi -i "$GPU" --query-gpu=uuid --format=csv,noheader)
+  for pid in $(nvidia-smi --query-compute-apps=gpu_uuid,pid --format=csv,noheader \
+               | awk -F', ' -v u="$uuid" '$1 == u {print $2}'); do
+    [ "$(ps -o user= -p "$pid" 2>/dev/null)" = "$USER" ] || n=$((n + 1))
+  done
+  echo "$n"
+}
+
 fitting_shards() {
-  local free
-  free=$(nvidia-smi -i "$GPU" --query-gpu=memory.free --format=csv,noheader,nounits)
-  local n=$(( (free - HEADROOM_MB) / PER_STREAM_MB ))
+  local free min=999999 i headroom=$HEADROOM_MB
+  for i in 1 2 3 4 5 6; do
+    free=$(nvidia-smi -i "$GPU" --query-gpu=memory.free --format=csv,noheader,nounits)
+    [ "$free" -lt "$min" ] && min=$free
+    [ "$i" -lt 6 ] && sleep 10
+  done
+  [ "$(others_on_gpu)" -gt 0 ] && headroom=$SHARED_HEADROOM_MB
+  local n=$(( (min - headroom) / PER_STREAM_MB ))
   [ "$n" -gt "$MAX_SHARDS" ] && n=$MAX_SHARDS
   [ "$n" -lt 0 ] && n=0
   echo "$n"
@@ -37,20 +61,43 @@ pop() {  # print and delete the first line of a queue, under a lock
     'line=$(head -n 1 "$1"); [ -z "$line" ] || sed -i 1d "$1"; printf "%s" "$line"' _ "$1"
 }
 
-while true; do
-  shards=$(fitting_shards)
-  if [ "$shards" -lt 1 ]; then sleep 60; continue; fi
-  job="" queue="" ckpt="" num=""
-  for entry in $QUEUES; do
-    IFS== read -r queue ckpt num <<< "$entry"
-    job="$(pop "$queue")"
-    [ -n "$job" ] && break
+recorded_episodes() {  # episodes with a final result for seeds offset..offset+shards-1
+  local ckpt=$1 num=$2 task=$3 config=$4 offset=$5 shards=$6 seed f n total=0
+  for ((seed = offset; seed < offset + shards; seed++)); do
+    f="$ROOT/logs/eval_${ckpt}_ckpt-${num}_${task}_${config}"
+    [ "$seed" -eq 0 ] || f+="_seed$seed"
+    f+=".client.log"
+    n=$(sed 's/\x1b\[[0-9;]*m//g' "$f" 2>/dev/null \
+        | grep -oE 'Final success rate: [0-9]+/[0-9]+' | tail -1 | cut -d/ -f2)
+    total=$((total + ${n:-0}))
   done
-  if [ -z "$job" ]; then log "all queues empty"; exit 0; fi
-  read -r task config eps seed_offset <<< "$job"
-  log "start $task $config ${eps:-100} eps, $shards shards, seed offset ${seed_offset:-0} ($ckpt)"
-  CKPT="$ckpt" CHECKPOINT_NUM="$num" TASKS="$task" TASK_CONFIG="$config" GPUS="$GPU" \
-    SHARDS="$shards" EPS="${eps:-100}" SEED_OFFSET="${seed_offset:-0}" \
-    bash "$ROOT/gr00t/benchmark.sh" || log "benchmark.sh exited with $?"
-  log "done $task $config"
+  echo "$total"
+}
+
+shards=0
+while [ "$shards" -lt 1 ]; do
+  shards=$(fitting_shards)
+  [ "$shards" -lt 1 ] && sleep 50
 done
+job="" queue="" ckpt="" num=""
+for entry in $QUEUES; do
+  IFS== read -r queue ckpt num <<< "$entry"
+  job="$(pop "$queue")"
+  [ -n "$job" ] && break
+done
+if [ -z "$job" ]; then log "all queues empty"; exit 0; fi
+read -r task config eps seed_offset retry <<< "$job"
+eps=${eps:-100} seed_offset=${seed_offset:-0} retry=${retry:-0}
+log "start $task $config $eps eps, $shards shards, seed offset $seed_offset, retry $retry ($ckpt)"
+CKPT="$ckpt" CHECKPOINT_NUM="$num" TASKS="$task" TASK_CONFIG="$config" GPUS="$GPU" \
+  SHARDS="$shards" EPS="$eps" SEED_OFFSET="$seed_offset" \
+  bash "$ROOT/gr00t/benchmark.sh" || log "benchmark.sh exited with $?"
+got=$(recorded_episodes "$ckpt" "$num" "$task" "$config" "$seed_offset" "$shards")
+if [ "$got" -lt "$eps" ] && [ "$retry" -lt "$MAX_RETRIES" ]; then
+  line="$task $config $((eps - got)) $((seed_offset + shards)) $((retry + 1))"
+  flock "$queue.lock" bash -c 'echo "$2" >> "$1"' _ "$queue" "$line"
+  log "done $task $config: $got/$eps episodes recorded; requeued \"$line\""
+else
+  log "done $task $config: $got/$eps episodes recorded"
+fi
+exec bash "$ROOT/gr00t/benchmark_worker.sh"  # pick up edits to this file

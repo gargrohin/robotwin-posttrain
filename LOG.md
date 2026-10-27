@@ -443,3 +443,21 @@ memory** (`gr00t/benchmark_worker.sh`).
   for memory, GPUs 4/7 finishing old tasks.
 - Randomized evals (50 tasks × 20) stay queued (your call: keep evaluating, pause if
   the GPUs are needed for hill-climbing).
+
+**19:16 ET** Status: 35/50 clean tasks done (mean 43.4% so far), 17 of our eval streams
+on all 8 GPUs. Problem on GPU 0: there was room for 3 streams when its task started,
+then the other user's jobs grew back and our streams ran out of memory. A one-time
+free-memory check isn't enough on a GPU whose other users' memory moves.
+
+**19:30 ET** Improved the worker (`gr00t/benchmark_worker.sh`) without stopping any
+running task:
+- Free memory is the *lowest* of 6 samples over ~1 min, with a 10 GB margin (instead
+  of 4) when other users are on the GPU.
+- After each task it counts the episodes actually recorded. If streams crashed, it
+  requeues the shortfall on new seeds, at most twice per task.
+- It re-execs itself between tasks, so future edits apply without restarts.
+- Tested the counting and other-user detection on real logs, then swapped each GPU's
+  worker at its next task boundary. The current tasks kept running; only the waiting
+  worker loops were stopped.
+- Tasks started by the old workers (e.g. put_bottles_dustbin on GPU 0) aren't
+  auto-healed; I'll top up any short ones by hand when the clean pass finishes.
