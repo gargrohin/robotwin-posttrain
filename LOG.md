@@ -242,3 +242,23 @@ no idle gap (`scratch/after_50task_train.sh`, log `logs/after_50task_train.log`)
 Old model, results so far, including partials: clean mean **28.2%** (beat_block_hammer
 47, lift_pot 18, stack_blocks_two 7, handover_block 3, open_laptop 66 on 50 eps);
 randomized: beat_block_hammer 4/30, lift_pot 0/17.
+
+**23:47–23:52 ET** Found why training was slower than expected:
+- After a fast start (2.6 steps/s on cached data), speed swung between ~1 and 2.6,
+  averaging ~1.8, so ~9 h, not the 6.5 h I first said (I had quoted a peak).
+- The GPUs had plenty of free memory (21 of 80 GB) but kept **waiting for data**:
+  each GPU's 8 data-loading workers were pegged at ~93% CPU, and the shared machine's
+  CPUs were ~98% busy (load 188 on 192 cores).
+- Video decoding itself turned out to be cheap (an 894-frame video decodes in
+  0.25 s; decoding only the needed frames barely helps). Most worker time is
+  per-sample image processing, and the CPU share we get on the busy machine.
+- ffprobe also ran *during* training (3 per episode load); the table fix removes
+  that too.
+
+**23:53 ET** Restarted training (your OK) with **16 data workers per GPU** (64 in
+total; RAM ~580 GB of 1.58 TB free) and the ffprobe-free loader. 32 per GPU would
+need ~1.15 TB of RAM on a shared machine, too risky. The first attempt's ~15 min of
+steps are discarded (no checkpoint yet); its log is
+`logs/train_50task_60k_seed0.attempt1.log`. Dataset init took **4.7 s** (first
+attempt: ~25 min). Training stepped again at **23:58 ET**, 5 min after the restart.
+The hand-off watcher was stopped before the restart and re-armed after it.
