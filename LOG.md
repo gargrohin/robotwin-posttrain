@@ -271,3 +271,13 @@ whole run; I'm measuring the speed.
 **00:04 ET** **GPU 6 came free and is ours again**: an old-model eval worker
 (`logs/queue_30k_gpu6.log`) is on it, starting with the open_laptop clean top-up (+50
 episodes, shards 4–7), then the randomized evals from `logs/queue_30k.txt`.
+
+**00:10 ET** Speed after the restart: **~1.8 steps/s, no better** than the first
+attempt (~1.9). The machine's CPUs are oversubscribed (load 200–256 on 192 cores),
+so doubling our workers only got ~24% more CPU time; each worker now runs at ~57% of
+a core. Each training sample costs ~0.34 CPU-seconds to prepare, and video decoding
+is only ~2–3% of that. ETA at 1.8 steps/s: **~09:15 ET**.
+Started a background agent to profile GR00T's per-sample processing (CPU only, no
+GPU, training untouched) and make it cheaper without changing what the model trains
+on. If it finds a big win, I'll ask you before restarting from checkpoint-5000
+(due ~00:50 ET), so almost nothing is lost.
