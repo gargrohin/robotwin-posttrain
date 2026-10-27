@@ -69,6 +69,22 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   rank at dataset init (~20+ min for the 50-task set on 4 GPUs; 5-task: 69.5 s → 0.1 s,
   identical episode lengths). Falls back to ffprobe when the file is missing.
   `gr00t/check_dataset.py` (prepare step 4) writes the file from each video's header.
+- Dataloader CPU fixes (2026-10-27, on `local/aloha-gr00t`, one commit each; training
+  samples verified bit-identical with seeded RNGs, with and without augmentation; CPU per
+  sample 114 → 32 ms):
+  - `ca02cce` PyAV decodes single-threaded (libdav1d defaulted to ~1 thread per core,
+    ~192, in every worker) and converts to RGB only the frames it returns.
+  - `0acfe8d` `LeRobotEpisodeLoader.load_episode(idx, step_indices, allow_padding)`
+    decodes only the rows `extract_step_data` reads; `get_shard` uses it
+    (`__getitem__` still decodes everything).
+  - `53d2c40` decode only from the last keyframe before each needed frame (fast path
+    guarded by timestamp/keyframe checks; otherwise full sequential decode).
+  - `9185684` PIL images via `cv2.merge` instead of copying a transposed view.
+  - `dc36f02` albumentations: replay params on the other views without rebuilding the
+    pipeline.
+  - `39385cc` `policy/GR00T_N17/train.sh` exports `TOKENIZERS_PARALLELISM=false`.
+  - Gotcha: GR00T rewrites `meta/relative_stats.json` at every startup; two runs
+    starting at once on the same dataset can read it mid-write.
 
 ## Decisions
 - Model: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`). It's the only assigned model with an
