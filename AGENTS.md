@@ -336,4 +336,14 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     ~100% busy rendering). Revised ETA: current 3 tasks ≈ 00:15–00:45 UTC; the 6 queued
     jobs ≈ 2 more rounds, so everything ≈ 10:00–13:00 UTC Oct 27. GPU 2 was briefly
     free but another user took it.
+  - **Open-loop / train-eval consistency check (2026-10-27, checkpoint-30000): no bug.**
+    `gr00t/open_loop_check.py` (GR00T venv) feeds 150 demo frames through the eval
+    client's conversion functions + adapter `Model`; 16-step chunk error vs demo is
+    3–5× below hold-still on all 5 tasks, two-arm tasks not worse, L/R arms similar.
+    Eval-path state == training state; images match training video within codec noise
+    (no channel swap). `gr00t/live_obs_check.py` (RoboTwin venv): live sim reset to a
+    demo seed matches that demo's first frame. Per-call sampling spread ~0.004 rad.
+    Instruction mismatch: training sampled 1 instruction per episode; using the
+    training sentence lowers open-loop arm error 15–35%. Outputs:
+    `outputs/open_loop_check/`. Commit 4cf9226.
 - [ ] Step 6: hill-climb.
