@@ -303,3 +303,11 @@ so (your suggestion) moved training to **GPUs 0, 4, 5, 7**. It was still loading
 so nothing was lost. GR00T resumes automatically from the latest checkpoint
 (checkpoint-5000). The hand-off watcher was updated to GPUs 0/4/5/7 and re-armed.
 GPU 1 is back to the other user alone.
+
+**01:10 ET** **The fix worked.** Training resumed from checkpoint-5000 (stepping from
+01:00 ET) and measured **2.63 steps/s** over 8 minutes (was ~1.75). Data workers now
+idle at ~11% CPU each (were 57–93%), so training is no longer waiting for data.
+Remaining 53.4k steps ≈ 5.6 h plus checkpoint saves, so done ≈ **07:00 ET**. GPU
+compute utilization is ~30–97% (avg ~55%): the per-GPU batch of 16 is small and each
+step has fixed CPU-side overhead. A bigger per-GPU batch would push that up, but it
+changes the training recipe, so it's an option for the next run, not this one.
