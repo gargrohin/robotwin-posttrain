@@ -8,3 +8,6 @@ data/
 *.log
 __pycache__/
 outputs/
+
+# runtime state: eval/train logs, job queues and locks
+logs/

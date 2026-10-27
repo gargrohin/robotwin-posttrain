@@ -99,7 +99,7 @@ finished at 01:38 with no errors or read retries. While it runs, the machine is 
 busy (load ~200 on 192 cores), which may briefly slow the evals.
 
 **02:08** **Bug check result: no bug found.** (Background agent; scripts
-`gr00t/open_loop_check.py` and `gr00t/live_obs_check.py`, commit 4cf9226; outputs
+`gr00t/open_loop_check.py` and `gr00t/live_obs_check.py`, commit 72beb1d; outputs
 in `outputs/open_loop_check/`.)
 - Test: 150 demo frames (3 demos × 10 moments × 5 tasks) went through the eval
   client's own conversion code, the websocket encoding and the GR00T adapter. The

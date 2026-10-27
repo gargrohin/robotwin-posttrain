@@ -1,0 +1,45 @@
+From 91856840d9eb6f235f487b7bfaf74024d2c28e90 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:37:43 +0000
+Subject: [PATCH 6/8] GR00T_N17 processor: build PIL images with cv2.merge
+
+Image.fromarray on a transposed CHW->HWC view makes PIL copy it through a slow
+strided tobytes (~1.4 ms per 256x256 image, ~4 ms per sample). cv2.merge builds the
+same HWC array ~20x faster. Pixels are identical (seeded before/after comparison of
+processed samples and collated batches).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py      | 9 +++++++--
+ 1 file changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py b/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py
+index 30155dc..bf5f4f8 100644
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/processing_gr00t_n1d7.py
+@@ -23,6 +23,7 @@ from typing import Any, Dict
+ import warnings
+ 
+ import albumentations as A
++import cv2
+ import numpy as np
+ from PIL import Image
+ import torch
+@@ -454,8 +455,12 @@ class Gr00tN1d7Processor(BaseProcessor):
+                 video: [T, C, H, W]
+         Returns: vlm_content format for collation
+         """
+-        # Convert images to PIL format
+-        pil_images = [Image.fromarray(np.transpose(v, (1, 2, 0))) for v in images]
++        # Convert images to PIL format. cv2.merge builds the HWC array ~20x faster than PIL
++        # copying a transposed view; the pixels are identical.
++        pil_images = [
++            Image.fromarray(cv2.merge(list(v)) if v.shape[0] > 1 else np.transpose(v, (1, 2, 0)))
++            for v in images
++        ]
+ 
+         # Create conversation with images and text
+         conversation = [
+-- 
+2.34.1
+

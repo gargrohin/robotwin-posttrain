@@ -1,0 +1,61 @@
+From 88f9e502ee7d5cda698c7858290a3e54dc868cd7 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 03:32:02 +0000
+Subject: [PATCH 2/8] GR00T_N17 loader: read video frame counts from
+ meta/video_frames.json if present
+
+Dataset init ran ffprobe on every video in every training rank to sync episode
+lengths with video lengths (4 ranks x 7,500 videos ~ 20+ min for the 50-task set).
+If meta/video_frames.json ({video path relative to dataset root: frame count}) exists,
+use it; otherwise fall back to ffprobe as before. On the 5-task dataset the episode
+lengths are identical and init drops from 69.5 s to 0.1 s.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../gr00t/data/dataset/lerobot_episode_loader.py | 16 +++++++++++++++-
+ 1 file changed, 15 insertions(+), 1 deletion(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
+index 0f2047c..438f412 100755
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
+@@ -55,6 +55,9 @@ LEROBOT_TASKS_FILENAME = "tasks.jsonl"
+ LEROBOT_MODALITY_FILENAME = "modality.json"
+ LEROBOT_STATS_FILE_NAME = "stats.json"
+ LEROBOT_RELATIVE_STATS_FILE_NAME = "relative_stats.json"
++# Optional {video path relative to the dataset root: frame count}, so dataset init doesn't
++# have to run ffprobe on every video in every rank.
++VIDEO_FRAMES_FILENAME = "video_frames.json"
+ 
+ ALLOWED_MODALITIES = ["video", "state", "action", "language", "mask"]
+ DEFAULT_COLUMN_NAMES = {
+@@ -191,6 +194,12 @@ class LeRobotEpisodeLoader:
+             with open(relative_stats_path, "r") as f:
+                 self.stats["relative_action"] = json.load(f)
+ 
++        video_frames_path = meta_dir / VIDEO_FRAMES_FILENAME
++        self.video_frames = {}
++        if video_frames_path.exists():
++            with open(video_frames_path, "r") as f:
++                self.video_frames = json.load(f)
++
+         # Extract key configuration parameters
+         self.feature_config = self.info_meta.get("features", {})
+         self.data_path_pattern = self.info_meta["data_path"]
+@@ -431,7 +440,12 @@ class LeRobotEpisodeLoader:
+ 
+     def _get_video_frame_count(self, episode_index: int, image_key: str) -> int | None:
+         video_path = self._resolve_video_path(episode_index, image_key)
+-        if video_path is None or not video_path.exists():
++        if video_path is None:
++            return None
++        cached = self.video_frames.get(str(video_path.relative_to(self.dataset_path)))
++        if cached is not None:
++            return cached if cached > 0 else None
++        if not video_path.exists():
+             return None
+ 
+         info = _get_video_info_ffmpeg(str(video_path))
+-- 
+2.34.1
+

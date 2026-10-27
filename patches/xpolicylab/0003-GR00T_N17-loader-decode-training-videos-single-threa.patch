@@ -1,0 +1,51 @@
+From ca02cce7a89837966fb3e721be4e3ff41c36a226 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:36:16 +0000
+Subject: [PATCH 3/8] GR00T_N17 loader: decode training videos single-threaded,
+ convert only used frames
+
+PyAV's default decoder threading (one thread per core) burned ~5x more CPU than a
+single thread on these 240x320 AV1 videos, and every decoded frame was converted to
+RGB even when it was not returned. The dataloader workers are already parallel, so
+decode with one thread and convert only the requested frames. Frames are identical
+(checked on 30 random dataset videos x 4 index sets, incl. unsorted/repeated and
+past-the-end indices); decode CPU 64.7 s -> 11.0 s on that set.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../gr00t_n17/gr00t/utils/video_utils.py         | 16 ++++++++++++----
+ 1 file changed, 12 insertions(+), 4 deletions(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py b/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
+index 57b2125..6c27dd6 100644
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
+@@ -368,13 +368,21 @@ def _extract_frames_by_indices_pyav(
+     last_frame: np.ndarray | None = None
+ 
+     with av.open(video_path) as container:
+-        for frame_idx, frame in enumerate(container.decode(video=0)):
+-            arr = frame.to_ndarray(format="rgb24")
+-            last_frame = arr
++        stream = container.streams.video[0]
++        # Decode single-threaded: dataloader workers already run in parallel, and FFmpeg's
++        # default (one decoder thread per core) burns several times more CPU on small frames.
++        # The decoded frames are identical.
++        stream.codec_context.thread_count = 1
++        av_frame = None
++        for frame_idx, av_frame in enumerate(container.decode(stream)):
++            # Only convert the frames that are returned to RGB.
+             if frame_idx in index_set:
+-                frames[frame_idx] = arr
++                frames[frame_idx] = av_frame.to_ndarray(format="rgb24")
+             if frame_idx >= max_idx:
+                 break
++        # Indices past the end of the video get the last decoded frame.
++        if av_frame is not None and len(frames) < len(index_set):
++            last_frame = av_frame.to_ndarray(format="rgb24")
+ 
+     result = []
+     for i in indices:
+-- 
+2.34.1
+

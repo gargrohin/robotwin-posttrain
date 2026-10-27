@@ -1,0 +1,32 @@
+From 39385cc32b6e20dcc3571821b58d48f93ff0a875 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:38:23 +0000
+Subject: [PATCH 8/8] GR00T_N17 train.sh: disable HF tokenizers' thread pool in
+ dataloader workers
+
+The collator tokenizes each batch inside every dataloader worker, where the
+tokenizers library spins up a thread per core and burns ~10x the CPU of a serial
+encode for 16 short prompts. Same token ids either way.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ policy/GR00T_N17/train.sh | 3 +++
+ 1 file changed, 3 insertions(+)
+
+diff --git a/policy/GR00T_N17/train.sh b/policy/GR00T_N17/train.sh
+index d1cfa31..5b68e20 100755
+--- a/policy/GR00T_N17/train.sh
++++ b/policy/GR00T_N17/train.sh
+@@ -36,6 +36,9 @@ export CUDA_VISIBLE_DEVICES="${gpu_id}"
+ export NUM_GPUS="${NUM_GPUS:-$(tr ',' '\n' <<< "${gpu_id}" | sed '/^$/d' | wc -l | xargs)}"
+ export GR00T_COSMOS_MODEL="${cosmos_model}"
+ export GR00T_VIDEO_BACKEND="${GR00T_VIDEO_BACKEND:-pyav}"
++# The collator tokenizes each batch in every dataloader worker; HF tokenizers' per-core thread
++# pool there burns ~10x the CPU of a serial encode for no gain. Same token ids either way.
++export TOKENIZERS_PARALLELISM="${TOKENIZERS_PARALLELISM:-false}"
+ 
+ if [[ ! -d "${dataset_path}" ]]; then
+   echo "Processed dataset not found: ${dataset_path}" >&2
+-- 
+2.34.1
+
