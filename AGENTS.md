@@ -19,6 +19,12 @@ doing anything outward-facing or destructive.
   repo id. Logs go to `logs/eval_<CKPT>_ckpt-<N>_<TASK>_<CONFIG>.{server,client}.log`.
   RoboTwin ignores `--device_id` in single-task eval, so the launcher sets
   `CUDA_VISIBLE_DEVICES` instead.
+- `gr00t/benchmark_worker.sh`: adaptive eval worker for one GPU (use this, not
+  `benchmark_queue.sh`, on the shared box). Before each job it checks the GPU's free
+  memory and runs `(free - 4 GB) / 14 GB` streams (max 4), or waits if none fit.
+  `QUEUES="q1=ckpt=num q2=ckpt=num"` are popped in order. One worker per GPU on all
+  8 GPUs since 2026-10-27 19:00 ET; logs `logs/worker_gpu<N>.log`; queues
+  `logs/queue_50task_v2.txt` (new model) then `logs/queue_30k_v2.txt` (old model).
 - `gr00t/train.sh`: fine-tuning launcher. Use `RUN=<name> GPUS=5,6 MAX_STEPS=..
   GLOBAL_BATCH_SIZE=..`; checkpoints go to
   `RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-<SEED>/`
