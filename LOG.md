@@ -83,3 +83,56 @@ LeRobot's own `aggregate_datasets` tool. The steps after that are the same as fo
 5 tasks: downgrade to the format GR00T reads, compute normalization stats, then
 `check_dataset.py` decodes every video and checks one frame per step and 2,500
 episodes. Output dataset: `data/lerobot/RoboTwin-50task-aloha_agilex-joint`.
+
+**01:40** Freed GPUs for training without killing anything. I moved the 3
+not-yet-started demo_randomized jobs (handover_block, stack_blocks_two, open_laptop)
+from `logs/queue_30k.txt` to `logs/queue_30k_held.txt`. When the clean evals on
+GPUs 5 and 6 finish, their workers find the queue empty and exit, which leaves those
+GPUs free for the 50-task training. The held jobs go back in the queue once training
+has its GPUs. Still running: GPU 1 open_laptop clean, GPU 4 beat_block_hammer
+randomized, GPU 5 handover_block clean, GPU 6 stack_blocks_two clean, GPU 7
+lift_pot randomized.
+
+**01:40** Conversion speed: ~3.5–7 min per task with 12 at once; the first 3 tasks
+finished at 01:38 with no errors or read retries. While it runs, the machine is very
+busy (load ~200 on 192 cores), which may briefly slow the evals.
+
+**02:08** **Bug check result: no bug found.** (Background agent; scripts
+`gr00t/open_loop_check.py` and `gr00t/live_obs_check.py`, commit 4cf9226; outputs
+in `outputs/open_loop_check/`.)
+- Test: 150 demo frames (3 demos × 10 moments × 5 tasks) went through the eval
+  client's own conversion code, the websocket encoding and the GR00T adapter. The
+  model's next-16 predicted actions were compared with what the demo actually did
+  next, and with a "hold still" guess.
+- The model is 3–5× closer to the demo than hold-still on every task. The two-arm
+  tasks are **not** worse than the one-arm tasks, and the left and right arms are
+  about equally accurate. A wiring bug (cameras, state order, colours, action format)
+  would push the model's error up to the hold-still level.
+
+  | task | arm error, model / hold still (rad) | gripper error, model / hold still |
+  |---|---|---|
+  | beat_block_hammer | 0.012 / 0.066 | 0.005 / 0.036 |
+  | lift_pot | 0.019 / 0.091 | 0.012 / 0.081 |
+  | handover_block | 0.014 / 0.054 | 0.014 / 0.053 |
+  | stack_blocks_two | 0.013 / 0.054 | 0.011 / 0.019 |
+  | open_laptop | 0.013 / 0.035 | 0.005 / 0.026 |
+
+  (0.01 rad ≈ 0.6°. Gripper: 0 = closed, 1 = open.)
+- State fed at eval = training state exactly. Images fed at eval = training video
+  frames up to compression noise (same size, same colour order; PNGs
+  `outputs/open_loop_check/images_<task>.png`).
+- The live simulator, reset to a demo's seed, gives the same image and joints as
+  that demo's first frame (`live_vs_demo_*.png`).
+- Calling the model 5× on the same frame changes its prediction by only ~0.2°, so
+  its built-in randomness is small.
+- Where it goes wrong: decision moments in handover_block, e.g. when to let go
+  with the left gripper, or when the right arm should start moving. That matches the
+  eval videos.
+- Conclusion: the low two-arm scores come from the policy (small mistakes at key
+  moments add up once the robot acts on its own predictions), not from the eval
+  pipeline.
+- Caveat: these were training demos, so this checks the wiring, not generalization.
+- Side finding (possible hill-climb idea): training used one random instruction
+  sentence per demo, so the model saw only ~50 phrasings per task, and at eval it
+  gets new phrasings. Feeding the demo's own training sentence lowers arm error
+  15–35%. Training with all instruction variants per demo might help a little.
