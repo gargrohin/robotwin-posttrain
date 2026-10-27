@@ -2,9 +2,10 @@
 # Fine-tune GR00T N1.7 on the 5-task RoboTwin dataset through XPolicyLab's train.sh.
 #
 # usage: RUN=5task_sanity GPUS=5,6 MAX_STEPS=2000 GLOBAL_BATCH_SIZE=32 gr00t/train.sh
+#        DATASET=50task picks the prepared dataset (default 5task).
 #
 # XPolicyLab names both the dataset and the checkpoint dir after <ckpt_name>, so each
-# RUN gets a symlink to the one prepared dataset (RoboTwin-5task-aloha_agilex-joint) and
+# RUN gets a symlink to a prepared dataset (RoboTwin-<DATASET>-aloha_agilex-joint) and
 # its own checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-<SEED>/.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
@@ -24,7 +25,7 @@ export MASTER_PORT="${MASTER_PORT:-29617}"  # avoid torchrun's default on a shar
 [ -n "${HF_TOKEN:-}" ] || export HF_TOKEN="$(cat ~/.cache/huggingface/token)"
 
 dataset="$GR00T_LEROBOT_HOME/RoboTwin-$RUN-aloha_agilex-joint"
-[ -e "$dataset" ] || ln -s RoboTwin-5task-aloha_agilex-joint "$dataset"
+[ -e "$dataset" ] || ln -s "RoboTwin-${DATASET:-5task}-aloha_agilex-joint" "$dataset"
 
 mkdir -p "$ROOT/logs"
 cd "$ROOT/RoboTwin/XPolicyLab/policy/GR00T_N17"

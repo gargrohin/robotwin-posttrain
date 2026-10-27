@@ -8,9 +8,11 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 
-TASKS=(beat_block_hammer lift_pot handover_block stack_blocks_two open_laptop)
-SRC=robotwin_5task_aloha  # converter output; becomes v2.1 in place (v3.0 kept as *_v3.0)
-CKPT_NAME=5task           # -> GR00T dataset RoboTwin-5task-aloha_agilex-joint
+# Override for another task set, e.g. TASKS="$(ls RoboTwin/data/demo_clean)"
+# SRC=robotwin_50task_aloha CKPT_NAME=50task gr00t/prepare_data.sh
+read -r -a TASKS <<< "${TASKS:-beat_block_hammer lift_pot handover_block stack_blocks_two open_laptop}"
+SRC="${SRC:-robotwin_5task_aloha}"  # converter output; becomes v2.1 in place (v3.0 kept as *_v3.0)
+CKPT_NAME="${CKPT_NAME:-5task}"     # -> GR00T dataset RoboTwin-<CKPT_NAME>-aloha_agilex-joint
 
 export HF_LEROBOT_HOME="$ROOT/data/lerobot" GR00T_LEROBOT_HOME="$ROOT/data/lerobot"
 PY="$ROOT/.venv-lerobot/bin/python"
