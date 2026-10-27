@@ -136,3 +136,34 @@ in `outputs/open_loop_check/`.)
   sentence per demo, so the model saw only ~50 phrasings per task, and at eval it
   gets new phrasings. Feeding the demo's own training sentence lowers arm error
   15–35%. Training with all instruction variants per demo might help a little.
+
+**02:10** Result: **stack_blocks_two demo_clean = 7/100 (7%)**. GPU 6 is free and
+waiting for the 50-task training. All 50 tasks converted with no errors; merging
+them now. Made `check_dataset.py` decode videos in parallel (5-task check: 9 s, 0
+mismatches, same as before).
+
+**02:45** **50-task dataset ready:** `data/lerobot/RoboTwin-50task-aloha_agilex-joint`.
+2,500 episodes, 548,893 frames (10.7× the 5-task set), 2,413 distinct instruction
+sentences, episodes 74–894 steps long. Every video checked: one frame per step, 0
+mismatches. Prep took ~70 min in total (download 6 min, conversion ~30 min, merge
+~13 min, the rest stats and checks).
+
+**02:52** Someone else (a root-owned vLLM server, started ~02:31) took **GPU 6**
+while it sat idle waiting for the data. It's not ours, so I'm leaving it alone.
+
+**02:55** Training GPUs, per your "training first" OK:
+- **GPU 5**, once its handover_block clean eval finishes (every shard is on its
+  last episode).
+- **GPU 7**, by stopping its lift_pot demo_randomized job, the one approved
+  preemption. I picked lift_pot because it had the least progress (~15 episodes,
+  0 successes so far). bbh randomized on GPU 4 had 4/23 and keeps running. The
+  lift_pot job goes back to the hold file and its partial results are discarded
+  (logs kept in `logs/preempted/`).
+- A detached watcher (`scratch/start_50task_train.sh`, log
+  `logs/start_50task_train.log`) does this the moment GPU 5 frees, so nobody grabs
+  GPU 5 in between. If someone else takes GPU 5 first, it leaves GPU 7 alone.
+- Training recipe: same as the 5-task run (GR00T defaults, global batch 64, lr 1e-4),
+  except **60k steps** instead of 30k, and `OMP_NUM_THREADS=8`. The last run was
+  CPU-bound with 1 thread per GPU process; I'll compare steps/s against it.
+  Checkpoint every 5k steps; the last 5 are kept.
+  Log: `logs/train_50task_60k_seed0.log`.
