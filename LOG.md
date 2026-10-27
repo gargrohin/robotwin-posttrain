@@ -373,3 +373,10 @@ empties, GPU 6's worker would have exited and left the GPU idle. A chain now mov
 GPU 6 straight into the new model's queue (`logs/queue_chain_gpu6.log`). Suggested
 trimming the old model's randomized evals to ~20 episodes per task (pending your
 call).
+
+**10:30 ET** Decision (you): **old model randomized evals trimmed to ~20 episodes per
+task** (old queue saved as `logs/queue_30k.before_trim.txt`). What's left on GPU 6:
+handover_block (running, already 68 episodes), stack_blocks_two 20, open_laptop 20,
+lift_pot +4 (17 → 21). beat_block_hammer is dropped because it already has 30. GPU 6
+should finish the old model around 19:00–20:00 ET instead of tomorrow afternoon, then
+join the new model's evals.
