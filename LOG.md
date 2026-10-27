@@ -359,3 +359,9 @@ tasks: **28.3%**. GPU 6 then started handover_block demo_randomized.
   training on 50 tasks hurt it (20 vs 100 episodes, so ±22% vs ±10%).
 
 Old model, handover_block demo_randomized (GPU 6): **0/68** so far.
+
+**09:50 ET** Queued **randomized-scene evals for the 50-task model** (your OK): 50 tasks
+× 20 episodes, appended to `logs/queue_50task.txt` after the remaining clean ones.
+GPUs 0/4/5/7 run them before the old model's leftovers; GPU 6 keeps doing the old
+model's list. Expect another ~12+ h after the clean screening, because failures run
+to the step limit and randomized scenes fail more.
