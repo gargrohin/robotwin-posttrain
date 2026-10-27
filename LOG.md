@@ -281,3 +281,25 @@ Started a background agent to profile GR00T's per-sample processing (CPU only, n
 GPU, training untouched) and make it cheaper without changing what the model trains
 on. If it finds a big win, I'll ask you before restarting from checkpoint-5000
 (due ~00:50 ET), so almost nothing is lost.
+
+**00:44 ET** **Profiling result (background agent): the real CPU hog was video
+decoding**, contrary to my earlier estimate:
+- Each data worker's AV1 decoder started ~192 threads (one per core); with 64
+  workers that flooded the machine.
+- Workers decoded ~10× more frames than training uses.
+- Fixed in 6 commits on our local GR00T branch (`ca02cce`, `0acfe8d`, `53d2c40`,
+  `9185684`, `dc36f02`, `39385cc`): CPU per training sample **114 → 32 ms (3.5×
+  cheaper)**; video decode 75 → 4 ms.
+- Verified the training samples are **bit-for-bit identical** before vs after
+  (2,061 samples + 8 batches, seeded, with and without augmentation).
+- Training was at step 5,130 (~1.75 steps/s, load ~250) with checkpoint-5000 saved.
+
+**00:51 ET** Restart (your OK). My first restart command killed only itself (the
+process search matched its own command line, the known `pkill` pitfall); nothing
+else was affected. Second attempt: training relaunched at 00:51 ET on GPUs 1/4/5/7.
+
+**00:53 ET** GPU 0 became completely free while GPU 1 had the other user's vLLM growing to 45 GB,
+so (your suggestion) moved training to **GPUs 0, 4, 5, 7**. It was still loading,
+so nothing was lost. GR00T resumes automatically from the latest checkpoint
+(checkpoint-5000). The hand-off watcher was updated to GPUs 0/4/5/7 and re-armed.
+GPU 1 is back to the other user alone.
