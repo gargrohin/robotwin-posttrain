@@ -399,3 +399,12 @@ wrong, but no harm was done:
 
 Old model, randomized so far: beat_block_hammer 4/30 (13%), handover_block 0/100,
 lift_pot 0/17.
+
+**10:50 ET** **Freed GPU 6 for someone who needed a GPU** (your OK). Stopped GPU 6's
+chain into the new model's queue, then its old-model worker (stack_blocks_two
+randomized; no episodes recorded yet, so ~25 min of work lost). Checked it was gone:
+GPU 6 at 8 MB. GPUs 0/4/5/7 untouched. The old model's 3 unfinished randomized jobs
+(stack_blocks_two 20, open_laptop 20, lift_pot +4) are back in `logs/queue_30k.txt`, so
+GPUs 0/4/5/7 run them automatically after the new model's evals. The new model's evals
+now have 4 GPUs instead of 5: clean screening ≈ tonight 8–10 pm ET, randomized ≈
+tomorrow early afternoon.
