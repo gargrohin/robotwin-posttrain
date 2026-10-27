@@ -19,5 +19,5 @@ for gpu in $GPUS; do
     setsid -f nohup bash -c "sleep $delay; exec bash '$ROOT/gr00t/benchmark_queue.sh'" \
     > "$log" 2>&1 < /dev/null
   echo "GPU $gpu worker starts in ${delay}s, log: $log"
-  delay=$((delay + 75))
+  delay=$((delay + ${STAGGER:-75}))
 done

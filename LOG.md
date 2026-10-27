@@ -1,7 +1,8 @@
 # Work log (RoboTwin / GR00T)
 
 Plain-language, timestamped log of what was done, what the evals returned, and why
-each decision was made. Newest entries at the bottom. Times are UTC. Technical
+each decision was made. Newest entries at the bottom. Times are UTC up to the
+"Times switch to ET" entry, New York time (ET) after it. Technical
 details for agents live in `AGENTS.md`.
 
 ## Results so far
@@ -208,3 +209,36 @@ lift_pot's 17 were discarded) and the open_laptop clean top-up. Queue:
 **03:30** Multi-GPU method: GR00T uses **DeepSpeed ZeRO stage 2** automatically
 with more than one GPU. Each GPU has the full model and a different slice of each
 batch; the optimizer state and gradients are split across the GPUs to save memory.
+
+**03:39 UTC** You asked about someone taking our GPUs. At 03:39 only our 4 training
+processes were on GPUs 1/4/5/7. They had looked idle (0%, 1.5 GB) for ~25 min during
+GR00T's startup, which is probably why. Lesson saved: on this machine any GPU that
+looks idle for a few minutes gets taken, so the goal is ~100% utilization with no
+gaps between jobs.
+
+### Times switch to ET (New York, EDT = UTC−4) from here, as you asked.
+
+**23:42 ET (Oct 26)** **Training is stepping.** GPUs 1/4/7 at ~100%, loss 1.05 → 0.35
+in the first 300 steps. Speed **2.62 steps/s** on 4 GPUs (the 5-task run on 2 GPUs
+averaged 1.22). ETA: 60k steps ≈ 6.3 h plus checkpoint saves, so done ≈ **06:15–06:45
+ET**.
+
+**23:45 ET** Armed the hand-off, so the GPUs go straight from training to evals with
+no idle gap (`scratch/after_50task_train.sh`, log `logs/after_50task_train.log`):
+- When training exits, each of GPUs 1/4/5/7 starts an eval worker (30 s apart).
+- First the **50-task screening**: checkpoint-60000, 20 episodes per task (4 shards
+  × 5), clean scenes, 50 tasks (`logs/queue_50task.txt`; place_empty_cup last
+  because it renders very slowly).
+- Then the old 5-task model's remaining evals (`logs/queue_30k.txt`): open_laptop
+  clean top-up (+50 eps on new seeds), handover/stack/open_laptop randomized (100
+  each), beat_block_hammer randomized top-up (+70), lift_pot randomized top-up (+83).
+- If training fails and there's no checkpoint-60000, the workers run only the
+  old-model evals, so the GPUs still stay busy.
+- Script changes for this: queue lines can set episode count and seed offset
+  (top-ups use new seeds, so nothing is double-counted); `summarize_eval.py` also
+  counts the stopped shards' partial results (`logs/preempted/`); the per-GPU start
+  gap is configurable.
+
+Old model, results so far, including partials: clean mean **28.2%** (beat_block_hammer
+47, lift_pot 18, stack_blocks_two 7, handover_block 3, open_laptop 66 on 50 eps);
+randomized: beat_block_hammer 4/30, lift_pot 0/17.

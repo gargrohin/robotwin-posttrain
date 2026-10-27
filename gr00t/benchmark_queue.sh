@@ -20,10 +20,12 @@ pop() {  # print and delete the first line of the queue, under a lock
     'line=$(head -n 1 "$1"); [ -z "$line" ] || sed -i 1d "$1"; printf "%s" "$line"' _ "$QUEUE"
 }
 
+# A line may also set the episode count and seed offset: "<task> <config> [eps] [seed_offset]".
 while job="$(pop)" && [ -n "$job" ]; do
-  read -r task config <<< "$job"
-  echo "[queue gpu$GPU] $(date -u +%H:%M) start $task $config"
-  TASKS="$task" TASK_CONFIG="$config" GPUS="$GPU" bash "$ROOT/gr00t/benchmark.sh"
+  read -r task config eps seed_offset <<< "$job"
+  echo "[queue gpu$GPU] $(date -u +%H:%M) start $task $config ${eps:-} ${seed_offset:-}"
+  TASKS="$task" TASK_CONFIG="$config" GPUS="$GPU" EPS="${eps:-${EPS:-100}}" \
+    SEED_OFFSET="${seed_offset:-0}" bash "$ROOT/gr00t/benchmark.sh"
   echo "[queue gpu$GPU] $(date -u +%H:%M) done $task $config"
 done
 echo "[queue gpu$GPU] $(date -u +%H:%M) queue empty"

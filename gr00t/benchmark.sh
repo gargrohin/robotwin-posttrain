@@ -17,6 +17,7 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TASKS="${TASKS:-beat_block_hammer lift_pot handover_block stack_blocks_two open_laptop}"
 SHARDS="${SHARDS:-4}"
 EPS="${EPS:-100}"
+SEED_OFFSET="${SEED_OFFSET:-0}"  # shards use SEED=OFFSET..OFFSET+SHARDS-1 (new seeds to top up a run)
 read -r -a gpus <<< "${GPUS:-6}"
 per_shard=$(( (EPS + SHARDS - 1) / SHARDS ))
 
@@ -25,7 +26,7 @@ for task in $TASKS; do
   pids=()
   for ((i = 0; i < SHARDS; i++)); do
     gpu="${gpus[$((i % ${#gpus[@]}))]}"
-    TASK="$task" SEED="$i" TEST_NUM="$per_shard" POLICY_GPU="$gpu" ENV_GPU="$gpu" \
+    TASK="$task" SEED="$((SEED_OFFSET + i))" TEST_NUM="$per_shard" POLICY_GPU="$gpu" ENV_GPU="$gpu" \
       bash "$ROOT/gr00t/eval.sh" > /dev/null 2>&1 &
     pids+=($!)
     sleep 20  # stagger startup, so shards don't race for the same free port

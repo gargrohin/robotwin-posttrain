@@ -1,7 +1,8 @@
 """Sum per-shard eval results into a per-task success table.
 
 usage: summarize_eval.py <ckpt> <checkpoint_num> <task_config>
-Reads logs/eval_<ckpt>_ckpt-<n>_<task>_<config>[_seed<i>].client.log.
+Reads logs/eval_<ckpt>_ckpt-<n>_<task>_<config>[_seed<i>].client.log, plus shards that
+were stopped early (logs/preempted/), which count with their last logged running total.
 """
 
 import re
@@ -16,11 +17,14 @@ pattern = re.compile(
     r"(?:_seed(\d+))?\.client\.log$"
 )
 final = re.compile(r"Final success rate: (\d+)/(\d+)")
+running = re.compile(r"Success rate: (\d+)/(\d+)")
 
 totals = defaultdict(lambda: [0, 0, 0])  # successes, episodes, shards
-for path in sorted(logs.glob(f"eval_{ckpt}_ckpt-{num}_*.client.log")):
+glob = f"eval_{ckpt}_ckpt-{num}_*.client.log"
+for path in sorted(logs.glob(glob)) + sorted((logs / "preempted").glob(glob)):
     m = pattern.match(path.name)
-    hits = final.findall(re.sub(r"\x1b\[[0-9;]*m", "", path.read_text(errors="ignore")))
+    text = re.sub(r"\x1b\[[0-9;]*m", "", path.read_text(errors="ignore"))
+    hits = final.findall(text) or (running.findall(text) if path.parent.name == "preempted" else [])
     if not m or not hits:
         continue
     successes, episodes = map(int, hits[-1])
