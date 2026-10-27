@@ -422,3 +422,24 @@ workers were gone first. place_a2b_left (+10), place_bread_skillet (20) and
 place_cans_plasticbox (20) were requeued at the front, on new seeds; neither of the
 last two had recorded any episodes. GPUs 0/5 keep 4 streams. New ETA: clean
 screening ~11 pm–1 am ET, randomized tomorrow.
+
+**18:51 ET** Status: clean screening 34/50 tasks done. Other users' jobs on GPUs 0
+(two × 32 GB) and 5 (33 GB) crashed some of our streams; place_cans_plasticbox (10/20)
+and place_object_basket (15/20) came out short.
+
+**18:58 ET** Decision (you): **eval workers on all 8 GPUs, each sizing itself to free
+memory** (`gr00t/benchmark_worker.sh`).
+- Before each task a worker checks its GPU's free memory and starts as many streams
+  as fit (14 GB each, 4 GB headroom, max 4). If none fit, it waits and re-checks
+  every minute. No more out-of-memory crashes, and any spare memory on any GPU gets
+  used, including GPUs other users are on.
+- Switched to new queue files (`logs/queue_50task_v2.txt`, `logs/queue_30k_v2.txt`).
+  The old workers on GPUs 4/7 finish their current task, find their old queues empty
+  and exit; the new workers there wait for that.
+- Stopped the old workers on GPUs 0 and 5 (checked gone).
+- Requeued on new seeds: place_phone_stand (20), place_cans_plasticbox (+10),
+  place_object_basket (+5).
+- At 18:58: GPU 5 (now free) 4 streams, GPU 3 3, GPUs 2 and 6 1 each, GPUs 0/1 waiting
+  for memory, GPUs 4/7 finishing old tasks.
+- Randomized evals (50 tasks × 20) stay queued (your call: keep evaluating, pause if
+  the GPUs are needed for hill-climbing).
