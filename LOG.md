@@ -191,3 +191,20 @@ evals wait until it finishes.
 Old-model evals still to do: demo_randomized for all 5 tasks (bbh has 30 episodes,
 lift_pot's 17 were discarded) and the open_laptop clean top-up. Queue:
 `logs/queue_30k_held.txt`.
+
+**03:30** Why training startup is slow, and a fix for next time:
+- Before training, GR00T checks every video's frame count with `ffprobe`, so it
+  never reads a frame that doesn't exist. Every GPU process does this separately,
+  with no cache: 4 × 7,500 videos, ~20+ min on the shared disk, with the GPUs at 0%.
+- Fix (your call): GR00T now reads the counts from a table
+  (`meta/video_frames.json`) that `check_dataset.py` writes once during data prep.
+  GR00T falls back to ffprobe if the table is missing.
+- Tested on the 5-task data: identical episode lengths, 69.5 s → 0.1 s.
+- Commits: GR00T side `88f9e50` (XPolicyLab branch `local/aloha-gr00t`); our side
+  is `check_dataset.py`. The tables now exist for both datasets.
+- The current run started before the fix and keeps its old code. Its data workers
+  are forked copies, so they don't reload the file. Future runs get the fast path.
+
+**03:30** Multi-GPU method: GR00T uses **DeepSpeed ZeRO stage 2** automatically
+with more than one GPU. Each GPU has the full model and a different slice of each
+batch; the optimizer state and gradients are split across the GPUs to save memory.

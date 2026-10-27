@@ -63,6 +63,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   `write_modality_config`, `arx_x5)` → `arx_x5|aloha_agilex)` (same 14-dim layout and
   camera keys). `resolve_src_dataset` is deliberately unchanged, so aloha must set
   `GR00T_SRC_DATASET`. Check with `git -C RoboTwin/XPolicyLab diff`.
+- `XPolicyLab/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py`
+  (commit 88f9e50 on `local/aloha-gr00t`): if `meta/video_frames.json` exists, read
+  per-video frame counts from it instead of running ffprobe on every video in every
+  rank at dataset init (~20+ min for the 50-task set on 4 GPUs; 5-task: 69.5 s → 0.1 s,
+  identical episode lengths). Falls back to ffprobe when the file is missing.
+  `gr00t/check_dataset.py` (prepare step 4) writes the file from each video's header.
 
 ## Decisions
 - Model: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`). It's the only assigned model with an
