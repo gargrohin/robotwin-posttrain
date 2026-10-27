@@ -335,3 +335,27 @@ ffprobe startup problem, why more workers didn't help, the profiling table, each
 the 6 data-loading fixes, how they were verified, and what's left. The cuRobo H100
 crash is written up in [`notes/curobo_h100_lbfgs_bug.md`](notes/curobo_h100_lbfgs_bug.md).
 The profiling scripts are preserved locally in `scratch/dataloader_profiling/`.
+
+## 2026-10-27 (morning)
+
+**07:36 ET** **50-task training finished**: 60k steps in 6 h 37 min (2.52 steps/s on
+average, including checkpoint saves), final train loss 0.0096 (run average). Kept
+checkpoints 40k/45k/50k/55k/60k. The hand-off watcher started eval workers on
+GPUs 0/4/5/7 within seconds, so there was no idle gap.
+
+**02:42 ET (overnight)** Old model, **open_laptop demo_clean finished: 68/102 = 67%**
+(the 50 earlier episodes plus the 52-episode top-up). Old-model clean mean over the 5
+tasks: **28.3%**. GPU 6 then started handover_block demo_randomized.
+
+**09:35 ET** **50-task screening** (checkpoint-60000, 20 episodes per task, clean):
+- Done (6 tasks): adjust_bottle 95%, beat_block_hammer 45%, click_alarmclock 100%,
+  click_bell 95%, dump_bin_bigbin 75%, grab_roller 90%.
+- Running: blocks_ranking_rgb 3/14, blocks_ranking_size 1/12, handover_mic 4/4,
+  handover_block (just started).
+- 40 tasks still queued. Some tasks allow much longer episodes (blocks_ranking 1,200
+  steps, put_bottles_dustbin 1,700, vs 400 for most), and failures run to the limit,
+  so those take hours.
+- beat_block_hammer is 45% vs 47% for the 5-task model, so far no sign that
+  training on 50 tasks hurt it (20 vs 100 episodes, so ±22% vs ±10%).
+
+Old model, handover_block demo_randomized (GPU 6): **0/68** so far.
