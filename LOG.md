@@ -365,3 +365,11 @@ Old model, handover_block demo_randomized (GPU 6): **0/68** so far.
 GPUs 0/4/5/7 run them before the old model's leftovers; GPU 6 keeps doing the old
 model's list. Expect another ~12+ h after the clean screening, because failures run
 to the step limit and randomized scenes fail more.
+
+**10:20 ET** GPU 6 (old model) still has ~30 h of randomized evals queued: handover
+~3.5 h left, then stack_blocks_two, open_laptop, the beat_block_hammer and lift_pot
+top-ups, all mostly failures running to 400–800 steps. Fixed a gap: when that list
+empties, GPU 6's worker would have exited and left the GPU idle. A chain now moves
+GPU 6 straight into the new model's queue (`logs/queue_chain_gpu6.log`). Suggested
+trimming the old model's randomized evals to ~20 episodes per task (pending your
+call).
