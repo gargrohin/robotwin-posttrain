@@ -328,3 +328,10 @@ account only.
   upstream.
 - Commit hashes in this repo changed with the rewrite (e.g. the open-loop check is
   now `72beb1d`).
+
+**02:00 ET** Wrote up the training-speed investigation in depth:
+[`notes/gr00t_training_speedup.md`](notes/gr00t_training_speedup.md). It covers the
+ffprobe startup problem, why more workers didn't help, the profiling table, each of
+the 6 data-loading fixes, how they were verified, and what's left. The cuRobo H100
+crash is written up in [`notes/curobo_h100_lbfgs_bug.md`](notes/curobo_h100_lbfgs_bug.md).
+The profiling scripts are preserved locally in `scratch/dataloader_profiling/`.
