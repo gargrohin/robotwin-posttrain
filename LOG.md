@@ -408,3 +408,17 @@ GPU 6 at 8 MB. GPUs 0/4/5/7 untouched. The old model's 3 unfinished randomized j
 GPUs 0/4/5/7 run them automatically after the new model's evals. The new model's evals
 now have 4 GPUs instead of 5: clean screening ≈ tonight 8–10 pm ET, randomized ≈
 tomorrow early afternoon.
+
+**15:00 ET** Other users started big jobs on our eval GPUs: ~46 GB on GPU 7 (since
+~13:17 ET) and ~42 GB on GPU 4 (since ~14:58). The simulator then couldn't get GPU
+memory ("cannot create buffer"), so streams aborted. GPU 7's place_bread_skillet and
+GPU 4's place_cans_plasticbox were broken, and place_a2b_left (earlier) came out with
+10/20 episodes. GPU 5 is shared with a small 1.4 GB job and is fine; GPU 0 is ours
+alone.
+
+**15:28 ET** Decision (you): restarted the eval workers on **GPUs 4 and 7 with 2
+streams each** instead of 4 (~26 GB, fits next to the other jobs). Checked the old
+workers were gone first. place_a2b_left (+10), place_bread_skillet (20) and
+place_cans_plasticbox (20) were requeued at the front, on new seeds; neither of the
+last two had recorded any episodes. GPUs 0/5 keep 4 streams. New ETA: clean
+screening ~11 pm–1 am ET, randomized tomorrow.
