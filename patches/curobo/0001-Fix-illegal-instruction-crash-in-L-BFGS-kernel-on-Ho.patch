@@ -1,0 +1,76 @@
+From 13d961c9c7c981853ab7e6c60ed73f3a0afb1ad3 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 01:21:11 +0000
+Subject: [PATCH] Fix illegal-instruction crash in L-BFGS kernel on Hopper
+ (sm_90)
+
+reduce_v0/reduce_v1 do their cross-warp reduction with all 32 lanes of
+warp 0 calling __shfl_down_sync(mask2, ...), where mask2 only holds lanes
+< elems. A lane calling a *_sync intrinsic with a mask that excludes
+itself is undefined behaviour; nvcc 12.1 lowers it to WARPSYNC <reg>,
+which traps on H100 ("CUDA error: an illegal instruction was
+encountered", compute-sanitizer synccheck: "Barrier error detected.
+Invalid arguments" in lbfgs_update_buffer_and_step_v1_compile_m).
+Newer nvcc avoids the trap, but lanes >= elems still add stale shared
+memory into the sum, which gives wrong step directions.
+
+Use FULL_MASK (all of warp 0 executes the loop) and make lanes >= elems
+contribute 0. Register usage is unchanged.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/curobo/curobolib/cpp/lbfgs_step_kernel.cu | 14 ++++++++++----
+ 1 file changed, 10 insertions(+), 4 deletions(-)
+
+diff --git a/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu b/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
+index be14450..7cd1a9b 100644
+--- a/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
++++ b/src/curobo/curobolib/cpp/lbfgs_step_kernel.cu
+@@ -78,16 +78,19 @@ namespace Curobo
+         __syncthreads();
+ 
+         int elems      = (m + 31) / 32;
+-        unsigned mask2 = __ballot_sync(FULL_MASK, threadIdx.x < elems);
+ 
+         if (threadIdx.x / 32 == 0) // only the first warp will do this work
+         {
++          // All 32 lanes of warp 0 run the shuffles below, so they must use
++          // FULL_MASK: a lane outside the mask is undefined behaviour and traps
++          // on sm_90 ("illegal instruction"). Lanes past elems contribute 0.
+           psum_t val2  = data[threadIdx.x % 32];
++          if (threadIdx.x >= elems) val2 = 0;
+           int    shift = 1;
+ 
+           for (int i = elems - 1; i > 0; i /= 2)
+           {
+-            val2  += __shfl_down_sync(mask2, val2, shift);
++            val2  += __shfl_down_sync(FULL_MASK, val2, shift);
+             shift *= 2;
+           }
+ 
+@@ -161,17 +164,20 @@ namespace Curobo
+         __syncthreads();
+ 
+         int elems      = (m + 31) / 32;
+-        unsigned mask2 = __ballot_sync(FULL_MASK, threadIdx.x < elems);
+ 
+         if (threadIdx.x / 32 == 0) // only the first warp will do this work
+         {
++          // All 32 lanes of warp 0 run the shuffles below, so they must use
++          // FULL_MASK: a lane outside the mask is undefined behaviour and traps
++          // on sm_90 ("illegal instruction"). Lanes past elems contribute 0.
+           psum_t val2  = data[threadIdx.x % 32];
++          if (threadIdx.x >= elems) val2 = 0;
+           int    shift = 1;
+ 
+           #pragma unroll
+           for (int i = elems - 1; i > 0; i /= 2)
+           {
+-            val2  += __shfl_down_sync(mask2, val2, shift);
++            val2  += __shfl_down_sync(FULL_MASK, val2, shift);
+             shift *= 2;
+           }
+ 
+-- 
+2.34.1
+

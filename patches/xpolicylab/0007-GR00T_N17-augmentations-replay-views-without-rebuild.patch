@@ -1,0 +1,62 @@
+From dc36f0264fe03b8475841c779bbdb0a55d7cee77 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:38:04 +0000
+Subject: [PATCH 7/8] GR00T_N17 augmentations: replay views without rebuilding
+ the pipeline
+
+ReplayCompose.replay re-instantiates and re-validates every transform from the
+saved dict for each extra camera view. For a flat pipeline, apply the transform's
+own transforms with the saved params instead (what the rebuilt pipeline does).
+Nested composes still use ReplayCompose.replay. Same images and RNG state over
+300 seeded samples.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../model/gr00t_n1d7/image_augmentations.py   | 24 +++++++++++++++----
+ 1 file changed, 19 insertions(+), 5 deletions(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/image_augmentations.py b/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/image_augmentations.py
+index be73215..b06744e 100755
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/image_augmentations.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/model/gr00t_n1d7/image_augmentations.py
+@@ -72,11 +72,7 @@ def apply_with_replay(transform, images, masks=None, replay=None):
+                 current_replay = augmented_image["replay"]
+             else:
+                 # Subsequent images - use replay for consistent transforms
+-                with warnings.catch_warnings():
+-                    warnings.filterwarnings("ignore", category=UserWarning)
+-                    augmented_image = transform.replay(
+-                        image=img_array, saved_augmentations=current_replay
+-                    )
++                augmented_image = _replay(transform, current_replay, img_array)
+         else:
+             # Regular Compose transform - no replay functionality
+             augmented_image = transform(image=img_array)
+@@ -95,6 +91,24 @@ def apply_with_replay(transform, images, masks=None, replay=None):
+     return transformed_tensors, current_replay
+ 
+ 
++def _replay(transform, saved_augmentations, image):
++    """Same result as ``transform.replay(image=image, saved_augmentations=...)``.
++
++    ``ReplayCompose.replay`` rebuilds (and re-validates) every transform from the saved dict for
++    each image. For a flat pipeline, apply ``transform``'s own transforms with the saved params
++    instead, which is what the rebuilt pipeline does.
++    """
++    if any(isinstance(t, A.BaseCompose) for t in transform.transforms):
++        with warnings.catch_warnings():
++            warnings.filterwarnings("ignore", category=UserWarning)
++            return transform.replay(image=image, saved_augmentations=saved_augmentations)
++    data = {"image": image}
++    for t, saved in zip(transform.transforms, saved_augmentations["transforms"]):
++        if saved["applied"]:
++            data = t.apply_with_params(saved["params"], **data)
++    return data
++
++
+ class MaskedColorTransform(A.ImageOnlyTransform):
+     """Apply random tint to specific mask regions.
+ 
+-- 
+2.34.1
+

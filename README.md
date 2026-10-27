@@ -1,6 +1,25 @@
 # robotwin-posttrain
 
 Post-train VLAs (GR00T N1.7 first) on RoboTwin 2.0, benchmark, then hill-climb.
+Current status and results: [LOG.md](LOG.md) (plain-language work log). Technical
+notes: [AGENTS.md](AGENTS.md).
+
+## What's ours and what's upstream
+
+This repo holds only our own code. Everything else is upstream code, used as published:
+
+| Code | Source | Where |
+|---|---|---|
+| Benchmark, simulator, eval client (`scripts/eval_policy_xpolicylab.py`) | [RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin), unmodified | `RoboTwin/` (cloned by `setup/install_robotwin.sh`, not in this repo) |
+| Policy adapters and data converters | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | `RoboTwin/XPolicyLab/` |
+| GR00T N1.7 model, training loop, data loading | NVIDIA Isaac GR00T, vendored in XPolicyLab | `RoboTwin/XPolicyLab/policy/GR00T_N17/gr00t_n17/` |
+| Motion planner | [cuRobo](https://github.com/NVlabs/curobo) v0.7.8 | `RoboTwin/envs/curobo/` |
+| **Our scripts**: data prep, train/eval launchers, job queues, checks | **ours** | [`gr00t/`](gr00t/), [`setup/`](setup/) |
+| **Our edits to upstream code**: aloha_agilex robot alias, faster GR00T data loading, cuRobo H100 fix | **ours** | [`patches/`](patches/) (one file per commit) |
+
+Training uses GR00T's own fine-tuning code; `gr00t/train.sh` only sets the knobs
+(data, steps, batch size, GPUs). Evaluation uses RoboTwin's official eval script
+unchanged, so scores are comparable to the leaderboard.
 
 ## Setup (`setup/`)
 

@@ -1,0 +1,150 @@
+From 53d2c405973340121dcf9492ecedd31e2ebcfe8d Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:37:24 +0000
+Subject: [PATCH 5/8] GR00T_N17 loader: skip video packets the requested frames
+ don't need
+
+After decoding only a shard's frames, PyAV still decoded every packet up to the last
+requested one. These AV1 videos have a keyframe every 2 frames and no frame
+reordering, so decode only from the last keyframe before each requested frame.
+The fast path is used only when every packet has a pts, pts increase in decode
+order and the first packet is a keyframe, and its result is checked (each fed
+packet yields one frame, mapped by pts); otherwise it decodes all packets in order
+as before. Frames are identical (30 random videos x 4 index sets); for 10% subsets
+decode CPU drops 66 -> 16 ms per video.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../gr00t_n17/gr00t/utils/video_utils.py      | 103 +++++++++++++++---
+ 1 file changed, 87 insertions(+), 16 deletions(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py b/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
+index 6c27dd6..0b4f088 100644
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/utils/video_utils.py
+@@ -354,35 +354,106 @@ def _extract_all_frames_ffmpeg(video_path: str) -> tuple[np.ndarray, np.ndarray]
+         raise ValueError(f"Failed to extract frames from {video_path}: {e}")
+ 
+ 
++def _decode_pyav_packets(stream, packets: list, index_set: set[int]) -> dict[int, np.ndarray]:
++    """Decode the frames in ``index_set`` (plus the last frame), feeding only needed packets.
++
++    Frame i is the i-th decoded frame. When every packet has a pts, pts increase in decode
++    order (no frame reordering) and the first packet is a keyframe, frame i is packet i, and
++    decoding from the last keyframe at or before i reproduces it exactly, so the packets
++    between requested frames are skipped. Otherwise (or if any packet doesn't yield exactly
++    one frame) all packets are decoded in order.
++
++    Returns {frame index: RGB array}. If an index is past the end, the last decoded frame is
++    also stored, under key -1.
++    """
++    ctx = stream.codec_context
++    pts = [p.pts for p in packets]
++    n = len(packets)
++    if (
++        n
++        and packets[0].is_keyframe
++        and None not in pts
++        and all(a < b for a, b in zip(pts, pts[1:]))
++    ):
++        pts_to_idx = {p: i for i, p in enumerate(pts)}
++        past_end = any(i >= n for i in index_set)
++        targets = sorted({i for i in index_set if i < n} | ({n - 1} if past_end else set()))
++        frames: dict[int, np.ndarray] = {}
++        fed = decoded = 0
++        next_packet = 0  # packet that continues the decoder's current state
++        ok = True
++        for k in targets:
++            if k in frames:
++                continue
++            start = k
++            while not packets[start].is_keyframe:
++                start -= 1
++            if start <= next_packet <= k:
++                start = next_packet
++            elif fed:
++                # Jump to a keyframe: drain and reset the decoder first.
++                out = ctx.decode(None)
++                ctx.flush_buffers()
++                decoded += len(out)
++                ok &= all(f.pts in pts_to_idx for f in out)
++            for i in range(start, k + 1):
++                out = ctx.decode(packets[i])
++                fed += 1
++                decoded += len(out)
++                for f in out:
++                    idx = pts_to_idx.get(f.pts)
++                    if idx is None:
++                        ok = False
++                    elif idx in index_set or (past_end and idx == n - 1):
++                        frames[idx] = f.to_ndarray(format="rgb24")
++            next_packet = k + 1
++        out = ctx.decode(None)
++        decoded += len(out)
++        ok &= all(f.pts in pts_to_idx for f in out)
++        for f in out:
++            idx = pts_to_idx.get(f.pts)
++            if idx in index_set or (past_end and idx == n - 1):
++                frames[idx] = f.to_ndarray(format="rgb24")
++        if ok and fed == decoded and all(k in frames for k in targets):
++            if past_end:
++                frames[-1] = frames[n - 1]
++            return frames
++        ctx.flush_buffers()
++
++    # Sequential decode of every packet, as container.decode() does.
++    frames = {}
++    av_frame = None
++    frame_idx = -1
++    for packet in packets + [None]:
++        for av_frame in ctx.decode(packet):
++            frame_idx += 1
++            if frame_idx in index_set:
++                frames[frame_idx] = av_frame.to_ndarray(format="rgb24")
++    if av_frame is not None and any(i > frame_idx for i in index_set):
++        frames[-1] = frames.get(frame_idx)
++        if frames[-1] is None:
++            frames[-1] = av_frame.to_ndarray(format="rgb24")
++    return frames
++
++
+ def _extract_frames_by_indices_pyav(
+     video_path: str, indices: list[int] | np.ndarray
+ ) -> np.ndarray:
+-    """Extract frames at specific indices using PyAV sequential decode."""
++    """Extract frames at specific indices using PyAV."""
+     indices = np.asarray(indices, dtype=np.int64)
+     if len(indices) == 0:
+         return np.empty((0, 0, 0, 3), dtype=np.uint8)
+ 
+-    max_idx = int(indices.max())
+-    index_set = set(indices.tolist())
+-    frames: dict[int, np.ndarray] = {}
+-    last_frame: np.ndarray | None = None
+-
+     with av.open(video_path) as container:
+         stream = container.streams.video[0]
+         # Decode single-threaded: dataloader workers already run in parallel, and FFmpeg's
+         # default (one decoder thread per core) burns several times more CPU on small frames.
+         # The decoded frames are identical.
+         stream.codec_context.thread_count = 1
+-        av_frame = None
+-        for frame_idx, av_frame in enumerate(container.decode(stream)):
+-            # Only convert the frames that are returned to RGB.
+-            if frame_idx in index_set:
+-                frames[frame_idx] = av_frame.to_ndarray(format="rgb24")
+-            if frame_idx >= max_idx:
+-                break
+-        # Indices past the end of the video get the last decoded frame.
+-        if av_frame is not None and len(frames) < len(index_set):
+-            last_frame = av_frame.to_ndarray(format="rgb24")
++        packets = [p for p in container.demux(stream) if p.size]
++        frames = _decode_pyav_packets(stream, packets, set(indices.tolist()))
++    # Indices past the end of the video get the last decoded frame.
++    last_frame = frames.pop(-1, None)
+ 
+     result = []
+     for i in indices:
+-- 
+2.34.1
+

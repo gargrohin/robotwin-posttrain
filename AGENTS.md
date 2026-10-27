@@ -117,8 +117,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 - Shared GPUs. Check `nvidia-smi` first; use `CUDA_DEVICE_ORDER=PCI_BUS_ID`. On
   2026-10-26 GPU 6 was used for step 0 and then another user's vLLM job started on it.
   GPU 5 was freed with the user's OK (after they checked with the team) by
-  stopping their idle vLLM container. The container
-  was kept; bring it back with restarting that container.
+  stopping their idle vLLM container (kept, so it can be restarted).
 - EFS is slow: cold imports take ~1 min; installs take tens of minutes.
 - EFS can throw a one-off `Input/output error` (errno 5) on reads, especially right
   after files are written. Retry before assuming a file is corrupt.
@@ -367,5 +366,5 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     demo seed matches that demo's first frame. Per-call sampling spread ~0.004 rad.
     Instruction mismatch: training sampled 1 instruction per episode; using the
     training sentence lowers open-loop arm error 15–35%. Outputs:
-    `outputs/open_loop_check/`. Commit 4cf9226.
+    `outputs/open_loop_check/`. Commit 72beb1d.
 - [ ] Step 6: hill-climb.

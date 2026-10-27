@@ -1,0 +1,106 @@
+From 0acfe8d23c15f2701e757dbfd9cf11843a8efe83 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 27 Oct 2026 04:36:32 +0000
+Subject: [PATCH 4/8] GR00T_N17 dataset: decode only the video frames a shard
+ uses
+
+Each episode is split into 10 step subsets on different shards, but get_shard
+decoded, converted and stacked every frame of all 3 videos for each subset, i.e.
+~10x the frames it reads. LeRobotEpisodeLoader.load_episode(idx, step_indices)
+decodes only the rows extract_step_data reads (step + video delta_indices, with the
+same padding/negative-index handling); other rows hold None. __getitem__ still
+loads everything. Processed samples are unchanged (seeded before/after comparison).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../data/dataset/lerobot_episode_loader.py    | 46 ++++++++++++++++---
+ .../dataset/sharded_single_step_dataset.py    |  7 ++-
+ 2 files changed, 45 insertions(+), 8 deletions(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
+index 438f412..182ea23 100755
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/lerobot_episode_loader.py
+@@ -628,6 +628,24 @@ class LeRobotEpisodeLoader:
+         Raises:
+             IndexError: If episode index is out of bounds
+         """
++        return self.load_episode(idx)
++
++    def load_episode(
++        self,
++        idx: int,
++        step_indices: np.ndarray | None = None,
++        allow_padding: bool = False,
++    ) -> pd.DataFrame:
++        """
++        Load episode data like ``__getitem__``, optionally decoding only some video frames.
++
++        Args:
++            idx: Episode index to load
++            step_indices: If given, only decode the video frames that ``extract_step_data``
++                reads for these steps (``step + video delta_indices``); the video columns hold
++                None in all other rows. If None, decode every frame.
++            allow_padding: Same as in ``extract_step_data`` (clamp indices to the episode).
++        """
+         if idx < 0 or idx >= len(self):
+             raise IndexError(f"Episode index {idx} out of bounds")
+ 
+@@ -650,14 +668,30 @@ class LeRobotEpisodeLoader:
+         df = df.iloc[:actual_length]
+ 
+         # Load synchronized video data
+-        video_data = self._load_video_data(episode_id, np.arange(actual_length))
+-
+-        # Add video frames to dataframe as PIL Images
++        if step_indices is None or "video" not in self.modality_configs:
++            video_rows = np.arange(actual_length)
++        else:
++            rows = np.add.outer(
++                np.asarray(step_indices, dtype=np.int64),
++                np.asarray(self.modality_configs["video"].delta_indices, dtype=np.int64),
++            ).ravel()
++            if allow_padding:
++                rows = np.clip(rows, 0, actual_length - 1)
++            # Negative positions wrap around, as they do in extract_step_data's .iloc.
++            rows = np.where(rows < 0, rows + actual_length, rows)
++            video_rows = np.unique(rows[(rows >= 0) & (rows < actual_length)])
++        video_data = self._load_video_data(episode_id, video_rows)
++
++        # Add video frames to dataframe (None in rows that weren't decoded)
+         for key in video_data.keys():
+-            assert len(video_data[key]) == len(df), (
+-                f"Video data for {key} has length {len(video_data[key])} but dataframe has length {len(df)}"
++            assert len(video_data[key]) == len(video_rows), (
++                f"Video data for {key} has length {len(video_data[key])} but {len(video_rows)} "
++                f"frames were requested"
+             )
+-            df[f"video.{key}"] = [frame for frame in video_data[key]]
++            column = [None] * len(df)
++            for row, frame in zip(video_rows, video_data[key]):
++                column[row] = frame
++            df[f"video.{key}"] = column
+ 
+         # Load synchronized mask data
+         mask_data = self._load_mask_data(episode_id, np.arange(actual_length))
+diff --git a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/sharded_single_step_dataset.py b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/sharded_single_step_dataset.py
+index 1077cdc..3fccdb0 100644
+--- a/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/sharded_single_step_dataset.py
++++ b/policy/GR00T_N17/gr00t_n17/gr00t/data/dataset/sharded_single_step_dataset.py
+@@ -280,8 +280,11 @@ class ShardedSingleStepDataset(ShardedDataset):
+         episodes = self.sharded_episodes[idx]
+         datapoints = []
+         for ep_idx, step_indices in episodes:
+-            # Load episode data once per episode in shard
+-            episode_data = self.episode_loader[ep_idx]
++            # Load episode data once per episode in shard, decoding only the video frames
++            # these steps use (a shard holds ~1/num_splits of each episode's steps).
++            episode_data = self.episode_loader.load_episode(
++                ep_idx, step_indices, allow_padding=self.allow_padding
++            )
+             for step_index in step_indices:
+                 datapoints.append(self.get_datapoint(episode_data, step_index))
+         return datapoints
+-- 
+2.34.1
+

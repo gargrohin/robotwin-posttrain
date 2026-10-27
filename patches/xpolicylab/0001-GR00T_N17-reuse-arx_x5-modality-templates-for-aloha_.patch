@@ -1,0 +1,40 @@
+From 8e0e7e41419c173f9af6a48ac242726d1a96f58d Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 26 Oct 2026 00:49:07 +0000
+Subject: [PATCH 1/8] GR00T_N17: reuse arx_x5 modality templates for
+ aloha_agilex
+
+aloha_agilex has the same 14-dim state/action layout (6 joints + gripper per arm) and
+the same LeRobot camera keys, so process_data.sh can write the same modality.json and
+modality config. resolve_src_dataset is unchanged: aloha needs GR00T_SRC_DATASET.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ policy/GR00T_N17/process_data.sh | 4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/policy/GR00T_N17/process_data.sh b/policy/GR00T_N17/process_data.sh
+index ff76b9a..e0e52a5 100755
+--- a/policy/GR00T_N17/process_data.sh
++++ b/policy/GR00T_N17/process_data.sh
+@@ -42,7 +42,7 @@ resolve_src_dataset() {
+ 
+ write_modality_json() {
+   case "${env_cfg_type}" in
+-    arx_x5)
++    arx_x5|aloha_agilex)
+       cat > "${dataset_path}/meta/modality.json" <<'EOF'
+ {
+   "state": {
+@@ -74,7 +74,7 @@ EOF
+ write_modality_config() {
+   mkdir -p "${POLICY_DIR}/configs"
+   case "${env_cfg_type}" in
+-    arx_x5)
++    arx_x5|aloha_agilex)
+       cat > "${modality_config}" <<'PY'
+ from gr00t.configs.data.embodiment_configs import register_modality_config
+ from gr00t.data.embodiment_tags import EmbodimentTag
+-- 
+2.34.1
+
