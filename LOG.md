@@ -380,3 +380,22 @@ handover_block (running, already 68 episodes), stack_blocks_two 20, open_laptop 
 lift_pot +4 (17 → 21). beat_block_hammer is dropped because it already has 30. GPU 6
 should finish the old model around 19:00–20:00 ET instead of tomorrow afternoon, then
 join the new model's evals.
+
+**10:20–10:40 ET** Stopping the old model's handover randomized eval (your OK) went
+wrong, but no harm was done:
+- My first stop command silently did nothing. The agent's shell is zsh, which doesn't
+  split a variable of process IDs into words. Its file-moving part did run, though,
+  and moved the eval's output folder while it was running.
+- At 10:30 ET all 4 handover streams finished their 25th episode and crashed only when
+  writing the final summary into the moved folder. All **100 episodes were recorded:
+  0/100**.
+- GPU 6's worker moved on to stack_blocks_two randomized (20 episodes) at 10:30 ET.
+  My second stop attempt (10:38) found the old processes already gone and touched
+  nothing.
+- GPU 7 was never affected: its blocks_ranking_size job (new model) happened to finish
+  normally at 10:21 ET (1/20), and it started lift_pot.
+- Lessons added to AGENTS.md "Gotchas": use bash for PID-list loops; never move a
+  running eval's output folder.
+
+Old model, randomized so far: beat_block_hammer 4/30 (13%), handover_block 0/100,
+lift_pot 0/17.

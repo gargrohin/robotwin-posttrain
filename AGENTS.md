@@ -129,6 +129,11 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   Cosmos-Reason2-2B is gated (license accepted by the user). Don't print `env`
   unfiltered: it contains token variables.
 - RoboTwin's `_install.sh` keeps going after errors; grep its output for `ERROR`.
+- **The agent's shell is zsh**: an unquoted `$var` holding several PIDs is NOT split into
+  words, so `kill $pids` silently does nothing. Run PID-list loops under `bash -c '...'`.
+- **Never move a running eval's output folder** (`RoboTwin/eval_result/...`): the client
+  writes each episode's video and the final `_result.txt` by path and crashes with
+  FileNotFoundError. Move partial results only after the shard has exited.
 - Decode RoboTwin camera bytes only with `decode_image_bit` (no BGR↔RGB swap after it).
 - SAPIEN 2 (SimplerEnv) doesn't render on these H100s. SAPIEN 3 (RoboTwin) renders
   with the `rt` shader only (see Status, step 0).
