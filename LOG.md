@@ -311,3 +311,20 @@ Remaining 53.4k steps ≈ 5.6 h plus checkpoint saves, so done ≈ **07:00 ET**.
 compute utilization is ~30–97% (avg ~55%): the per-GPU batch of 16 is small and each
 step has fixed CPU-side overhead. A bigger per-GPU batch would push that up, but it
 changes the training recipe, so it's an option for the next run, not this one.
+
+**01:45 ET** Put this repo on GitHub, as you asked:
+**https://github.com/gargrohin/robotwin-posttrain** (public), pushed with the gargrohin
+account only.
+- Before pushing: scanned every file and the whole git history. No secrets
+  (tokens/keys) anywhere. Work-internal details were replaced with placeholders
+  throughout the history: the company pip-mirror account details, other users'
+  names, shared-machine notes.
+- All commits are re-authored as gargrohin's GitHub noreply address, so no work email
+  shows.
+- Your MIT LICENSE commit was merged in, not overwritten.
+- `patches/` now holds every line we changed in upstream code (XPolicyLab/GR00T: 8
+  commits; cuRobo: 1). The README has a "what's ours vs upstream" table. Our own code
+  is `gr00t/` and `setup/`; everything else (RoboTwin, XPolicyLab, GR00T, cuRobo) is
+  upstream.
+- Commit hashes in this repo changed with the rewrite (e.g. the open-loop check is
+  now `72beb1d`).
