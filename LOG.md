@@ -167,3 +167,27 @@ while it sat idle waiting for the data. It's not ours, so I'm leaving it alone.
   CPU-bound with 1 thread per GPU process; I'll compare steps/s against it.
   Checkpoint every 5k steps; the last 5 are kept.
   Log: `logs/train_50task_60k_seed0.log`.
+
+**03:05** handover_block demo_clean finished: **3/100**. The watcher stopped
+lift_pot randomized on GPU 7 (0/17 so far; re-held) and started training on GPUs
+5+7.
+
+**03:10** Decision (you): **train on 4 GPUs instead of 2** (~7–8 h instead of ~14 h).
+Stopped the 2-GPU training (it was still loading, so nothing lost) and the two
+old-model evals on GPUs 1 and 4. Their partial results are kept
+(`logs/preempted/partial_counts_0310.txt`, logs and videos in `logs/preempted/` and
+`outputs/preempted_eval/`):
+- **open_laptop demo_clean: 33/50 = 66%.** This is its result for now (±13%). It
+  can be topped up to 100 later with new shards on new seeds.
+- beat_block_hammer demo_randomized: 4/30 so far. Re-held, to resume later the
+  same way.
+
+**03:12** **Training started on GPUs 1, 4, 5, 7**: `RUN=50task_60k`, one model on all
+50 tasks, 60k steps, global batch 64 (16 per GPU), lr 1e-4, checkpoint every 5k
+steps, `OMP_NUM_THREADS=8`. Log: `logs/train_50task_60k_seed0.log`. ETA ~10:30–11:30
+UTC after ~15 min of startup. All 4 of our GPUs are on training now; the old-model
+evals wait until it finishes.
+
+Old-model evals still to do: demo_randomized for all 5 tasks (bbh has 30 episodes,
+lift_pot's 17 were discarded) and the open_laptop clean top-up. Queue:
+`logs/queue_30k_held.txt`.
