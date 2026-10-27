@@ -89,8 +89,11 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 ## Decisions
 - Model: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`). It's the only assigned model with an
   XPolicyLab adapter.
-- Robot `aloha_agilex`; 50 clean demos per task (leaderboard protocol); eval 100
-  episodes per task, clean + randomized.
+- Robot `aloha_agilex`; 50 clean demos per task (leaderboard protocol). Eval budget is
+  the user's call: before queueing evals, give tasks × episodes × settings, the
+  GPU-hour estimate and cheaper options. The 5-task baseline started at 100 eps/task
+  (chosen without consulting the user; trimmed to ~20 for randomized on
+  2026-10-27); the 50-task screening is 20 eps/task, clean + randomized.
 - Scope (2026-10-26): `beat_block_hammer`, `lift_pot`, `handover_block`,
   `stack_blocks_two`, `open_laptop`. Skipped `place_empty_cup` (RoboTwin issue #83:
   very slow rendering on H-series GPUs). Chosen for skill coverage; difficulty
