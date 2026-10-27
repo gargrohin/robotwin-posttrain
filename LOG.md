@@ -262,3 +262,12 @@ steps are discarded (no checkpoint yet); its log is
 `logs/train_50task_60k_seed0.attempt1.log`. Dataset init took **4.7 s** (first
 attempt: ~25 min). Training stepped again at **23:58 ET**, 5 min after the restart.
 The hand-off watcher was stopped before the restart and re-armed after it.
+
+**23:59 ET** Another user started a vLLM server on **GPU 1** (30 GB) next to
+our training rank (22 GB). Both fit in the 80 GB, so training continues there (your
+call). Risk: the 4 training GPUs move in lockstep, so a busy vLLM would slow the
+whole run; I'm measuring the speed.
+
+**00:04 ET** **GPU 6 came free and is ours again**: an old-model eval worker
+(`logs/queue_30k_gpu6.log`) is on it, starting with the open_laptop clean top-up (+50
+episodes, shards 4–7), then the randomized evals from `logs/queue_30k.txt`.
