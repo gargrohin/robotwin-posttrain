@@ -22,7 +22,10 @@ mkdir -p "$HF_LEROBOT_HOME"
 # 1. HDF5 -> LeRobot v3.0 with XPolicyLab's official converter (all tasks, one dataset),
 #    run through convert_to_lerobot.py so video frames aren't dropped and EFS read
 #    errors are retried.
-if [ ! -d "$HF_LEROBOT_HOME/$SRC" ]; then
+#    JOBS>1 converts that many tasks at a time and merges them (convert_parallel.py).
+if [ ! -d "$HF_LEROBOT_HOME/$SRC" ] && [ "${JOBS:-1}" -gt 1 ]; then
+  "$PY" "$ROOT/gr00t/convert_parallel.py" --repo_id "$SRC" --jobs "$JOBS" "${TASKS[@]}"
+elif [ ! -d "$HF_LEROBOT_HOME/$SRC" ]; then
   patterns=()
   for t in "${TASKS[@]}"; do patterns+=("demo_clean.$t.aloha_agilex"); done
   "$PY" "$ROOT/gr00t/convert_to_lerobot.py" "${patterns[@]}" --repo_id "$SRC"

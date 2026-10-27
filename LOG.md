@@ -71,3 +71,15 @@ small memory, next to the evals):
 - Outputs go to `outputs/open_loop_check/`.
 
 Download progress at 01:31: 38/50 tasks.
+
+**01:33** Download finished: all 50 tasks × 50 clean demos (33 GB, every task has
+exactly 50 episodes).
+
+**01:36** Started converting the 50-task data into GR00T's format
+(`logs/prepare_50task.log`). The old one-task-at-a-time converter would take ~6 h
+here, judging by the 5-task run's 2–11 min per task. So `gr00t/convert_parallel.py`
+converts 12 tasks at a time into separate datasets and then merges them with
+LeRobot's own `aggregate_datasets` tool. The steps after that are the same as for
+5 tasks: downgrade to the format GR00T reads, compute normalization stats, then
+`check_dataset.py` decodes every video and checks one frame per step and 2,500
+episodes. Output dataset: `data/lerobot/RoboTwin-50task-aloha_agilex-joint`.
