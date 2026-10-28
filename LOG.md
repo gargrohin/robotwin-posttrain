@@ -461,3 +461,10 @@ running task:
   worker loops were stopped.
 - Tasks started by the old workers (e.g. put_bottles_dustbin on GPU 0) aren't
   auto-healed; I'll top up any short ones by hand when the clean pass finishes.
+
+**22:10 ET** Stopped the stuck **put_bottles_dustbin** clean eval on GPU 0 (your OK).
+It had started at 19:04 during GPU 0's out-of-memory episode: its motion planner never
+initialized, so every scene failed setup (~170,000 seeds in 3 h, 0 episodes). Checked
+it was gone. Requeued it at the front as 4 chunks of 5 episodes on separate seed
+ranges, so several GPUs can share this long task (1,700-step limit). Status: clean
+screening 47/50 tasks, mean 46.1%; randomized 2 running, 48 queued.
