@@ -6,8 +6,10 @@
 # Free memory is the lowest of 6 samples over ~1 min, with a bigger margin when other
 # users are on the GPU (their memory use moves). After each job it counts the episodes
 # actually recorded; if streams crashed, it requeues the shortfall on new seeds (at most
-# MAX_RETRIES times). It re-execs itself between jobs, so edits to this file apply from
-# the next job without a restart.
+# MAX_RETRIES times). A watchdog stops any stream whose client log has been silent for
+# HANG_MIN minutes (healthy streams log every few minutes); its episodes are requeued
+# like a crash. It re-execs itself between jobs, so edits to this file apply from the
+# next job without a restart.
 #
 # QUEUES is a space-separated list of queue=ckpt=checkpoint_num entries, popped in
 # order (the first non-empty queue wins). Queue lines:
@@ -24,6 +26,8 @@ HEADROOM_MB="${HEADROOM_MB:-4000}"             # margin on a GPU only we use
 SHARED_HEADROOM_MB="${SHARED_HEADROOM_MB:-10000}"  # margin when other users are on it
 MAX_SHARDS="${MAX_SHARDS:-4}"                  # the GPU is ~100% busy rendering at 4
 MAX_RETRIES="${MAX_RETRIES:-2}"
+HANG_MIN="${HANG_MIN:-60}"
+WATCH_SEC="${WATCH_SEC:-300}"   # how often the watchdog checks
 
 if [ -n "${WAIT_PID:-}" ]; then
   while kill -0 "$WAIT_PID" 2>/dev/null; do sleep 30; done
@@ -61,6 +65,30 @@ pop() {  # print and delete the first line of a queue, under a lock
     'line=$(head -n 1 "$1"); [ -z "$line" ] || sed -i 1d "$1"; printf "%s" "$line"' _ "$1"
 }
 
+descendants() { local p; for p in $(ps --ppid "$1" -o pid= 2>/dev/null); do descendants "$p"; echo "$p"; done; }
+
+watchdog() {  # stop streams of benchmark.sh $1 whose client log is silent for HANG_MIN
+  local bench=$1 ckpt=$2 num=$3 task=$4 config=$5 now e seed f last pids
+  while kill -0 "$bench" 2>/dev/null; do
+    sleep "$WATCH_SEC"
+    now=$(date +%s)
+    for e in $(ps --ppid "$bench" -o pid= 2>/dev/null); do
+      seed=$(tr '\0' '\n' < /proc/"$e"/environ 2>/dev/null | sed -n 's/^SEED=//p')
+      [ -n "$seed" ] || continue
+      f="$ROOT/logs/eval_${ckpt}_ckpt-${num}_${task}_${config}"
+      [ "$seed" -eq 0 ] || f+="_seed$seed"
+      f+=".client.log"
+      grep -q 'Final success rate' "$f" 2>/dev/null && continue
+      last=$(stat -c %Y "$f" 2>/dev/null || stat -c %Y /proc/"$e" 2>/dev/null || echo "$now")
+      if [ $(( now - last )) -gt $(( HANG_MIN * 60 )) ]; then
+        pids="$(descendants "$e") $e"
+        log "watchdog: $task $config seed $seed silent for $(( (now - last) / 60 )) min, stopping it"
+        kill -TERM $pids 2>/dev/null || true; sleep 20; kill -KILL $pids 2>/dev/null || true
+      fi
+    done
+  done
+}
+
 recorded_episodes() {  # episodes with a final result for seeds offset..offset+shards-1
   local ckpt=$1 num=$2 task=$3 config=$4 offset=$5 shards=$6 seed f n total=0
   for ((seed = offset; seed < offset + shards; seed++)); do
@@ -91,7 +119,12 @@ eps=${eps:-100} seed_offset=${seed_offset:-0} retry=${retry:-0}
 log "start $task $config $eps eps, $shards shards, seed offset $seed_offset, retry $retry ($ckpt)"
 CKPT="$ckpt" CHECKPOINT_NUM="$num" TASKS="$task" TASK_CONFIG="$config" GPUS="$GPU" \
   SHARDS="$shards" EPS="$eps" SEED_OFFSET="$seed_offset" \
-  bash "$ROOT/gr00t/benchmark.sh" || log "benchmark.sh exited with $?"
+  bash "$ROOT/gr00t/benchmark.sh" &
+bench=$!
+watchdog "$bench" "$ckpt" "$num" "$task" "$config" &
+dog=$!
+wait "$bench" || log "benchmark.sh exited with $?"
+kill "$dog" 2>/dev/null || true
 got=$(recorded_episodes "$ckpt" "$num" "$task" "$config" "$seed_offset" "$shards")
 if [ "$got" -lt "$eps" ] && [ "$retry" -lt "$MAX_RETRIES" ]; then
   line="$task $config $((eps - got)) $((seed_offset + shards)) $((retry + 1))"
