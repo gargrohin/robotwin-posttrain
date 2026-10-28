@@ -498,3 +498,13 @@ requeued on fresh seeds for the 4 remaining workers: place_dual_shoes 6,
 move_can_pot 19, stack_bowls_two 7, blocks_ranking_rgb 20. (A first attempt at the
 requeue hit a script bug and did nothing; the queue had already been empty, so no
 harm.)
+
+**12:21 ET** At your request, stopped **another user's idle vLLM server on GPU 1** (the
+owner is out of office). Checked first: 0% GPU over 30 s, no client connections, up
+~1.5 days. Stopped it gracefully (SIGTERM to `vllm serve`). Its exact launch command
+is saved locally (git-ignored) in `scratch/stopped_servers/` so it can be restarted.
+GPU 1 freed (6 MB).
+
+**12:22 ET** Started our adaptive eval worker on **GPU 1**: 4 streams,
+stack_bowls_two randomized (+7 episodes). Another user started a small 1.9 GB job
+there the same minute; both fit. Our GPUs now: 0, 1, 3, 5, 6.
