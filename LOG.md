@@ -468,3 +468,23 @@ initialized, so every scene failed setup (~170,000 seeds in 3 h, 0 episodes). Ch
 it was gone. Requeued it at the front as 4 chunks of 5 episodes on separate seed
 ranges, so several GPUs can share this long task (1,700-step limit). Status: clean
 screening 47/50 tasks, mean 46.1%; randomized 2 running, 48 queued.
+
+## 2026-10-28
+
+**10:23 ET** Status: **clean screening complete**: 50 tasks × 20 episodes, mean **43.0%**.
+Randomized: 41/50 tasks done, mean **11.1%** (a big robustness gap). 8 running, 3
+queued (2 of them requeued automatically after crashing at startup on a crowded GPU
+1). The old model's 3 trimmed leftovers come after.
+
+**10:26 ET** Stopped a **hung stream** (your OK): place_dual_shoes randomized, stream 2
+on GPU 3, silent since ~04:25 ET (its simulator spun one CPU core at 100%, GPU at
+0%). Checked it was gone. The worker recorded 14/20 episodes and requeued the
+missing 6 on new seeds by itself, then moved on.
+
+**10:35 ET** Added **hang detection** to the worker (your OK):
+- Every 5 min it checks each running stream's client log; if a stream has been silent
+  for 60+ min, it stops that stream, and the self-healing requeues its episodes.
+- Healthy streams were measured to log at least every ~7.5 min, even on
+  1,700-step episodes, so 60 min leaves a wide margin.
+- Tested on a dummy job: it stopped exactly the silent stream and nothing else.
+- Each GPU picks it up at its next task.
