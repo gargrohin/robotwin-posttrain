@@ -7,6 +7,9 @@ details for agents live in `AGENTS.md`.
 
 ## Results so far
 
+**Full, current per-task results for both models: [`notes/results.md`](notes/results.md).**
+The table below is the 5-task model only, from early on.
+
 Model **5task_30k** (one GR00T N1.7 model trained on 5 tasks × 50 clean demos,
 30k steps), checkpoint-30000. Success rate over 100 episodes per task (4 shards × 25).
 
@@ -523,3 +526,14 @@ summary's header row was counted as a task). Real status: clean 49/50, randomize
   stack_blocks_two (GPU 5) and open_laptop (GPU 6) still running.
 - Our workers on GPUs 1 and 3 had exited at ~13:30 when the queues emptied; GPU 1 is
   now used by others.
+
+**17:10 ET** **All evals finished.** Every task in every setting has its full 20+
+episodes; the workers exited on empty queues and released their GPUs.
+- **50-task model:** clean **42.6%** (50/50 tasks), randomized **9.7%** (50/50).
+  - Clean: 10 tasks ≥80%, 8 at 50–80%, 19 at 20–50%, 13 under 20%.
+  - Randomized: 41 of 50 tasks under 20%; best are shake_bottle 55% and
+    shake_bottle_horizontally 50%.
+- **5-task model:** clean 28.3%, randomized 4.7%.
+- On those 5 tasks the 50-task model is about the same or better (stack_blocks_two
+  clean 7% → 20%; open_laptop 67% → 50% is within noise at 20 episodes).
+- Full tables: `notes/results.md`.
