@@ -508,3 +508,18 @@ GPU 1 freed (6 MB).
 **12:22 ET** Started our adaptive eval worker on **GPU 1**: 4 streams,
 stack_bowls_two randomized (+7 episodes). Another user started a small 1.9 GB job
 there the same minute; both fit. Our GPUs now: 0, 1, 3, 5, 6.
+
+**14:10 ET** **Correction:** my task counts since last night were one too high (the
+summary's header row was counted as a task). Real status: clean 49/50, randomized
+49/50.
+- **put_object_cabinet clean** had never completed. It crashed out of memory at 19:11
+  ET yesterday on a crowded GPU under the old worker, which had no self-healing.
+  The "clean complete" at 10:23 above was wrong. It's now requeued as 4 chunks of 5
+  episodes (fresh seeds 40–55); the first chunk is running on GPU 3, where I
+  restarted our worker after it had exited on an empty queue.
+- **blocks_ranking_rgb randomized** is running on GPU 0 (9 episodes so far).
+- New model so far: **clean 43.0%** (49 tasks), **randomized 9.9%** (49 tasks).
+- Old model randomized: beat_block_hammer 4/30, handover_block 0/100, lift_pot 0/21;
+  stack_blocks_two (GPU 5) and open_laptop (GPU 6) still running.
+- Our workers on GPUs 1 and 3 had exited at ~13:30 when the queues emptied; GPU 1 is
+  now used by others.
