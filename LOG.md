@@ -488,3 +488,13 @@ missing 6 on new seeds by itself, then moved on.
   1,700-step episodes, so 60 min leaves a wide margin.
 - Tested on a dummy job: it stopped exactly the silent stream and nothing else.
 - Each GPU picks it up at its next task.
+
+**11:10 ET** **Freed 4 GPUs for other people** (your call): GPUs **2, 4, 7** (ones we had
+to ourselves) and shared GPU **1**. Checked none of our processes are left. We kept
+**GPU 5** (ours alone; put_bottles_dustbin randomized at 17/20) and shared GPUs 0, 3,
+6. The stopped streams' finished episodes are kept (logs in `logs/preempted/`,
+counted by `summarize_eval.py`): stack_bowls_two 13, move_can_pot 1. The rest is
+requeued on fresh seeds for the 4 remaining workers: place_dual_shoes 6,
+move_can_pot 19, stack_bowls_two 7, blocks_ranking_rgb 20. (A first attempt at the
+requeue hit a script bug and did nothing; the queue had already been empty, so no
+harm.)
