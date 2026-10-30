@@ -1,8 +1,9 @@
 """Check a LeRobot v2.1 dataset: every camera video has exactly one frame per step.
 
-Also writes meta/video_frames.json (each video's header frame count, what ffprobe
-reports), which our patched GR00T loader reads instead of running ffprobe on every
-video in every training rank.
+If the check passes, also writes meta/video_frames.json (each video's header frame
+count, what ffprobe reports), which our patched GR00T loader reads instead of running
+ffprobe on every video in every training rank. On failure it removes that file, since
+gr00t/run_mix200.sh takes the file to mean the dataset is ready.
 
 usage: check_dataset.py <dataset_dir> [expected_episodes]
 """
@@ -41,10 +42,12 @@ if __name__ == "__main__":
         results = list(pool.imap(check, jobs, chunksize=8))
     bad = [msg for _, _, msg in results if msg]
     frames = {rel: n for rel, n, _ in results}
-    (root / "meta/video_frames.json").write_text(json.dumps(frames, indent=0))
+    frames_path = root / "meta/video_frames.json"
 
     print(f"{len(episodes)} episodes, {len(video_keys)} cameras, {len(bad)} mismatches")
     for line in bad[:20]:
         print("  " + line)
     if bad or (expected is not None and len(episodes) != expected):
+        frames_path.unlink(missing_ok=True)
         sys.exit(f"FAILED (expected {expected} episodes)" if expected else "FAILED")
+    frames_path.write_text(json.dumps(frames, indent=0))
