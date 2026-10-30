@@ -144,6 +144,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   writes each episode's video and the final `_result.txt` by path and crashes with
   FileNotFoundError. Move partial results only after the shard has exited.
 - Decode RoboTwin camera bytes only with `decode_image_bit` (no BGR↔RGB swap after it).
+- **zsh doesn't word-split `$TASKS` either**: `cmd $TASKS` passes all task names as
+  one argument. Run commands that expand a word list under `bash -c '...'`.
+- **`pgrep -f '<pattern>'` in a wait loop matches the loop's own shell** (its command
+  line contains the pattern), so the loop never ends. Use a `[x]` bracket trick, e.g.
+  `'convert[_]parallel'`.
+- **LeRobot conversion on EFS under heavy load silently drops the rest of a part**: the
+  converter fails to delete its temp dir (`Errno 39 Directory not empty`, an open file's
+  `.nfs…` placeholder), every later episode then fails with `'size'`, and it still exits
+  0. 74 conversions at once hit 17/200 parts; 24 at once is ~safe.
+  `gr00t/build_mix200.sh` re-converts short parts; always count episodes per part.
 - SAPIEN 2 (SimplerEnv) doesn't render on these H100s. SAPIEN 3 (RoboTwin) renders
   with the `rt` shader only (see Status, step 0).
 - Robots: `aloha_agilex` is RoboTwin's default and the leaderboard's robot; its URDF is
@@ -381,4 +391,13 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     Instruction mismatch: training sampled 1 instruction per episode; using the
     training sentence lowers open-loop arm error 15–35%. Outputs:
     `outputs/open_loop_check/`. Commit 72beb1d.
+- [x] **Clean + randomized run `mix200_150k` (started 2026-10-30 04:56 ET, ETA ~22:45
+  ET).** 50 clean + 200 randomized demos per task, all 50 tasks (12,500 episodes),
+  150k steps, checkpoint every 15k, all kept; GPUs 3, 5, 0, 7; ~2.35 steps/s
+  (data-loading bound). Launched with `GPUS=3,5,0,7 bash gr00t/run_mix200.sh`, which
+  resumes from the last checkpoint after a crash. Exact data, settings, commits and
+  fingerprints: `notes/runs/mix200_150k.md`. Data built by `gr00t/build_mix200.sh`
+  (`fetch_randomized.py` → per-part convert → per-part v3→v2 → `merge_v2.py` → GR00T
+  stats → `check_dataset.py`), verified by `gr00t/verify_dataset.py`. Evals of its
+  checkpoints: budget is the user's call.
 - [ ] Step 6: hill-climb.

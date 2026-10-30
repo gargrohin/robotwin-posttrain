@@ -658,3 +658,35 @@ from the main one while both were running.
   `logs/build_mix200.log`; the failed run is in `logs/build_mix200.attempt1.log`). It
   redoes only the 17 pieces (17 at once), then downgrade, merge, stats and the check;
   data ready ~04:30 ET.
+
+**05:09 ET** **Training started: `mix200_150k`** (50 clean + 200 randomized demos per task,
+all 50 tasks, 150k steps, a checkpoint every 15k, all kept). Full details for
+reproducing and analysing it: [`notes/runs/mix200_150k.md`](notes/runs/mix200_150k.md).
+- **Data** (`data/lerobot/RoboTwin-mix200-aloha_agilex-joint`): the rebuilt dataset
+  passed every check: 12,500 episodes (per task: 50 clean + 200 randomized), every
+  video one frame per step, and every episode's state, action and instruction identical
+  to its source file (`gr00t/verify_dataset.py`, 0 problems; frames within 1.6/255 of
+  the source images). One finding: 169 randomized episodes (1.7%, none clean) have a
+  joint wound past a full turn (up to 8.5 rad). These are smooth motions as RoboTwin
+  recorded them, and GR00T scales by the 1st/99th percentiles (unchanged by them), so I
+  kept them.
+- **GPU 3:** still the same idle vLLM server (up 1 day 21 h, 0% use, no connections), so
+  I stopped it just before the dry run, as agreed; its launch command is saved in
+  `scratch/stopped_servers/`. GPU 5 was empty.
+- **Dry run** (300 steps, GPUs 3, 5, 0, 7): data loaded, loss 1.04 → 0.10, checkpoint
+  saved (34 GB, complete; then deleted), ~2.3 steps/s with the GPUs ~40–60% busy. That
+  looked data-bound, so the real run uses 32 workers per GPU instead of 16 (your earlier
+  OK); it made no difference (~2.35 steps/s), so the limit is elsewhere in loading.
+- **Launch hiccup:** in the ~2 min between the dry run and the launch, another user's
+  jobs started on GPUs 0, 3 and 7. On 0 and 7 they were 49 GB each, leaving ~10 GB
+  spare with ours, below the margin you asked for. I tried to move the just-started run
+  to GPUs 1 and 2 (~40 GB spare), but stopping our running job is blocked without your
+  OK, so it stayed. By the first training step those jobs had ended; all four GPUs are
+  now ours alone (~21.7 GB used, ~59.7 GB free each).
+- **Settings:** identical to `50task_60k` except the dataset, 150k steps, saving every
+  15k with all 10 checkpoints kept, and 32 workers (diffed the saved configs). Commits:
+  this repo `8dacfd9`, XPolicyLab `ab4f0d9`. Base model `nvidia/GR00T-N1.7-3B`
+  (snapshot `2fc962b`). The learning rate follows one cosine schedule over 150k steps,
+  so the 15k, 30k, … checkpoints are snapshots of one run.
+- **ETA ~22:45 ET tonight** (~2.35 steps/s). On a crash it waits for room on the same
+  GPUs and resumes from the last checkpoint (up to 3 times).
