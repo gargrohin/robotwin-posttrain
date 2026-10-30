@@ -27,7 +27,7 @@ TASKS="$(ls RoboTwin/data/demo_clean | tr '\n' ' ')"
 if [ ! -f "data/lerobot/RoboTwin-$DATASET-aloha_agilex-joint/meta/video_frames.json" ]; then
   log "fetching 200 randomized demos per task"
   RoboTwin/.venv/bin/python gr00t/fetch_randomized.py --n 200 --group 50 --config demo_randomized \
-    --jobs 24 $TASKS || { log "fetch failed"; exit 1; }
+    --jobs 12 $TASKS || { log "fetch failed"; exit 1; }
   log "building the merged dataset"
   TASKS="$TASKS" CONFIG="demo_randomized0 demo_randomized1 demo_randomized2 demo_randomized3" \
     SRC=robotwin_mix200_aloha CKPT_NAME=$DATASET JOBS=24 \

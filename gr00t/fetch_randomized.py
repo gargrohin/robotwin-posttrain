@@ -83,7 +83,7 @@ def to_xspark(raw_bytes: bytes, instructions: dict, dst: Path) -> None:
 
 
 def open_zip(task, kind):
-    f = HfFileSystem().open(ZIP.format(task=task, kind=kind), "rb", block_size=8 << 20)
+    f = HfFileSystem().open(ZIP.format(task=task, kind=kind), "rb", block_size=64 << 20)
     z = zipfile.ZipFile(f)
     return f, z, z.namelist()[0].split("/")[0]
 
@@ -93,7 +93,7 @@ def fetch(task, n, config, group):
         d = ROBOTWIN / "data" / f"{config}{i // group if group else ''}" / task / "aloha_agilex" / "data"
         d.mkdir(parents=True, exist_ok=True)
         return d
-    for attempt in range(5):
+    for attempt in range(8):
         try:
             f, z, pre = open_zip(task, "randomized_500")
             with f:
@@ -106,9 +106,9 @@ def fetch(task, n, config, group):
             count = sum(1 for i in range(n) if (out_dir(i) / f"episode_{i:07d}.hdf5").exists())
             print(f"[fetch] {task}: {count} episodes", flush=True)
             return task, count
-        except Exception as e:  # network hiccups, EFS errno 5
-            print(f"[retry {attempt + 1}/5] {task}: {e}", flush=True)
-            time.sleep(10 * (attempt + 1))
+        except Exception as e:  # HF rate limiting (error page -> "not a zip file"), EFS errno 5
+            print(f"[retry {attempt + 1}/8] {task}: {e}", flush=True)
+            time.sleep(60 * (attempt + 1))  # outlast HF's 5-minute rate window
     return task, -1
 
 
