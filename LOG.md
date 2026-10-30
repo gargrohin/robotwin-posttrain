@@ -564,3 +564,9 @@ randomized demos**, to attack the clean 42.6% vs randomized 9.7% gap.
 - A test caught an argument bug (`--extra_parts` swallowed the task list) before the
   real run reached it; fixed. A subagent is testing the whole dataset chain on tiny
   data in parallel with the fetch.
+
+**01:30 ET** The fetch was capped by Python's interpreter lock (24 threads in one
+process, ~360% CPU on a 192-core machine): 294 episodes/min. Switched it to 24
+processes and restarted the pipeline (it resumes where it was): **687 episodes/min**,
+so the fetch finishes ~01:45 ET. Then convert + merge + checks (~1–1.5 h), then
+training.
