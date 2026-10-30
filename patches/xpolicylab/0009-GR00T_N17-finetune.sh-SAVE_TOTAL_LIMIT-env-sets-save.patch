@@ -1,0 +1,27 @@
+From 47929bffc4c0fc3162142fca55df5875f6d27ef4 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 05:16:42 +0000
+Subject: [PATCH 09/10] GR00T_N17 finetune.sh: SAVE_TOTAL_LIMIT env sets
+ --save_total_limit (default 5)
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ policy/GR00T_N17/gr00t_n17/examples/finetune.sh | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/policy/GR00T_N17/gr00t_n17/examples/finetune.sh b/policy/GR00T_N17/gr00t_n17/examples/finetune.sh
+index 0fa0cc3..41137c1 100644
+--- a/policy/GR00T_N17/gr00t_n17/examples/finetune.sh
++++ b/policy/GR00T_N17/gr00t_n17/examples/finetune.sh
+@@ -113,7 +113,7 @@ LAUNCH_CMD=(
+     --num_gpus "$NUM_GPUS"
+     --output_dir "$OUTPUT_DIR"
+     --save_steps "$SAVE_STEPS"
+-    --save_total_limit 5
++    --save_total_limit "${SAVE_TOTAL_LIMIT:-5}"
+     --max_steps "$MAX_STEPS"
+     --warmup_ratio 0.05
+     --weight_decay 1e-5
+-- 
+2.34.1
+

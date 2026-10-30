@@ -609,3 +609,20 @@ against the dataset built the official way last time (same 50 clean pieces → s
 episodes, values and videos); the build waits for that validation before merging.
 Data should be ready ~03:15 ET. The old pipeline's later steps were stopped; the
 fetch kept running (7,000 / 10,000 episodes at 02:05).
+
+**02:04 ET** Both subagents finished; the fetch finished at 01:59 ET (10,000 randomized
+episodes) and the build is converting the randomized pieces now.
+- **Direct merge validated** (`gr00t/merge_v2.py`, commit `c5ddd1c`). It rebuilt the
+  50-task clean dataset from its 50 pieces and matched the official build: same 2,500
+  episodes and lengths, same instructions, identical values in every column, every
+  video with identical frames (pixel-identical on 150 decoded spot checks), same
+  normalization stats for state and action. Two harmless differences: state/action
+  keep a fixed-length-14 type (as in the 5-task dataset GR00T already trained on), and
+  the bookkeeping index stats are now correct (the official build kept stale ones).
+  The new path takes ~4.5 min vs ~3 h. I created `scratch/merge_v2_validated`, so
+  the build will merge as soon as the pieces are downgraded.
+- **Parallel v3→v2 downgrade** (XPolicyLab commit `ab4f0d9`): `--workers N`, default 1
+  (unchanged behavior); byte-identical output, 22 min → 2.5 min for 2,500 episodes at 32
+  workers. Our build doesn't use it (it runs 24 one-worker downgrades at once instead).
+- Exported XPolicyLab's two newest commits to `patches/xpolicylab/0009`–`0010` and
+  committed the fetch's rate-limit fixes (`7987f5c`).
