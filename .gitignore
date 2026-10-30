@@ -11,3 +11,7 @@ outputs/
 
 # runtime state: eval/train logs, job queues and locks
 logs/
+
+# eval explorer: rebuildable index cache, app log, and the user's failure tags
+analysis/cache/
+analysis/tags/

@@ -66,7 +66,13 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   L-BFGS kernel fix. The built `.so` files are git-ignored; see Status, step 0, for the
   build and revert steps.
 
-## Upstream edits (re-apply if XPolicyLab is updated)
+## Upstream edits (re-apply if XPolicyLab or RoboTwin is updated)
+- `RoboTwin/scripts/eval_policy_xpolicylab.py` (commit 7d1c8bc on RoboTwin's
+  `local/aloha-gr00t`, 2026-10-30, user-approved): `write_episode_record` saves
+  `episode<N>.json` beside each video in `eval_remote_policy` (the non-batch path we
+  use). `gr00t/eval.sh` passes `checkpoint_num` via `--additional_info` for it.
+  Commit in RoboTwin as `gargrohin <29701609+gargrohin@users.noreply.github.com>`: the
+  clone's own git identity is a company email, and patches land in this public repo.
 - `XPolicyLab/policy/GR00T_N17/process_data.sh` (commit 8e0e7e4 on
   `local/aloha-gr00t`): in `write_modality_json` and
   `write_modality_config`, `arx_x5)` → `arx_x5|aloha_agilex)` (same 14-dim layout and

@@ -1,0 +1,69 @@
+From 7d1c8bcf83a494e9d26da42a8bc3641f02d42ffa Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Fri, 30 Oct 2026 16:34:17 +0000
+Subject: [PATCH] eval client: write episode<N>.json next to each rollout video
+
+Seed, instruction, outcome, steps, step limit, sim error and checkpoint
+number per episode; the client log records neither the instruction nor the
+checkpoint. A failed write only prints a warning.
+---
+ scripts/eval_policy_xpolicylab.py | 29 +++++++++++++++++++++++++++++
+ 1 file changed, 29 insertions(+)
+
+diff --git a/scripts/eval_policy_xpolicylab.py b/scripts/eval_policy_xpolicylab.py
+index 60dff8a..73c1410 100644
+--- a/scripts/eval_policy_xpolicylab.py
++++ b/scripts/eval_policy_xpolicylab.py
+@@ -4,6 +4,7 @@ import argparse
+ import ast
+ import copy
+ import importlib
++import json
+ import multiprocessing as mp
+ import os
+ import queue
+@@ -955,6 +956,7 @@ def eval_remote_policy(
+             print("\033[92mSuccess!\033[0m")
+         else:
+             print("\033[91mFail!\033[0m")
++        write_episode_record(task_env, usr_args, now_seed, instruction, succ, rollout_failed)
+ 
+         now_id += 1
+         task_env.close_env(clear_cache=((succ_seed + 1) % clear_cache_freq == 0))
+@@ -975,6 +977,33 @@ def eval_remote_policy(
+     return now_seed, task_env.suc
+ 
+ 
++def write_episode_record(task_env, usr_args: dict[str, Any], seed: int, instruction: str, success: bool, sim_error: bool) -> None:
++    # One JSON per episode next to its video (episode<N>.json beside episode<N>.mp4),
++    # with what the log doesn't record: the instruction and the checkpoint number.
++    if task_env.eval_video_path is None:
++        return
++    episode_id = task_env.test_num
++    record = {
++        "episode": episode_id,
++        "seed": int(seed),
++        "instruction": instruction,
++        "success": bool(success),
++        "steps": int(task_env.take_action_cnt),
++        "step_limit": int(task_env.step_lim),
++        "sim_error": bool(sim_error),
++        "task_name": usr_args.get("task_name"),
++        "task_config": usr_args.get("task_config"),
++        "ckpt_setting": usr_args.get("ckpt_setting"),
++        "checkpoint_num": usr_args.get("checkpoint_num"),
++        "instruction_type": usr_args.get("instruction_type"),
++    }
++    try:
++        with open(os.path.join(task_env.eval_video_path, f"episode{episode_id}.json"), "w", encoding="utf-8") as f:
++            json.dump(record, f, indent=1)
++    except OSError as e:  # never stop an eval over its side record
++        print(f"could not write episode record: {e}")
++
++
+ def build_instruction(args: dict[str, Any], episode_info: dict[str, Any], instruction_type: str | None, test_num: int, seed: int) -> str:
+     if not instruction_type:
+         return args["task_name"]
+-- 
+2.34.1
+

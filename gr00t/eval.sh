@@ -54,5 +54,5 @@ CUDA_VISIBLE_DEVICES="$ENV_GPU" bash scripts/eval_policy.sh \
   --bench_name RoboTwin --task_name "$TASK" --env_cfg_type aloha_agilex \
   --policy_name GR00T_N17 --host localhost --port "$port" --protocol ws \
   --eval_batch false --root_dir "$ROOT/RoboTwin" --device_id 0 \
-  --additional_info "ckpt_name=$CKPT,action_type=joint" --seed "$SEED" \
+  --additional_info "ckpt_name=$CKPT,action_type=joint,checkpoint_num=$CHECKPOINT_NUM" --seed "$SEED" \
   --task_config "$TASK_CONFIG" --test_num "$TEST_NUM" 2>&1 | tee "$log.client.log"
