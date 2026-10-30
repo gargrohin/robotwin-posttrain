@@ -67,7 +67,7 @@ for attempt in 1 2 3; do
   [ "$attempt" = 1 ] || until gpus_have_room; do log "not enough room on GPUs $GPUS; re-checking in 10 min"; sleep 600; done
   log "attempt $attempt: training on GPUs $GPUS"
   [ -f "logs/train_${RUN}_seed0.log" ] && mv "logs/train_${RUN}_seed0.log" "logs/train_${RUN}_seed0.before_attempt$attempt.log"
-  OMP_NUM_THREADS=8 DATALOADER_NUM_WORKERS=16 RUN=$RUN DATASET=$DATASET GPUS="$GPUS" \
+  OMP_NUM_THREADS=8 DATALOADER_NUM_WORKERS=32 RUN=$RUN DATASET=$DATASET GPUS="$GPUS" \
     MAX_STEPS=$MAX_STEPS SAVE_STEPS=15000 SAVE_TOTAL_LIMIT=10 GLOBAL_BATCH_SIZE=64 \
     bash gr00t/train.sh
   [ -d "$CKPTS/checkpoint-$MAX_STEPS" ] && { log "training finished"; exit 0; }
