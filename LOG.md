@@ -597,3 +597,15 @@ checked. It found and fixed a real bug (commit `ca6b248`): the check wrote the "
 ready" marker before deciding pass or fail, so a re-run after a failed check would
 have trained on bad data. I added a retry for one-off network-disk read errors in that
 check (commit `909bee1`). A second subagent is making the v3→v2 step parallel.
+
+**02:05 ET** Skipping the round trip for this dataset too (your call). The old
+pipeline merged all pieces into big video files and then cut them back apart (~3 h,
+single-threaded). New build (`gr00t/build_mix200.sh`, detached, log
+`logs/build_mix200.log`): wait for the fetch → convert the 200 randomized pieces → copy
+the 50 clean pieces → downgrade each piece to GR00T's format on its own, 24 at a time
+(~10 min) → merge the per-episode files directly (`gr00t/merge_v2.py`, ~10 min) →
+GR00T stats → check every video. A subagent is writing `merge_v2.py` and validating it
+against the dataset built the official way last time (same 50 clean pieces → same
+episodes, values and videos); the build waits for that validation before merging.
+Data should be ready ~03:15 ET. The old pipeline's later steps were stopped; the
+fetch kept running (7,000 / 10,000 episodes at 02:05).
