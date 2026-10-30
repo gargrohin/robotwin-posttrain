@@ -10,6 +10,7 @@ usage: check_dataset.py <dataset_dir> [expected_episodes]
 
 import json
 import sys
+import time
 from multiprocessing import Pool
 from pathlib import Path
 
@@ -28,9 +29,16 @@ def check(job):
     rel = str(Path(info["video_path"].format(
         episode_chunk=i // info["chunks_size"], video_key=key, episode_index=i
     )))
-    with av.open(str(root / rel)) as container:
-        header_frames = container.streams.video[0].frames
-        n = sum(1 for _ in container.decode(video=0))
+    for attempt in range(5):  # EFS can throw a one-off errno 5 right after files are written
+        try:
+            with av.open(str(root / rel)) as container:
+                header_frames = container.streams.video[0].frames
+                n = sum(1 for _ in container.decode(video=0))
+            break
+        except OSError:
+            if attempt == 4:
+                raise
+            time.sleep(2 * (attempt + 1))
     if n != ep["length"]:
         return rel, header_frames, f"episode {i} {key}: {n} frames, {ep['length']} steps"
     return rel, header_frames, None
