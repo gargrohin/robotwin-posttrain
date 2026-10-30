@@ -414,6 +414,11 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   resumes from the last checkpoint after a crash. Exact data, settings, commits and
   fingerprints: `notes/runs/mix200_150k.md`. Data built by `gr00t/build_mix200.sh`
   (`fetch_randomized.py` → per-part convert → per-part v3→v2 → `merge_v2.py` → GR00T
-  stats → `check_dataset.py`), verified by `gr00t/verify_dataset.py`. Evals of its
-  checkpoints: budget is the user's call.
+  stats → `check_dataset.py`), verified by `gr00t/verify_dataset.py`.
+  Evals (plan agreed 2026-10-30, see the run card): `gr00t/eval_mix200.sh` waits for
+  training to end, then runs 4 single-stream workers (`MAX_SHARDS=1`) per GPU on 0, 3,
+  5, 7 over `logs/queue_mix200_s{1,2,3}_*.txt`. Those queues come from
+  `gr00t/paired_queue.py`, which replays the 50task_60k eval's seed layout (one line per
+  old shard) so every model is scored on the same scenes. Don't run these queues with
+  `MAX_SHARDS` > 1: a multi-shard job re-splits its episodes onto different seeds.
 - [ ] Step 6: hill-climb.
