@@ -37,6 +37,9 @@ doing anything outward-facing or destructive.
   - `XPolicyLab/policy/GR00T_N17/`: GR00T adapter (`process_data.sh`, `train.sh`,
     `eval.sh`, `configs/`, `model.py`).
 - `outputs/`: renderer-check images.
+- `analysis/` (in progress, 2026-10-30): eval explorer, own venv `analysis/.venv`
+  (pandas, pyarrow, av). `build_index.py` pairs client logs with video folders and
+  writes `analysis/cache/{episodes,streams}.parquet`. Read-only on logs and videos.
 
 ## Environments
 - `RoboTwin/.venv` (simulator): py3.10, torch 2.4.1+cu121, sapien 3.0.0b1, mplib
@@ -154,6 +157,13 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   `.nfs…` placeholder), every later episode then fails with `'size'`, and it still exits
   0. 74 conversions at once hit 17/200 parts; 24 at once is ~safe.
   `gr00t/build_mix200.sh` re-converts short parts; always count episodes per part.
+- **Eval outputs, verified 2026-10-30:** `eval_result/<task>/GR00T_N17/<config>/<model>/<UTC
+  start time>/` has no checkpoint number, so all checkpoints of a model share the
+  folder; only the client log name has it, and a rerun of the same (ckpt, task, config,
+  seed) overwrites that log. Episode N is `episodeN.mp4` (N counts episodes that ran,
+  not seeds); frames = steps, +1 on success. Every policy failure runs to the step
+  limit. The instruction per episode is not logged. Logs are block-buffered, so a
+  stopped stream's log can lag its videos by an episode.
 - SAPIEN 2 (SimplerEnv) doesn't render on these H100s. SAPIEN 3 (RoboTwin) renders
   with the `rt` shader only (see Status, step 0).
 - Robots: `aloha_agilex` is RoboTwin's default and the leaderboard's robot; its URDF is
