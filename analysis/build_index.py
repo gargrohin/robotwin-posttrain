@@ -13,10 +13,17 @@ How the pairing works (verified against the RoboTwin eval client):
   so skipped seeds don't use up a number). Each action step writes one frame, and a
   success writes one extra final frame, so frames == steps (+1 on success). Every
   pairing is checked this way (column frames_ok).
+- Evals run after 2026-10-30 also write episode<N>.json next to each video (RoboTwin
+  patch 0001) with the instruction and checkpoint number. They fill the instruction
+  column, are cross-checked against the log (record_ok), and stand in for the log
+  when it is missing (e.g. overwritten by a rerun of the same stream).
+- spot_check marks the early 10-episode evals in logs/learning_curve/. They reuse
+  seeds of the full benchmark, so aggregates should leave them out.
 
 usage: analysis/.venv/bin/python analysis/build_index.py
 """
 
+import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -48,6 +55,7 @@ EVENTS = re.compile(
     r"|Eval Instruction: (?P<instruction_type>\w+)"
 )
 VIDEO = re.compile(r"episode(\d+)\.mp4$")
+RECORD = re.compile(r"episode(\d+)\.json$")
 FOLDER_TS = re.compile(r"\d{4}-\d\d-\d\d_\d\d-\d\d-\d\d_\d{6}$")
 
 
@@ -102,6 +110,7 @@ def parse_log(path):
         in_progress_steps=step,  # steps of an episode cut off by a stop, else 0
         finished=stream["final_n"] is not None,
         log_mtime=st.st_mtime,
+        spot_check=path.parent.name == "learning_curve",
     )
     return stream, episodes
 
@@ -117,11 +126,13 @@ def scan_folders():
             rel = d.relative_to(ROOT)
             parts = d.relative_to(root).parts  # <task>/GR00T_N17/<setting>/<model>/<ts>
             known = root.name == "eval_result" and len(parts) == 5
-            videos = {}
+            videos, records = {}, {}
             for f in filenames:
                 if v := VIDEO.match(f):
                     st = (d / f).stat()
                     videos[int(v[1])] = (str(rel / f), st.st_size, st.st_mtime)
+                elif r := RECORD.match(f):
+                    records[int(r[1])] = d / f
             folders[str(rel)] = {
                 "folder": str(rel),
                 "task": parts[0] if known else None,
@@ -131,8 +142,18 @@ def scan_folders():
                 .replace(tzinfo=timezone.utc),
                 "has_result": "_result.txt" in filenames,
                 "videos": videos,
+                "records": records,
             }
     return folders
+
+
+def read_records(folders):
+    """Replace each folder's episode<N>.json paths by their contents."""
+    paths = [p for f in folders.values() for p in f["records"].values()]
+    with ThreadPoolExecutor(32) as pool:
+        loaded = dict(zip(paths, pool.map(lambda p: json.loads(p.read_text()), paths)))
+    for f in folders.values():
+        f["records"] = {n: loaded[p] for n, p in f["records"].items()}
 
 
 def probe_frames(folders):
@@ -191,6 +212,7 @@ def main():
     logs = sorted(LOGS.rglob("eval_*.client.log"))
     parsed = [parse_log(p) for p in logs if NAME.search(p.name)]
     folders = scan_folders()
+    read_records(folders)
     frames = probe_frames(folders)
 
     claimed = {}  # folder -> log
@@ -219,6 +241,24 @@ def main():
             stream["folder"] = None
             stream["match"] = f"none ({len(scored)} candidates)" if scored else "none"
 
+    for f in folders.values():  # no log, but episode records: index from those
+        if f["folder"] in claimed or not f["records"] or not f["model_full"]:
+            continue
+        recs = [f["records"][n] for n in sorted(f["records"])]
+        ckpt = recs[0].get("checkpoint_num")
+        episodes = [{"episode": r["episode"], "seed": r["seed"], "success": r["success"],
+                     "outcome_line": None, "steps": r["steps"], "step_limit": r["step_limit"],
+                     "sim_error": r["sim_error"]} for r in recs]
+        parsed.append(({
+            "log": None, "model_full": f["model_full"], "model": short_model(f["model_full"]),
+            "ckpt": None if ckpt in (None, "last") else int(ckpt), "task": f["task"],
+            "setting": f["setting"], "shard": min(r["seed"] for r in recs) // 100000 - 1,
+            "instruction_type": recs[0].get("instruction_type"), "folder": f["folder"],
+            "finished": f["has_result"], "spot_check": False, "match": "records only",
+            "n_episodes": len(episodes), "n_success": sum(e["success"] for e in episodes),
+        }, episodes))
+        claimed[f["folder"]] = None
+
     ep_rows, stream_rows = [], []
     for stream, episodes in parsed:
         folder = folders.get(stream["folder"]) if stream["folder"] else None
@@ -227,13 +267,17 @@ def main():
         stream_rows.append(stream)
         for e in episodes:
             video = folder["videos"].get(e["episode"]) if folder else None
+            rec = folder["records"].get(e["episode"]) if folder else None
             n = frames.get(video[0]) if video else None
             ep_rows.append({
                 **{k: stream[k] for k in ("model", "ckpt", "task", "setting", "shard",
-                                          "model_full", "instruction_type", "log",
-                                          "folder", "started", "finished")},
+                                          "model_full", "instruction_type", "log", "folder",
+                                          "started", "finished", "spot_check")},
                 **e,
                 "timed_out": not e["success"] and e["steps"] == e["step_limit"],
+                "instruction": rec["instruction"] if rec else None,
+                "record_ok": all(rec[k] == e[k] for k in ("seed", "success", "steps"))
+                if rec and stream["log"] else None,
                 "video": video[0] if video else None,
                 "video_frames": n,
                 "frames_ok": fingerprint_ok(e, n) if video else None,
@@ -253,7 +297,7 @@ def main():
         df["ckpt"] = df["ckpt"].astype("Int64")
     episodes_df.to_parquet(CACHE / "episodes.parquet", index=False)
     streams_df.to_parquet(CACHE / "streams.parquet", index=False)
-    print(f"{len(episodes_df)} episodes from {len(parsed)} logs; "
+    print(f"{len(episodes_df)} episodes from {len(parsed)} streams; "
           f"{len(folders)} video folders, {len(folders) - len(claimed)} without a log")
 
 
