@@ -580,3 +580,20 @@ files, then the downgrade cuts them back into per-episode files. A subagent is m
 the downgrade parallel and verifying identical output before the pipeline reaches it
 (~2 h → ~20 min), so the data should be ready ~04:00 ET. For the next dataset, skip the
 round trip (downgrade each part in parallel, then merge per-episode files).
+
+**01:50 ET** Fetch problem and fix:
+- After the switch to 24 processes, ~30 tasks failed with "File is not a zip file":
+  we were sending ~12 range requests/s, very likely over Hugging Face's rate limit
+  (a throttled request returns an error page, not file bytes).
+- Stopped the fetch (no GPU; 3,558 episodes kept) and relaunched it with 64 MB read
+  blocks instead of 8 MB (the data files sit back to back in each zip, so ~8× fewer
+  requests), 12 processes, and retries that wait out the 5-minute rate window.
+- Now **308 episodes/min with zero errors**; fetch done ~02:20 ET.
+
+**01:55 ET** The subagent's test of the dataset chain (convert → merge → v3→v2 →
+stats → check → GR00T loader) on tiny data **passed**: merged episode counts,
+instructions from both sources, bit-identical values after the merge, and every video
+checked. It found and fixed a real bug (commit `ca6b248`): the check wrote the "dataset
+ready" marker before deciding pass or fail, so a re-run after a failed check would
+have trained on bad data. I added a retry for one-off network-disk read errors in that
+check (commit `909bee1`). A second subagent is making the v3→v2 step parallel.
