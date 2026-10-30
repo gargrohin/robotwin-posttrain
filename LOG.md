@@ -570,3 +570,13 @@ process, ~360% CPU on a 192-core machine): 294 episodes/min. Switched it to 24
 processes and restarted the pipeline (it resumes where it was): **687 episodes/min**,
 so the fetch finishes ~01:45 ET. Then convert + merge + checks (~1–1.5 h), then
 training.
+
+**01:40 ET** Corrected the data-prep estimate. My "~1–1.5 h" was wrong; it's ~4 h with
+the current steps, scaled from last time's measured timings (12,500 episodes vs
+2,500): fetch ~25 min, LeRobot conversion ~40 min (24 jobs at a time), merge ~60 min,
+v3→v2 downgrade ~2 h, stats + check ~10 min. The merge and the downgrade are
+single-threaded, and together they're a round trip: merge glues the videos into big
+files, then the downgrade cuts them back into per-episode files. A subagent is making
+the downgrade parallel and verifying identical output before the pipeline reaches it
+(~2 h → ~20 min), so the data should be ready ~04:00 ET. For the next dataset, skip the
+round trip (downgrade each part in parallel, then merge per-episode files).
