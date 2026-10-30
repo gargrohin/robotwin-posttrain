@@ -705,3 +705,15 @@ logs and videos). First step, an episode index (`analysis/build_index.py`, ~50 s
   failures. Its folders were moved to `outputs/preempted_eval/` while running, so
   episodes 20–24 of each shard died on a broken video pipe after 1 step. Real result:
   0/80, not 0/100.
+
+**12:45 ET** Eval explorer, first working version (your picks: no re-encoding, eval
+logging change, `.gitignore`):
+- **Eval logging (your OK):** the eval client now writes `episode<N>.json` next to each
+  video: seed, instruction, outcome, steps, checkpoint number. It's on RoboTwin's local
+  branch `local/aloha-gr00t`, exported as `patches/robotwin/0001`. Tested on a stub, not
+  yet in a real eval; the index cross-checks every record against the log.
+- **App:** `analysis/run.sh` (Streamlit, CPU only, localhost:8611; running detached now
+  as PID 3986960). Pick model / checkpoint / setting / task → success with a 95%
+  range → click an episode → video with frame stepping. Videos play as recorded
+  (H.264); nothing is re-encoded. Every model/checkpoint/setting view tested headless.
+- `.gitignore`: `analysis/cache/` (index, app log) and `analysis/tags/` (your tags).
