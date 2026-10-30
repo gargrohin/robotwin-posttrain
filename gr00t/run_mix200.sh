@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 # Clean + randomized training run (2026-10-30), end to end, meant to run detached:
-#   setsid -f nohup bash gr00t/run_mix200.sh > logs/run_mix200.log 2>&1 < /dev/null
+#   GPUS=3,0,4,7 setsid -f nohup bash gr00t/run_mix200.sh > logs/run_mix200.log 2>&1 < /dev/null
 # 1. Fetch 200 randomized demos per task from RoboTwin's raw zips, in XPolicyLab format
 #    (gr00t/fetch_randomized.py).
 # 2. Convert them to LeRobot and merge with the already-converted 50-task clean demos:
 #    12,500 episodes -> data/lerobot/RoboTwin-mix200-aloha_agilex-joint (prepare_data.sh).
-# 3. GPUs are fixed: 3, 0, 4, 7 (the user's choice). GPU 3's vLLM server is stopped by
-#    hand, not by this script. Training starts only when every GPU has >= MIN_FREE_MB free
-#    (our ~22 GB + >= 23 GB spare for the other users' jobs); until then it waits and
-#    re-checks every 10 min, and never switches to other GPUs.
+# 3. GPUs are given explicitly (GPUS=...) and never switched. The first attempt starts
+#    right away (free memory was checked by hand just before, and an emptied GPU must not
+#    sit idle). Retries wait until every GPU has >= MIN_FREE_MB free (our ~22 GB + >= 23
+#    GB spare for the other users' jobs), re-checking every 10 min.
 # 4. Train 150k steps, checkpoint every 15k, keep all; on a crash, wait and resume from the
 #    last checkpoint (up to 3 attempts).
 # Each step is skipped when its output exists, so the script can simply be re-run.
@@ -16,7 +16,7 @@ set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 RUN=mix200_150k DATASET=mix200 MAX_STEPS=150000
-GPUS=3,0,4,7
+GPUS="${GPUS:?set GPUS, e.g. GPUS=3,0,4,7}"
 MIN_FREE_MB="${MIN_FREE_MB:-45000}"
 CKPTS="RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-$RUN-aloha_agilex-joint-0/RoboTwin-$RUN-aloha_agilex-joint-0"
 export HF_TOKEN="$(cat ~/.cache/huggingface/token)"
@@ -64,7 +64,7 @@ gpus_have_room() {  # every training GPU has >= MIN_FREE_MB free
 # 3-4. Train, resuming from the last checkpoint after a crash.
 for attempt in 1 2 3; do
   [ -d "$CKPTS/checkpoint-$MAX_STEPS" ] && { log "training already finished"; exit 0; }
-  until gpus_have_room; do log "not enough room on GPUs $GPUS; re-checking in 10 min"; sleep 600; done
+  [ "$attempt" = 1 ] || until gpus_have_room; do log "not enough room on GPUs $GPUS; re-checking in 10 min"; sleep 600; done
   log "attempt $attempt: training on GPUs $GPUS"
   [ -f "logs/train_${RUN}_seed0.log" ] && mv "logs/train_${RUN}_seed0.log" "logs/train_${RUN}_seed0.before_attempt$attempt.log"
   OMP_NUM_THREADS=8 DATALOADER_NUM_WORKERS=16 RUN=$RUN DATASET=$DATASET GPUS="$GPUS" \
