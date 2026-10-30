@@ -690,3 +690,18 @@ reproducing and analysing it: [`notes/runs/mix200_150k.md`](notes/runs/mix200_15
   so the 15k, 30k, … checkpoints are snapshots of one run.
 - **ETA ~22:45 ET tonight** (~2.35 steps/s). On a crash it waits for room on the same
   GPUs and resumes from the last checkpoint (up to 3 times).
+
+**12:25 ET** Started the **eval explorer** (`analysis/`, own uv venv, read-only on
+logs and videos). First step, an episode index (`analysis/build_index.py`, ~50 s cold):
+- 2,766 episodes from 413 client logs, 2,626 paired with their video. Every pairing
+  passes a frame check (video frames = steps, +1 on success), and the totals match
+  `summarize_eval.py` / `notes/results.md` exactly.
+- Every policy failure runs to the step limit (2,063/2,063), so "timeout" tells us
+  nothing; failure types have to come from watching the videos.
+- 140 episodes have no video: 5task_30k randomized handover_block (folders moved
+  mid-run on 10-27, see below), lift_pot (videos discarded), and 23 all-timeout
+  episodes whose folder can't be told apart from a sibling shard's.
+- Data problem: 20 of 5task_30k's handover_block randomized "failures" are not policy
+  failures. Its folders were moved to `outputs/preempted_eval/` while running, so
+  episodes 20–24 of each shard died on a broken video pipe after 1 step. Real result:
+  0/80, not 0/100.
