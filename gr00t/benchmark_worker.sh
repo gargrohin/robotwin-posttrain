@@ -6,7 +6,8 @@
 # Free memory is the lowest of 6 samples over ~1 min, with a bigger margin when other
 # users are on the GPU (their memory use moves). After each job it counts the episodes
 # actually recorded; if streams crashed, it requeues the shortfall on new seeds (at most
-# MAX_RETRIES times). A watchdog stops any stream whose client log has been silent for
+# MAX_RETRIES times), at seed offset +1000 so it can't reuse a seed index (and log file)
+# that another queued job owns. A watchdog stops any stream whose client log has been silent for
 # HANG_MIN minutes (healthy streams log every few minutes); its episodes are requeued
 # like a crash. It re-execs itself between jobs, so edits to this file apply from the
 # next job without a restart.
@@ -127,7 +128,7 @@ wait "$bench" || log "benchmark.sh exited with $?"
 kill "$dog" 2>/dev/null || true
 got=$(recorded_episodes "$ckpt" "$num" "$task" "$config" "$seed_offset" "$shards")
 if [ "$got" -lt "$eps" ] && [ "$retry" -lt "$MAX_RETRIES" ]; then
-  line="$task $config $((eps - got)) $((seed_offset + shards)) $((retry + 1))"
+  line="$task $config $((eps - got)) $((seed_offset + 1000 * (retry + 1))) $((retry + 1))"
   flock "$queue.lock" bash -c 'echo "$2" >> "$1"' _ "$queue" "$line"
   log "done $task $config: $got/$eps episodes recorded; requeued \"$line\""
 else

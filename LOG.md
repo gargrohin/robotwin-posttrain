@@ -717,3 +717,34 @@ logging change, `.gitignore`):
   range → click an episode → video with frame stepping. Videos play as recorded
   (H.264); nothing is re-encoded. Every model/checkpoint/setting view tested headless.
 - `.gitignore`: `analysis/cache/` (index, app log) and `analysis/tags/` (your tags).
+
+**19:11 ET** **Eval of the new model's checkpoints: plan agreed and armed.** It starts by
+itself on GPUs 0, 3, 5 and 7 the moment training finishes (~23:00 ET). Full plan and
+commands are in the run card, `notes/runs/mix200_150k.md`, under "Evaluation plan".
+- **What runs, in order:**
+  1. Checkpoints 150000 and 60000 on 10 tasks (`pick_dual_bottles`,
+     `place_object_stand`, `move_pillbottle_pad`, `place_empty_cup`,
+     `place_phone_stand`, `move_can_pot`, `dump_bin_bigbin`, `handover_mic`,
+     `grab_roller`, `click_bell`), clean + randomized, ~20 episodes each.
+  2. Checkpoint 150000 on the other 40 tasks: randomized ~20 episodes, clean 10.
+  3. Checkpoints 120000, 90000 and 30000 on the same 10 tasks, randomized only.
+  - Total 2,623 episodes, estimated 112.6 GPU-hours (~28 h on 4 GPUs), against ~1,100
+    for every checkpoint on everything.
+- **Same scenes as the old model.** Every job replays the exact seeds the old model was
+  scored on, so results compare scene by scene.
+  - How: `gr00t/paired_queue.py` copies the old eval's shard layout (seed index and
+    episode count per shard) from its logs, one queue line per shard. The workers run
+    one stream per job (4 workers per GPU), so no job gets re-split onto different seeds.
+  - Crash retries now use seed index +1000 (`benchmark_worker.sh`), so they can't
+    overwrite another job's log.
+- **Smoke test passed** (19:01–19:10 ET, GPU 5): one episode of `click_bell` on the new
+  model's checkpoint-60000 ran through the same worker setup and succeeded (199 of 400
+  steps). The new `episode0.json` recorded the checkpoint number and the instruction. I
+  deleted the test's outputs so they don't mix into the results.
+- **Caveat for reading the 60k comparison.** The new model's checkpoint-60000 was taken at
+  learning rate 7.0e-5. The old model's checkpoint-60000 was at 7.6e-14, the end of its
+  schedule. Both values are from each checkpoint's `trainer_state.json`. Equal steps
+  isn't like-for-like.
+- **Launcher:** `gr00t/eval_mix200.sh`, detached (pid 1192637). It waits for the training
+  supervisor (pid 3231349) to exit and checks that checkpoint-150000 saved completely.
+  Log `logs/eval_mix200.log`; worker logs `logs/worker_mix200_gpu<G>_<1-4>.log`.
