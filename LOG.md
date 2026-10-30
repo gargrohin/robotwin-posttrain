@@ -641,3 +641,20 @@ episodes) and the build is converting the randomized pieces now.
   the source image, counts episodes per task and setting, and checks the stats for
   NaN/inf. On the existing 50-task dataset: 0 problems, frames within 1.4/255 of the
   source; with the sources deliberately shuffled it fails, as it should.
+
+**03:45 ET** The dataset build **failed its final check**: 11,961 of 12,500 episodes (every
+video in them was fine). 17 of the 200 randomized pieces were short (1–49 of 50
+episodes): 14 from the extra `demo_randomized3` converter I started at 02:14, and 3
+from the main one while both were running.
+- **Cause:** on the network disk (EFS) the converter sometimes can't delete its temp
+  folder (`Errno 39 Directory not empty`: a file still open when deleted leaves a
+  hidden `.nfs…` placeholder). After that error the converter's writer is broken: every
+  later episode of the piece fails, and the script still exits 0. Running 74
+  conversions at once made this race common; at 24 it's rare. **My extra converter
+  caused it** and cost ~40 min instead of saving 25.
+- **Fix:** `build_mix200.sh` now counts each piece's episodes after conversion; short
+  pieces are deleted and converted again (up to 3 attempts), so this can't slip through
+  silently. I deleted the failed merged dataset and re-ran the build (log
+  `logs/build_mix200.log`; the failed run is in `logs/build_mix200.attempt1.log`). It
+  redoes only the 17 pieces (17 at once), then downgrade, merge, stats and the check;
+  data ready ~04:30 ET.

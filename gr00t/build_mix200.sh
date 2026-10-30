@@ -36,10 +36,21 @@ if [ "$n" -lt 10000 ]; then
 fi
 log "fetch complete: $(find RoboTwin/data/demo_randomized[0-3] -name 'episode_*.hdf5' | wc -l) episodes"
 
-# 2. Parts (v3.0).
-log "converting 200 randomized parts"
-"$PY" gr00t/convert_parallel.py --repo_id robotwin_mix200_aloha --jobs 24 \
-  --config $CONFIGS --no_aggregate -- $TASKS || { log "part conversion failed"; exit 1; }
+# 2. Parts (v3.0). On EFS the converter can fail to delete a temp dir (Errno 39, an open
+# file leaves a .nfs placeholder), then fail every later episode of that part ('size')
+# and still exit 0. Under heavy load this hit 17/200 parts, so short parts are deleted
+# and re-converted.
+episodes() { grep -o '"total_episodes": *[0-9]*' "$PARTS/$1/meta/info.json" 2>/dev/null | grep -o '[0-9]*$'; }
+for round in 1 2 3 4; do
+  log "converting randomized parts (round $round)"
+  "$PY" gr00t/convert_parallel.py --repo_id robotwin_mix200_aloha --jobs 24 \
+    --config $CONFIGS --no_aggregate -- $TASKS || { log "part conversion failed"; exit 1; }
+  short=$(for c in $CONFIGS; do for t in $TASKS; do [ "$(episodes "${c}__$t")" = 50 ] || echo "${c}__$t"; done; done)
+  [ -z "$short" ] && break
+  log "short parts, re-converting:" $short
+  for p in $short; do rm -rf "${PARTS:?}/$p" "$PARTS/${p}_v3.0"; done
+done
+[ -z "$short" ] || { log "parts still short after 4 rounds: $short"; exit 1; }
 for t in $TASKS; do
   [ -d "$PARTS/clean__$t" ] || [ -d "$PARTS/clean__${t}_v3.0" ] || cp -a "$HF_LEROBOT_HOME/robotwin_50task_aloha_parts/$t" "$PARTS/clean__$t"
 done
