@@ -626,3 +626,18 @@ episodes) and the build is converting the randomized pieces now.
   workers. Our build doesn't use it (it runs 24 one-worker downgrades at once instead).
 - Exported XPolicyLab's two newest commits to `patches/xpolicylab/0009`–`0010` and
   committed the fetch's rate-limit fixes (`7987f5c`).
+
+**02:15 ET** Data prep, two changes:
+- **Faster conversion.** The 200 randomized pieces were converting at ~2.2/min (end
+  ~03:30 ET) with the box 60% idle and our 24 converters using ~1 core each, so the
+  limit was how many run at once. I started a second, detached converter on the 50
+  `demo_randomized3` pieces, all at once (log `logs/convert_randomized3.log`). The
+  main converter skips any piece that already has `meta/info.json`, which LeRobot
+  writes when a conversion starts, and it won't reach `demo_randomized3` for ~45 min,
+  so the two never work on the same piece. Saves ~25 min.
+- **Data check ready** (`gr00t/verify_dataset.py`): checks every merged episode against
+  its source file (same length, identical state and action, the instruction GR00T reads
+  is one of the file's sentences), compares one video frame per camera per piece with
+  the source image, counts episodes per task and setting, and checks the stats for
+  NaN/inf. On the existing 50-task dataset: 0 problems, frames within 1.4/255 of the
+  source; with the sources deliberately shuffled it fails, as it should.
