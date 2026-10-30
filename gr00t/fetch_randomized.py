@@ -35,7 +35,8 @@ import os
 import sys
 import time
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import ProcessPoolExecutor
+from functools import partial
 from pathlib import Path
 
 import h5py
@@ -159,8 +160,9 @@ if args.verify:
     for task in args.tasks:
         verify(task, args.n)
     sys.exit(0)
-with ThreadPoolExecutor(args.jobs) as pool:
-    results = list(pool.map(lambda t: fetch(t, args.n, args.config, args.group), args.tasks))
+# Processes, not threads: JPEG decode/encode is CPU work that the GIL would serialize.
+with ProcessPoolExecutor(args.jobs) as pool:
+    results = list(pool.map(partial(fetch, n=args.n, config=args.config, group=args.group), args.tasks))
 bad = [t for t, c in results if c != args.n]
 print(f"[fetch] done: {len(results) - len(bad)}/{len(results)} tasks complete", flush=True)
 if bad:
