@@ -537,3 +537,30 @@ episodes; the workers exited on empty queues and released their GPUs.
 - On those 5 tasks the 50-task model is about the same or better (stack_blocks_two
   clean 7% → 20%; open_laptop 67% → 50% is within noise at 20 episodes).
 - Full tables: `notes/results.md`.
+
+## 2026-10-30
+
+**01:00–01:25 ET** Next experiment (your call): **one model trained on clean +
+randomized demos**, to attack the clean 42.6% vs randomized 9.7% gap.
+- **Data:** 50 clean + **200 randomized** demos per task (12,500 episodes). RoboTwin
+  publishes randomized demos only in its raw format (500 per task, 391 GB), which
+  XPolicyLab can't read. `gr00t/fetch_randomized.py` reads the zips remotely, pulls just
+  the 200 episodes needed (~50 GB) and converts them to XPolicyLab format. The mapping
+  (state = raw step t, action = raw step t+1, same 4 cameras, "seen" instructions) was
+  derived from, and checked against, the clean demos RoboTwin publishes in both
+  formats: 6 episodes in 3 tasks reproduce the official files field-for-field (images
+  differ only by JPEG re-encoding, ~1/255).
+- **Training:** same recipe as the 50-task model, **150k steps**, checkpoint every 15k,
+  all kept (~350 GB) for a learning curve later (`SAVE_TOTAL_LIMIT`, XPolicyLab commit
+  47929bf). GPUs **3, 0, 4, 7**, fixed. GPU 3: another user's idle vLLM server will be
+  stopped by hand (your OK). GPUs 0/4/7 each have a stable ~17.5 GB job of another user,
+  so training starts only when each has ≥ 45 GB free (our ~22 GB + ≥ 23 GB spare).
+- **No bottlenecks this time:** all of last time's dataloader fixes are in GR00T's code.
+  Data prep is split into 200 small conversion jobs (4 groups of 50 episodes per task),
+  24 at a time; the machine is quiet (load ~53 on 192 cores).
+- **Pipeline** `gr00t/run_mix200.sh`, detached so it survives the Claude session ending
+  (log `logs/run_mix200.log`): fetch → convert + merge → checks → train, with
+  auto-resume from the last checkpoint after a crash.
+- A test caught an argument bug (`--extra_parts` swallowed the task list) before the
+  real run reached it; fixed. A subagent is testing the whole dataset chain on tiny
+  data in parallel with the fetch.
