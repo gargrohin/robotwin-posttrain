@@ -26,6 +26,7 @@ parser.add_argument("--repo_id", required=True)
 parser.add_argument("--jobs", type=int, default=10)
 parser.add_argument("--config", nargs="+", default=["demo_clean"])
 parser.add_argument("--extra_parts", nargs="*", default=[])
+parser.add_argument("--no_aggregate", action="store_true", help="only convert the parts")
 args = parser.parse_args()
 
 home = Path(os.environ["HF_LEROBOT_HOME"])
@@ -57,6 +58,8 @@ with ThreadPoolExecutor(args.jobs) as pool:
     failed = [job for job, code in pool.map(convert, jobs) if code != 0]
 if failed:
     sys.exit(f"conversion failed for {failed}; see {logs}")
+if args.no_aggregate:
+    sys.exit(0)
 
 sources = [part(c, t) for c, t in jobs]
 sources += [f"{extra}/{task}" for extra in args.extra_parts for task in args.tasks]
