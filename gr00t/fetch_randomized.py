@@ -23,6 +23,7 @@ transform_lerobot_v30_format.py expects ("<config>.<task>.aloha_agilex").
 
 --group G puts episode i in <config><i // G> (e.g. demo_randomized0..3 for 200/50), so the
 LeRobot conversion can run many small per-group jobs in parallel.
+--start S takes episodes S..S+N-1 instead (e.g. unseen demos beyond the ones trained on).
 
 usage: fetch_randomized.py --n 200 --group 50 --config demo_randomized --jobs 24 <task> ...
        fetch_randomized.py --verify --n 2 <task> [<task> ...]   (compare with demo_clean)
@@ -88,7 +89,7 @@ def open_zip(task, kind):
     return f, z, z.namelist()[0].split("/")[0]
 
 
-def fetch(task, n, config, group):
+def fetch(task, n, config, group, start=0):
     def out_dir(i):
         d = ROBOTWIN / "data" / f"{config}{i // group if group else ''}" / task / "aloha_agilex" / "data"
         d.mkdir(parents=True, exist_ok=True)
@@ -97,13 +98,13 @@ def fetch(task, n, config, group):
         try:
             f, z, pre = open_zip(task, "randomized_500")
             with f:
-                for i in range(n):
+                for i in range(start, start + n):
                     dst = out_dir(i) / f"episode_{i:07d}.hdf5"
                     if dst.exists():
                         continue
                     instr = json.loads(z.read(f"{pre}/instructions/episode{i}.json"))
                     to_xspark(z.read(f"{pre}/data/episode{i}.hdf5"), instr, dst)
-            count = sum(1 for i in range(n) if (out_dir(i) / f"episode_{i:07d}.hdf5").exists())
+            count = sum(1 for i in range(start, start + n) if (out_dir(i) / f"episode_{i:07d}.hdf5").exists())
             print(f"[fetch] {task}: {count} episodes", flush=True)
             return task, count
         except Exception as e:  # HF rate limiting (error page -> "not a zip file"), EFS errno 5
@@ -153,6 +154,7 @@ parser.add_argument("--n", type=int, default=200)
 parser.add_argument("--config", default="demo_randomized")
 parser.add_argument("--jobs", type=int, default=12)
 parser.add_argument("--group", type=int, default=0)
+parser.add_argument("--start", type=int, default=0)
 parser.add_argument("--verify", action="store_true")
 args = parser.parse_args()
 
@@ -162,7 +164,8 @@ if args.verify:
     sys.exit(0)
 # Processes, not threads: JPEG decode/encode is CPU work that the GIL would serialize.
 with ProcessPoolExecutor(args.jobs) as pool:
-    results = list(pool.map(partial(fetch, n=args.n, config=args.config, group=args.group), args.tasks))
+    results = list(pool.map(partial(fetch, n=args.n, config=args.config, group=args.group, start=args.start),
+                            args.tasks))
 bad = [t for t, c in results if c != args.n]
 print(f"[fetch] done: {len(results) - len(bad)}/{len(results)} tasks complete", flush=True)
 if bad:
