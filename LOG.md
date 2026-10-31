@@ -759,3 +759,19 @@ commands are in the run card, `notes/runs/mix200_150k.md`, under "Evaluation pla
   - First up: checkpoint 150000 on the 10 tasks, using the old model's exact seed layout
     (e.g. `click_bell` randomized as 4 shards × 5 episodes at seed indexes 0–3).
   - The 150k vs 60k comparison on those 10 tasks is expected ~04:00–05:00 ET.
+
+**03:59 ET** **Evals now on 5 GPUs.** GPU 4 was completely empty, so with your OK I
+added 4 more workers on it, giving 20 streams in total: 4 each on GPUs 0, 3, 4, 5 and 7.
+- **Setup:** same queue list and one stream per job as the others. I checked this from
+  each worker's environment.
+- **Command:**
+
+  ```
+  GPU=4 MAX_SHARDS=1 QUEUES="<same list as gr00t/eval_mix200.sh>" setsid -f nohup bash gr00t/benchmark_worker.sh > logs/worker_mix200_gpu4_<i>.log
+  ```
+
+  ×4, started 20 s apart.
+- **Speed so far:** the 61 jobs finished by 03:45 ET took 16% longer than the old
+  model's eval of the same tasks: 52.0 vs 45.0 stream-hours.
+- **ETA:** ~458 stream-hours were left at 03:45. Over 20 streams instead of 16, that
+  moves the finish from ~08:30 ET to ~03:00 ET Saturday (Nov 1), give or take a few hours.
