@@ -774,4 +774,41 @@ added 4 more workers on it, giving 20 streams in total: 4 each on GPUs 0, 3, 4, 
 - **Speed so far:** the 61 jobs finished by 03:45 ET took 16% longer than the old
   model's eval of the same tasks: 52.0 vs 45.0 stream-hours.
 - **ETA:** ~458 stream-hours were left at 03:45. Over 20 streams instead of 16, that
-  moves the finish from ~08:30 ET to ~03:00 ET Saturday (Nov 1), give or take a few hours.
+  moves the finish from ~08:30 ET to ~03:00 ET Sunday (Nov 1), give or take a few hours. (Corrected: Nov 1 is a Sunday.)
+
+**11:15 ET (Sat Oct 31)** **Results: the 10 tasks, three models, same scenes.**
+
+Successes / episodes. "Old" = the 50-clean-demo model at checkpoint 60000; "new" = the
+clean + randomized model.
+
+| task | clean: old / new 60k / new 150k | randomized: old / new 60k / new 150k |
+|---|---|---|
+| click_bell | 19/20 / 11/20 / 19/20 | 8/20 / 15/20 / 20/20 |
+| dump_bin_bigbin | 15/20 / 10/20 / 17/20 | 2/20 / 5/20 / 12/20 |
+| grab_roller | 18/20 / 11/20 / 18/20 | 8/21 / 4/21 / 19/21 |
+| handover_mic | 8/20 / 2/20 / 8/20 | 1/20 / 0/20 / 3/20 |
+| move_can_pot | 6/20 / 0/20 / 6/20 | 1/20 / 0/20 / 10/20 |
+| move_pillbottle_pad | 9/20 / 1/20 / 12/20 | 1/20 / 0/20 / 11/20 |
+| pick_dual_bottles | 15/20 / 1/20 / 12/20 | 3/20 / 0/20 / 16/20 |
+| place_empty_cup | 15/20 / 3/20 / 16/20 | 4/20 / 4/20 / 15/20 |
+| place_object_stand | 10/20 / 5/20 / 15/20 | 1/20 / 3/20 / 11/20 |
+| place_phone_stand | 8/20 / 1/20 / 7/20 | 2/20 / 2/20 / 10/20 |
+| **total** | **123/200 (62%) / 45/200 (22%) / 130/200 (65%)** | **31/201 (15%) / 33/201 (16%) / 127/201 (63%)** |
+
+- **The final new model (150k):** randomized 15% → 63%, clean unchanged (62% → 65%,
+  within luck for 200 episodes).
+- **The new model at 60k:** no better than the old model on randomized (16%) and much
+  worse on clean (22%). Same number of steps, but it wasn't a finished model yet. Two
+  likely reasons, which these numbers can't separate:
+  - its learning rate was still high (7.0e-5 vs ~0);
+  - it had seen each demo far fewer times. 60,000 steps × 64 samples = 3.84M samples:
+    1.4 passes over its 2,759,740 frames, against 7.0 passes over the old model's
+    548,893.
+  So the gain needed the longer training; randomized data at an equal step count did
+  not show it.
+- **One stream crashed:** a policy server on GPU 3 ran out of GPU memory while loading
+  (06:42 ET). Two of our streams were loading at once, plus another user's 2.3 GB
+  process. The automatic retry re-ran its 7 `put_bottles_dustbin` randomized episodes on
+  fresh seeds, so those 7 aren't the old model's scenes.
+- **ETA** for the rest (other 40 tasks at 150k, then 120k/90k/30k on the 10 tasks): about
+  07:00–12:00 ET Sunday (Nov 1).
