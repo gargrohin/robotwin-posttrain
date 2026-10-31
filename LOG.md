@@ -748,3 +748,14 @@ commands are in the run card, `notes/runs/mix200_150k.md`, under "Evaluation pla
 - **Launcher:** `gr00t/eval_mix200.sh`, detached (pid 1192637). It waits for the training
   supervisor (pid 3231349) to exit and checks that checkpoint-150000 saved completely.
   Log `logs/eval_mix200.log`; worker logs `logs/worker_mix200_gpu<G>_<1-4>.log`.
+
+**23:18 ET** **Training finished, evals running.**
+- **Training:** `mix200_150k` finished at 23:11 ET: 150,000 steps in 18 h 12 min, 2.29
+  steps/s on average, no restarts.
+  - Loss: mean training loss over the run 0.0127; last logged 0.0043.
+  - All 10 checkpoints are kept (15000 … 150000).
+- **Evals:** they started by themselves at 23:12 ET as planned: 16 single-stream workers, 4
+  each on GPUs 0, 3, 5 and 7.
+  - First up: checkpoint 150000 on the 10 tasks, using the old model's exact seed layout
+    (e.g. `click_bell` randomized as 4 shards × 5 episodes at seed indexes 0–3).
+  - The 150k vs 60k comparison on those 10 tasks is expected ~04:00–05:00 ET.
