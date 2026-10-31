@@ -812,3 +812,38 @@ clean + randomized model.
   fresh seeds, so those 7 aren't the old model's scenes.
 - **ETA** for the rest (other 40 tasks at 150k, then 120k/90k/30k on the 10 tasks): about
   07:00–12:00 ET Sunday (Nov 1).
+
+**18:40 ET (Sat Oct 31)** **Memorization check: no sign of memorization.**
+
+`gr00t/heldout_check.py`, run on GPU 4 next to the evals, 12:03–18:29 ET.
+- **Method:** 10 tasks × 5 demos per set × 8 moments per demo = 400 predictions per set.
+  At each moment the model predicts the next 16 actions through the eval code path.
+- **Metric:** mean absolute arm-joint error in radians, against what the demonstrator did.
+  "Hold still" (repeat the current joint state) scores ~0.064 on every set.
+- **Sets:**
+  - randomized demos the new model trained on: episodes 20/60/100/140/180;
+  - randomized demos no model saw: episodes 200–204, fetched for this check;
+  - clean demos both models trained on.
+
+| model | randomized, trained on | randomized, never seen | clean, trained on |
+|---|---|---|---|
+| old model, 60k | 0.0357 | 0.0316 | 0.0175 |
+| new model, 15k | 0.0479 | 0.0447 | 0.0453 |
+| new model, 30k | 0.0389 | 0.0370 | 0.0361 |
+| new model, 45k | 0.0349 | 0.0325 | 0.0323 |
+| new model, 60k | 0.0295 | 0.0263 | 0.0266 |
+| new model, 75k | 0.0280 | 0.0256 | 0.0253 |
+| new model, 90k | 0.0228 | 0.0200 | 0.0194 |
+| new model, 105k | 0.0217 | 0.0198 | 0.0200 |
+| new model, 120k | 0.0188 | 0.0167 | 0.0171 |
+| new model, 135k | 0.0181 | 0.0160 | 0.0164 |
+| new model, 150k | 0.0176 | 0.0156 | 0.0159 |
+
+- **No memorization.** At every checkpoint the unseen demos score as well as or slightly
+  better than the trained-on ones (ratio 1.05–1.14). The old model, which never trained
+  on either randomized set, shows the same ratio (1.13), so that small difference comes
+  from the scenes, not from training. Both errors fall together through 150k.
+- **The new model passed the old one:** on clean demos from ~120k (0.0171 vs 0.0175); on
+  randomized demos from ~45k–60k. Final 150k: 0.0156–0.0176 on every set, against the old
+  model's 0.0316–0.0357 on randomized.
+- **Results:** `outputs/heldout_check/<model>_<checkpoint>.json`.
