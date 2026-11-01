@@ -847,3 +847,31 @@ clean + randomized model.
   randomized demos from ~45k–60k. Final 150k: 0.0156–0.0176 on every set, against the old
   model's 0.0316–0.0357 on randomized.
 - **Results:** `outputs/heldout_check/<model>_<checkpoint>.json`.
+
+**06:30 ET (Sun Nov 1)** **All evals of the new model finished** (last job 04:10 ET). All
+2,621 planned episodes were recorded. Full tables: `notes/results.md`, top section.
+- **50-task benchmark, checkpoint 150000 vs the old model** (average of per-task rates):
+  - randomized: **9.7% → 45.2%**;
+  - clean: **42.6% → 46.0%**.
+
+  The clean gain is small: 40 of the 50 tasks got 10 clean episodes, so per-task clean
+  numbers are rough. Randomized went up on 44 of 50 tasks. Six tasks stay at or near 0%
+  on both: `put_bottles_dustbin`, `stack_blocks_three`, `handover_block`, `hanging_mug`,
+  `open_microwave`, `place_dual_shoes`. `open_microwave` randomized dropped 3/20 → 0/20.
+- **The 10 tasks across checkpoints** (randomized; same scenes):
+
+  | model | rate | learning rate |
+  |---|---|---|
+  | old | 15% | ~0 |
+  | 30k | 11% | 9.4e-05 |
+  | 60k | 16% | 7.0e-05 |
+  | 90k | 37% | 3.8e-05 |
+  | 120k | 62% | 1.1e-05 |
+  | 150k | 63% | ~0 |
+
+  Most of the gain came between 60k and 120k, while the learning rate fell from 7.0e-5
+  to 1.1e-5; the 120k → 150k rise is small. Over the same stretch the model also went
+  from 1.4 to 2.8 passes over its data. So this curve alone can't separate "lower
+  learning rate" from "more practice". The short decay-from-60k experiment would.
+- **GPUs:** our eval GPUs are free. Others took 0, 4 and 7 after the evals; 3 and 5 sat
+  empty from ~04:10 ET.
