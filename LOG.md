@@ -875,3 +875,25 @@ clean + randomized model.
   learning rate" from "more practice". The short decay-from-60k experiment would.
 - **GPUs:** our eval GPUs are free. Others took 0, 4 and 7 after the evals; 3 and 5 sat
   empty from ~04:10 ET.
+
+**09:45 EST (Sun Nov 1)** **Started the learning-rate decay experiment** (`mix200_decay60k`, run
+card `notes/runs/mix200_decay60k.md`) on GPUs 4 and 5, which you said were free.
+- **Question:** did the main run's jump from 16% (60k) to 63% (150k) come from the
+  low-learning-rate end of training, or from more passes over the data?
+- **Setup:** checkpoint-60000's weights, trained 10,000 more steps on the same data. The
+  learning rate ramps to 7.0e-5 over the first 500 steps, then falls to 0. That adds only
+  0.23 passes over the data.
+- **Two differences from the plan as discussed:**
+  - the optimizer state restarts (DeepSpeed can't load it on 2 GPUs when it was saved
+    on 4), hence the short ramp;
+  - the drop is GR00T's cosine curve, not a straight line.
+- **Dry run** (100 steps): weights loaded, loss continued at ~0.008 (the main run was at
+  0.0087 near step 60k), learning rate followed the plan, checkpoint saved. Deleted it
+  afterwards.
+- **Mistake on my side:** I launched the real run while the dry run's processes were
+  still shutting down, on the same communication port. It started cleanly anyway (the
+  old processes exited seconds later), but I won't chain launches that way again.
+- **Armed to start when training exits:**
+  - the simulator eval of checkpoint-10000: the 10 tasks, clean + randomized, the first
+    10 old seeds each, on GPUs 4 and 5;
+  - the prediction-error check of checkpoints 10000 and 5000.
