@@ -1087,3 +1087,37 @@ it needs you.**
   pipeline. It's an option for later runs, not this one.
 - **mix500 dataset finished** at 03:51 EST with 0 problems: 50 tasks × (50 clean +
   randomized episodes 0–494).
+
+**09:10 EST (Mon Nov 2)** **Cosmos: wandb works, and the eval now runs end to end. First
+numbers at iteration 500.**
+- **Training resumed cleanly** from iteration 500 at 08:51. At 522 the loss was 0.76–1.19 and
+  each iteration took ~35.5 s. wandb run `action_policy_robotwin_nano` in project
+  `robotwin-posttrain`, logging every 10 iterations.
+- **Bug found and fixed in NVIDIA's inference code.**
+  - Loading a training checkpoint crashed: the code adds a setting used only by NVIDIA's
+    self-driving checkpoints (`_auto_camera_fps`) to a config that rejects new keys.
+  - Fix: two lines on our local cosmos-framework branch (commit 30bd31a, not pushed). It
+    doesn't affect training.
+- **Open-loop check, iteration 500** (quick version: 80 moments per set instead of 400).
+  - Error is the mean arm-joint error in rad. Ratio is error ÷ the error of holding still;
+    lower is better.
+
+  | model | examples seen | train randomized | train clean | unseen randomized |
+  |---|---|---|---|---|
+  | Cosmos, iteration 500 | 1.04M | 0.046 (0.78) | 0.038 (0.59) | 0.045 (0.74) |
+  | GR00T mix200, step 15k | 0.96M | 0.048 (0.76) | 0.045 (0.69) | 0.045 (0.69) |
+  | GR00T mix200, step 30k | 1.92M | 0.039 (0.61) | 0.036 (0.55) | 0.037 (0.57) |
+  | GR00T mix200, step 150k | 9.6M | 0.018 (0.28) | 0.016 (0.24) | 0.016 (0.24) |
+
+  - **Reading:** after the same number of training examples, Cosmos is about where GR00T was.
+    This is early: Cosmos's warm-up only just ended, so its learning rate only now reached
+    the peak.
+  - Memorization: the unseen set is no worse than the trained randomized set.
+- **Sim test, iteration 500**, beat_block_hammer clean: **1/3 succeeded**.
+  - Each policy call takes ~1.4 s for 16 actions.
+  - Policy plus simulator use ~38.5 GB, so one stream per GPU.
+  - 3 episodes took ~12 min after a ~80 s model load: ~4 min per episode, ~15 episodes per
+    GPU-hour. That's better than my earlier estimate of 3–9, but it's from only 3 episodes.
+- **Next:** evaluate checkpoints 1,500 and 2,000 once they're saved (~18:45 and
+  ~23:40 EST; the run should finish ~Nov 4 06:00 EST). The sim eval size needs your budget decision. The open-loop check is cheap
+  (~15 min per checkpoint), and I'll run it when a GPU is free.

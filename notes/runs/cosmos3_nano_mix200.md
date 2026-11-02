@@ -72,3 +72,9 @@ is our own later experiment.
 - 08:43 EST: stopped at 507 and relaunched with wandb on (project `robotwin-posttrain`).
   It resumes from 500. Recipe and run folder unchanged. Earlier log:
   `logs/cosmos3_nano_mix200.part1_iter0-507_nowandb.log`.
+- 08:51 EST: resumed at 501, ~35.5 s per iteration. Inference needed a fix on the cosmos-framework
+  branch: commit 30bd31a (`_auto_camera_fps` on a structured config); training is still on f8a6519.
+- Iteration 500: open-loop (stride 5) arm error 0.046 / 0.038 / 0.045 rad (train randomized /
+  train clean / unseen randomized; holding still 0.058 / 0.066 / 0.061), close to GR00T mix200
+  at 15k steps (same number of examples seen). Sim: beat_block_hammer clean 1/3.
+  `outputs/heldout_check/cosmos3_nano_mix200_500_stride5.json`.
