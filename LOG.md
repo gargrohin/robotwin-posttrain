@@ -1072,3 +1072,18 @@ it needs you.**
   + resume iteration), so repeated preemptions don't keep replaying the start of the data.
   `RESHUFFLE_ON_RESUME=0` turns that off. The wandb key ends up visible in the job's
   command, as with SkyRL's launcher.
+
+**08:44 EST (Mon Nov 2)** **Cosmos run restarted with wandb on (you OK'd it).**
+- **Iteration 500 checkpoint saved** at 08:38 EST (166 GB). The loss fell from ~14.5 at the
+  start to ~0.6–1.07 around iterations 500–507, at ~37 s per iteration.
+- **Restart:** at iteration 507 I stopped the run and relaunched it on the same 5 GPUs
+  (0, 4, 5, 6, 7). It resumes from iteration 500, so ~4 minutes of training are redone.
+  - wandb project `robotwin-posttrain`, logged in from `~/.netrc`.
+  - The run folder and every recipe setting are unchanged.
+  - The log before the restart is `logs/cosmos3_nano_mix200.part1_iter0-507_nowandb.log`.
+- **Speed observation:** VAE encoding of the camera frames takes ~14 s of each ~37 s
+  iteration (~38%). The framework encodes every training sample on the fly. Encoding the
+  data once ahead of time could cut each iteration to ~23 s, but that changes NVIDIA's
+  pipeline. It's an option for later runs, not this one.
+- **mix500 dataset finished** at 03:51 EST with 0 problems: 50 tasks × (50 clean +
+  randomized episodes 0–494).
