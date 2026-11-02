@@ -978,3 +978,13 @@ priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
   suffice.
 - **Speed is unknown:** my very rough guess is ~50 s per iteration on 5 GPUs. I'll measure
   it in the first minutes before committing to the full length.
+
+**02:47 EST (Mon Nov 2)** **Cosmos env install fixed: 1.5 min instead of 1+ hour.**
+- **Cause:** uv's download cache is on the network disk (EFS). Two attempts spent ~1 hour
+  unpacking NVIDIA's CUDA libraries there without installing a single package.
+- **Fix:** installed with uv's cache and the environment on the machine's local NVMe drive.
+  It finished in ~1.5 min: 899 packages, PyTorch 2.10.0 + CUDA 13.0.
+- **Where:** `/opt/dlami/nvme/rohingarg/cosmos3-venv`, linked as `cosmos-framework/.venv`.
+  NVMe is wiped if the machine restarts; the env rebuilds from the lock file in minutes.
+- **Next:** the subagent can now compute the stats, test the data loading and dry-run the
+  config. Gotcha added to AGENTS.md.

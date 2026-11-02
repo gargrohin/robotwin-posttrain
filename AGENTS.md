@@ -146,6 +146,16 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   GPU 5 was freed with the user's OK (after they checked with the team) by
   stopping their idle vLLM container (kept, so it can be restarted).
 - EFS is slow: cold imports take ~1 min; installs take tens of minutes.
+- **Big CUDA installs: put uv's cache and the venv on local NVMe, not EFS.** With uv's
+  default cache (`~/.cache/uv`, on EFS), the cosmos-framework install was still unpacking
+  NVIDIA CUDA wheels after 15+ minutes, with 0 packages installed. With
+  `UV_CACHE_DIR=/opt/dlami/nvme/rohingarg/uv-cache` and
+  `UV_PROJECT_ENVIRONMENT=/opt/dlami/nvme/rohingarg/<env>` it took ~1.5 min (899
+  packages). NVMe is ephemeral (wiped if the machine restarts); rebuild from the repo's
+  `uv.lock`. The Cosmos env is `/opt/dlami/nvme/rohingarg/cosmos3-venv`, linked as
+  `/mnt/efs/rohingarg/cri/cosmos3/cosmos-framework/.venv`. The system `uv` (0.9.0) can't
+  parse cosmos-framework's `pyproject.toml`; use
+  `/mnt/efs/rohingarg/cri/cosmos3/.uv-0.11.29/bin/uv`.
 - EFS can throw a one-off `Input/output error` (errno 5) on reads, especially right
   after files are written. Retry before assuming a file is corrupt.
 - uv uses the mirror only when `UV_INDEX` is set, e.g.
