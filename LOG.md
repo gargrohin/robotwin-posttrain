@@ -1045,3 +1045,30 @@ run on a GPU).
   decision from you; the open-loop check is cheap (~20–60 min per checkpoint).
 - **Next:** when checkpoint 500 lands (~08:30), restart training with wandb on, then run a quick
   open-loop check on it if a GPU is free, to test loading, memory and speed.
+
+**04:55 EST (Mon Nov 2)** **Company-cluster packaging for Cosmos is ready; submitting
+it needs you.**
+- **Built and validated locally, no GPUs** (subagent): a Docker image (27.1 GB, CUDA 12.8
+  build), job configs for 1 and 2 nodes, an in-container script and a submit script. The
+  in-container script:
+  - downloads inputs from S3;
+  - resumes from the run's S3 checkpoint;
+  - uploads each checkpoint as it's saved;
+  - logs to the company wandb;
+  - coordinates 2 nodes.
+- **Kept local:** all files plain, uncommitted, in the private local folder, as you asked.
+  Nothing pushed anywhere.
+- **Inputs uploaded to S3:** 50,020 files, 70.2 GB (data, index, base model, VAE).
+- **My test-job submission was blocked** by Claude Code's permission system ("shared cluster
+  mutation"); I didn't work around it. To run the 1-node test yourself (~30–40 min, ~5
+  GPU-hours, borrowing pool, 2-hour limit), run from the private local cluster folder (see my handoff):
+  `./submit.sh --mode test --nodes 1 --run-name nano-st-test-1n --deadline-hours 2 --borrow`
+  - Add `--dry-run` first to review what gets submitted (I did: correct).
+  - The test prints the cluster's driver version, the GPUs, and the time per iteration.
+- **Estimates if it works:** 1 node, ~23 s per iteration (~32 h for 5,000); 2 nodes ~12–14 s
+  (~18–20 h, cross-node cost unmeasured). A full run could resume from a local checkpoint
+  staged in S3; the commands are in the subagent's report, summarized in my handoff.
+- **Behaviour to know:** after a resume on the cluster, the data order is reshuffled (seed 42
+  + resume iteration), so repeated preemptions don't keep replaying the start of the data.
+  `RESHUFFLE_ON_RESUME=0` turns that off. The wandb key ends up visible in the job's
+  command, as with SkyRL's launcher.
