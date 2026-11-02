@@ -1196,7 +1196,7 @@ found and fixed; resubmitted.**
 - **Local run:** another user's job is still on GPU 7, so it runs at ~71 s per iteration.
 
 **15:25 EST (Mon Nov 2)** The two fixed 2-node tests have been queued since 14:01.
-- As you suggested, I also submitted one under another team, at high priority on
+- As you suggested, I also submitted one under a second team, at high priority on
   that team's own quota. The shared borrowing pool is the same for every team, so only the
   team's own quota adds a new chance to start.
 - The submit script got a `--team` option for this (local file).
