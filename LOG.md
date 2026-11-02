@@ -1179,3 +1179,18 @@ our team's own quota.
 - 13:30 EST: also submitted the test in the shared pool (borrowing) at high priority, as you
   want for tests. I'll cancel whichever of the two high-priority tests hasn't started when the
   other does. Only the full run uses our team's own quota.
+
+**14:05 EST (Mon Nov 2)** **The 2-node test failed after ~1 min of training setup. Cause
+found and fixed; resubmitted.**
+- Everything up to data loading worked: both nodes connected, all 16 GPUs joined one
+  communication group, NVIDIA's 8 × 2 layout was applied, and the model initialized.
+- **Then every process aborted.** The data loader starts its worker processes with fork().
+  The library that carries traffic between nodes (AWS EFA) treats that as unsafe unless told
+  otherwise, and kills the job. Its own message says to set `FI_EFA_FORK_SAFE=1`.
+- This only affects multi-node runs: the 1-node test doesn't use that library.
+- **Fix:** the cluster script now sets `FI_EFA_FORK_SAFE=1` (and `RDMAV_FORK_SAFE=1`) on
+  multi-node runs. It's a local file, uncommitted.
+- **Resubmitted the test** at high priority as two copies, one in the shared pool and one on
+  our team's quota. I'll cancel whichever doesn't start first. Fresh run names, so the failed
+  run's leftover files can't confuse the new ones.
+- **Local run:** another user's job is still on GPU 7, so it runs at ~71 s per iteration.
