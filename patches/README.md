@@ -17,6 +17,8 @@ this repo.
   edits", for what each one does.
 - `xpolicylab/0009`: `finetune.sh` takes `SAVE_TOTAL_LIMIT` from the environment
   (default 5), so a run can keep every checkpoint.
+- `xpolicylab/0011`: `policy/Cosmos3_Nano/`, an XPolicyLab adapter that serves a
+  cosmos-framework RoboTwin action policy (Cosmos3-Nano) to the RoboTwin eval client.
 - `xpolicylab/0010`: `convert_v3_to_v2.py --workers N` (default 1, which is the original
   behavior) writes the per-episode files in parallel. Output is byte-identical; 2,500
   episodes take 2.5 min at 32 workers instead of 22 min.
