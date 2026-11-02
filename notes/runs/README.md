@@ -19,7 +19,7 @@ nvidia/GR00T-N1.7-3B (NVIDIA base model)
 ├── 50task_60k          60k steps, 50 tasks × 50 clean demos
 └── mix200_150k         150k steps, 50 tasks × (50 clean + 200 randomized demos)
     ├── checkpoint-60000  → mix200_decay60k          10k steps, learning rate 7.0e-5 → 0
-    └── checkpoint-150000 → mix200_150k_rewarm50k    50k steps, learning rate 5e-5 → 0 (2026-11-01)
+    └── checkpoint-150000 → mix200_150k_rewarm50k    planned 50k steps, learning rate 5e-5 → 0; stopped at ~29.4k
 ```
 
 ## Runs
@@ -31,7 +31,7 @@ nvidia/GR00T-N1.7-3B (NVIDIA base model)
 | `50task_60k` | base model | `50task` | 60k; 1e-4 cosine, 5% warm-up | 4, 64 | 2026-10-27 | 40000–60000 every 5000 | ckpt-60000, 50 tasks: clean 42.6%, randomized 9.7% | `notes/results.md` |
 | `mix200_150k` | base model | `mix200` | 150k; 1e-4 cosine, 5% warm-up | 4 (3, 5, 0, 7), 64 | 2026-10-30 | 15000–150000 every 15000 | ckpt-150000, 50 tasks: clean 46.0%, randomized 45.2%; 10-task curve; no memorization | `notes/runs/mix200_150k.md` |
 | `mix200_decay60k` | `mix200_150k` ckpt-60000 (weights only) | `mix200` | 10k; 7.0e-5, 5% warm-up, cosine to 0 | 2 (4, 5), 64 | 2026-11-01 | 5000, 10000 | ckpt-10000, 10 tasks (first 10 seeds): clean 50%, randomized 46% | `notes/runs/mix200_decay60k.md` |
-| `mix200_150k_rewarm50k` | `mix200_150k` ckpt-150000 (weights only) | `mix200` | 50k; 5e-5, 5% warm-up, cosine to 0 | 2 (5, 7), 64 | 2026-11-01 21:00 EST, ETA ~05:20 | every 10000 | running; prediction-error check armed for when it ends (GPUs 5, 7); simulator only if it improves | `notes/runs/mix200_150k_rewarm50k.md` |
+| `mix200_150k_rewarm50k` | `mix200_150k` ckpt-150000 (weights only) | `mix200` | 50k; 5e-5, 5% warm-up, cosine to 0 | 2 (5, 7), 64 | 2026-11-01 21:00 EST; **stopped early** 2026-11-02 03:04 EST at step ~29,400 of 50,000, to free GPUs 5 and 7 for Cosmos (user OK) | 10000, 20000 | not evaluated; the planned prediction-error check was cancelled with the run | `notes/runs/mix200_150k_rewarm50k.md` |
 
 ## Datasets
 
