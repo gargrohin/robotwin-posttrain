@@ -1224,3 +1224,16 @@ Mean arm-joint error in rad; in brackets, error ÷ the error of holding still (l
     randomized sim success was 16%.
 - Model load took 696 s this time (vs ~90 s at iteration 500), probably because the shared
   drive was slow.
+
+**15:35 EST (Mon Nov 2)** **First look at what goes well and badly for mix200_150k checkpoint-150000**
+(`analysis/task_report.py`, CPU only; index rebuilt: 5,590 episodes, every 150k episode has
+its video and its instruction record, all matching the logs).
+- **Task length matters most.** Tasks whose clean demos take ≤150 steps (median) score 56%
+  randomized; >350 steps, 6% (6 tasks). Rank correlation with demo length: −0.44.
+- **Two-arm tasks score lower (32% vs 56%) but are also longer** (median demo 249 vs 147
+  steps). Among short tasks (≤150 steps) both kinds score 56%. 50 tasks can't fully
+  separate the two.
+- **Not the step limit:** the limit is a median 2.8× the demo length, and successes take a
+  median 0.96× the demo length.
+- **Clean barely moved** vs 50task_60k on the same 581 scenes (93 newly solved, 71 lost);
+  randomized gained a lot (382 newly solved, 23 lost on 984 scenes).
