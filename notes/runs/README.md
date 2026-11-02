@@ -20,6 +20,9 @@ nvidia/GR00T-N1.7-3B (NVIDIA base model)
 └── mix200_150k         150k steps, 50 tasks × (50 clean + 200 randomized demos)
     ├── checkpoint-60000  → mix200_decay60k          10k steps, learning rate 7.0e-5 → 0
     └── checkpoint-150000 → mix200_150k_rewarm50k    planned 50k steps, learning rate 5e-5 → 0; stopped at ~29.4k
+
+nvidia/Cosmos3-Nano (16B, separate framework: NVIDIA cosmos-framework)
+└── cosmos3_nano_mix200   5,000 iterations, full fine-tune on mix200, NVIDIA's LIBERO recipe
 ```
 
 ## Runs
@@ -32,6 +35,8 @@ nvidia/GR00T-N1.7-3B (NVIDIA base model)
 | `mix200_150k` | base model | `mix200` | 150k; 1e-4 cosine, 5% warm-up | 4 (3, 5, 0, 7), 64 | 2026-10-30 | 15000–150000 every 15000 | ckpt-150000, 50 tasks: clean 46.0%, randomized 45.2%; 10-task curve; no memorization | `notes/runs/mix200_150k.md` |
 | `mix200_decay60k` | `mix200_150k` ckpt-60000 (weights only) | `mix200` | 10k; 7.0e-5, 5% warm-up, cosine to 0 | 2 (4, 5), 64 | 2026-11-01 | 5000, 10000 | ckpt-10000, 10 tasks (first 10 seeds): clean 50%, randomized 46% | `notes/runs/mix200_decay60k.md` |
 | `mix200_150k_rewarm50k` | `mix200_150k` ckpt-150000 (weights only) | `mix200` | 50k; 5e-5, 5% warm-up, cosine to 0 | 2 (5, 7), 64 | 2026-11-01 21:00 EST; **stopped early** 2026-11-02 03:04 EST at step ~29,400 of 50,000, to free GPUs 5 and 7 for Cosmos (user OK) | 10000, 20000 | not evaluated; the planned prediction-error check was cancelled with the run | `notes/runs/mix200_150k_rewarm50k.md` |
+
+| `cosmos3_nano_mix200` | `nvidia/Cosmos3-Nano` (Cosmos framework) | `mix200` | 5,000 iterations; 5e-5, 500 warm-up, linear decay over a 16,000 cycle (ends at 3.55e-5) | 5 (0, 4, 5, 6, 7), ~2,080 | 2026-11-02 03:24 EST, ETA ~11-04 07:00 | every 500 (+ final), ~166 GB each, at `/mnt/efs/rohingarg/cri/cosmos3/runs/...` | running | `notes/runs/cosmos3_nano_mix200.md` |
 
 ## Datasets
 

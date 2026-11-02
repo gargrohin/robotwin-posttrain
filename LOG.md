@@ -1012,3 +1012,17 @@ priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
   launch follows if it passes.
 - **Still to do:** the RoboTwin eval adapter for Cosmos (training takes ~2 days, so there's
   time).
+
+**03:30 EST (Mon Nov 2)** **Cosmos3-Nano training launched** (run card
+`notes/runs/cosmos3_nano_mix200.md`).
+- **GPU test** (10 iterations, 5 GPUs) passed: peak 59.4–60.8 GB per GPU, 36.3–37.6 s per
+  iteration, ~8 min startup, a 166 GB checkpoint saved in ~2 min to NVMe.
+- **4 GPUs would probably fit** (my estimate from the subagent's ~206 GB of fixed training
+  state): ~206 ÷ 4 + 20 GB working memory ≈ 71 GB per GPU, at ~46 s per iteration.
+- **Real run** on GPUs 0, 4, 5, 6, 7 since 03:24 EST. The first attempt at 03:23 did
+  nothing: my supervisor's `export` line swallowed the launch command; fixed and relaunched.
+- **ETA:** 5,000 × ~37 s ≈ 51 h, so ~07:00 EST Wednesday (Nov 4). It resumes after crashes
+  from the latest checkpoint. Checkpoints every 500 iterations (~166 GB each, ~1.8 TB in
+  all, on EFS).
+- **Plan:** evaluate checkpoints 1,500 and 2,000 while training continues, and stop early if
+  they're good or flat. Needs the Cosmos RoboTwin eval adapter.
