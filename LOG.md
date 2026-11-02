@@ -1237,3 +1237,23 @@ its video and its instruction record, all matching the logs).
   median 0.96× the demo length.
 - **Clean barely moved** vs 50task_60k on the same 581 scenes (93 newly solved, 71 lost);
   randomized gained a lot (382 newly solved, 23 lost on 984 scenes).
+
+**16:12 EST (Mon Nov 2)** **2-node test passed; full 16-GPU Cosmos run launched** (as you
+authorized).
+- **Test** (fixed version, shared pool, high priority): started 15:55. I cancelled the two
+  other queued copies.
+  - **~10.1 s per iteration** on 16 H100s (9.8–10.35 s), vs 19.9 s on 8: almost exactly 2×.
+  - Checkpoint at 20: saved in ~2 min. One copy was uploaded (166 GB), since the second node
+    holds an identical copy. Marked as the latest.
+  - Both nodes exited cleanly. The run landed in your own wandb (`rohin-garg/robotwin-posttrain`).
+- **Full run `nano-mix200-2n`**, submitted 16:11:
+  - from scratch: NVIDIA's base model, NVIDIA's LIBERO recipe, and their own 2-node × 8-GPU
+    layout;
+  - batch 2,048 = 32 per GPU × 16 GPUs × 4 accumulation;
+  - 5,000 iterations, checkpoint every 500;
+  - our team's own quota (no borrowing), normal priority, 24-hour limit.
+  - Expected ~14.5 h of running after it starts.
+- **Still untested on 2 nodes:** resuming from a checkpoint after an interruption. Unlikely to
+  be needed without borrowing.
+- **The local 5-GPU run continues**, as a cross-check: same recipe, batch 2,080 vs 2,048, so
+  the loss curves should match. I'll stop it only with your OK once the cluster run passes it.
