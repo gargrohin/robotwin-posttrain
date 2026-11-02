@@ -1194,3 +1194,12 @@ found and fixed; resubmitted.**
   our team's quota. I'll cancel whichever doesn't start first. Fresh run names, so the failed
   run's leftover files can't confuse the new ones.
 - **Local run:** another user's job is still on GPU 7, so it runs at ~71 s per iteration.
+
+**15:25 EST (Mon Nov 2)** The two fixed 2-node tests have been queued since 14:01.
+- As you suggested, I also submitted one under another team, at high priority on
+  that team's own quota. The shared borrowing pool is the same for every team, so only the
+  team's own quota adds a new chance to start.
+- The submit script got a `--team` option for this (local file).
+- Whichever of the three tests starts first, I'll cancel the other two.
+- The local run is back to ~36 s per iteration (the other user's job left GPU 7). It saved
+  iteration 1,000 at 15:11, and the open-loop check of that checkpoint is running on GPU 3.
