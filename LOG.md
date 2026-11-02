@@ -1026,3 +1026,22 @@ priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
   all, on EFS).
 - **Plan:** evaluate checkpoints 1,500 and 2,000 while training continues, and stop early if
   they're good or flat. Needs the Cosmos RoboTwin eval adapter.
+
+**04:15 EST (Mon Nov 2)** **Cosmos eval adapter ready** (subagent; CPU-verified, not yet
+run on a GPU).
+- **What it is:** the XPolicyLab adapter `policy/Cosmos3_Nano/` (XPolicyLab `92c0a8c`, patch
+  `patches/xpolicylab/0011`), plus `cosmos3/eval.sh` (one eval stream, same logs as GR00T's),
+  `cosmos3/check_adapter.py` and `cosmos3/heldout_check.py` (the same open-loop prediction
+  check as GR00T's, comparable numbers).
+- **Verified, CPU only:** 321 checks.
+  - On real training moments, the model input the adapter builds is bit-identical to
+    training's: image composite, prompt, normalized state.
+  - Output decoding returns the exact 16 actions.
+  - The real policy server and the RoboTwin client code exchange a chunk correctly.
+- **Settings follow NVIDIA's LIBERO server:** 30 sampling steps, guidance 1.0, shift 5.0, all
+  16 actions executed per query (as our GR00T eval).
+- **Expensive to evaluate (estimates):** ~45 GB per stream, so one stream per GPU vs four for
+  GR00T, at ~3–9 episodes per GPU-hour. Sim evals of Cosmos checkpoints need a budget
+  decision from you; the open-loop check is cheap (~20–60 min per checkpoint).
+- **Next:** when checkpoint 500 lands (~08:30), restart training with wandb on, then run a quick
+  open-loop check on it if a GPU is free, to test loading, memory and speed.

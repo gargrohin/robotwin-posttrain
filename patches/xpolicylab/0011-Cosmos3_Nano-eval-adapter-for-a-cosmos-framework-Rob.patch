@@ -1,0 +1,597 @@
+From 92c0a8cf14486dae1ce46d79a2649fb0bae5ff2f Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 09:02:10 +0000
+Subject: [PATCH] Cosmos3_Nano: eval adapter for a cosmos-framework RoboTwin
+ action policy
+
+Serves a Cosmos3-Nano policy post-trained with cosmos-framework's
+action_policy_robotwin_nano recipe (aloha_agilex, 14-D absolute joint
+positions) through the XPolicyLab policy server. Per query the adapter
+rebuilds the training sample for the current moment, with the settings read
+from the run's config.yaml: head and wrist cameras composed as in training,
+the normalized state as the conditioning action row, the JSON prompt (idle
+frames 0), the training transform. It returns the 16 generated actions,
+denormalized, in the GR00T_N17 per-step dict format.
+
+Checkpoints are DCP iterations of a cosmos-framework run dir, resolved through
+the shared checkpoint resolver (run_dir key) and loaded with OmniInference
+(EMA weights by default); a checkpoint newer than latest_checkpoint.txt is
+refused. Sampling defaults follow NVIDIA's LIBERO policy server (30 UniPC
+steps, guidance 1.0, shift 5.0). Two warm-up generations run before the port
+opens so compilation cannot time out the client's first request.
+
+Eval-only and local: no install/process_data/train/eval scripts.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ policy/Cosmos3_Nano/README.md   |  86 +++++++
+ policy/Cosmos3_Nano/__init__.py |   0
+ policy/Cosmos3_Nano/deploy.yml  |  31 +++
+ policy/Cosmos3_Nano/model.py    | 420 ++++++++++++++++++++++++++++++++
+ 4 files changed, 537 insertions(+)
+ create mode 100644 policy/Cosmos3_Nano/README.md
+ create mode 100644 policy/Cosmos3_Nano/__init__.py
+ create mode 100644 policy/Cosmos3_Nano/deploy.yml
+ create mode 100644 policy/Cosmos3_Nano/model.py
+
+diff --git a/policy/Cosmos3_Nano/README.md b/policy/Cosmos3_Nano/README.md
+new file mode 100644
+index 00000000..3509f59d
+--- /dev/null
++++ b/policy/Cosmos3_Nano/README.md
+@@ -0,0 +1,86 @@
++# Cosmos3_Nano
++
++**Original code:** https://github.com/NVIDIA/cosmos-framework | **Base model:** `nvidia/Cosmos3-Nano`
++
++`Cosmos3_Nano` serves a Cosmos3-Nano action policy, post-trained with cosmos-framework's
++`action_policy_robotwin_nano` recipe on RoboTwin 2.0 `aloha_agilex` demos, through the XPolicyLab
++policy server. This is an **eval-only, local adapter**: training happens in cosmos-framework, and
++there are no `install.sh` / `process_data.sh` / `train.sh` / `eval.sh` scripts here. The server is
++launched by the parent workspace's eval script, which runs this `model.py` in the cosmos-framework
++environment.
++
++## Installation
++
++Use the cosmos-framework environment (`uv sync` from its `uv.lock`). Add only XPolicyLab's
++protocol code, without letting it change any cosmos-framework pin:
++
++```bash
++uv pip install --python <cosmos-framework venv>/bin/python --no-deps -e XPolicyLab msgpack-numpy
++```
++
++Every other package XPolicyLab's server imports (`websockets`, `msgpack`, `pydantic`, `pyyaml`,
++`opencv`, `h5py`) is already in the cosmos-framework environment.
++
++## Checkpoints
++
++A cosmos-framework training output directory (`run_dir`) holds `config.yaml` and
++`checkpoints/iter_<N>/model/*.distcp` (DCP). `run_dir` resolves through the shared checkpoint
++resolver: the `run_dir` key, else `ckpt_name` as a path, else `checkpoints/<ckpt_name>` under this
++directory (a symlink works). `checkpoint_num` is a training iteration or `last`. A checkpoint newer
++than `checkpoints/latest_checkpoint.txt` is refused, because the trainer writes that file only once
++every shard of a save is on disk.
++
++Weights load with `OmniInference` as cosmos-framework's LIBERO docs load a DCP checkpoint: the
++experiment (the run's `job.name`), the Wan2.2 VAE path from the run's `config.yaml`, and the EMA
++weights by default (`use_ema_weights`).
++
++## Inputs and outputs
++
++Supported: `env_cfg_type: aloha_agilex`, `action_type: joint` (absolute joint positions). The arm
++and gripper split comes from `get_robot_action_dim_info(env_cfg_type)` and must total 14, the
++model's action width.
++
++Per query, the adapter rebuilds the sample that the training data path builds for one window
++(`RoboTwinLeRobotDataset` + `ActionTransformPipeline`, with the settings read from the run's
++`config.yaml`):
++
++- **Images:** `cam_head`, `cam_left_wrist` and `cam_right_wrist`, RGB uint8 240x320, as delivered
++  by the server (no decoding or channel conversion here). They are composed with
++  `compose_robotwin_views` (head on top, wrists at half size below) as frame 0 of 17 frames, then
++  resized and padded to the 256 tier. The model conditions on frame 0 only.
++- **State:** `{left,right}_arm_joint_state` (6) and `{left,right}_ee_joint_state` (1), giving action
++  row 0, normalized with the training quantile stats (q01/q99).
++- **Prompt:** the observation's `instruction`, in the training JSON prompt format (domain
++  `robotwin`, 15 fps, `concat_view`). Idle frames are set to 0, as NVIDIA's LIBERO policy server
++  does.
++- **Output:** the model jointly denoises the future video and 17 action rows ("wam" mode, as
++  trained). The adapter drops row 0 (the given state), keeps the 14 real channels, denormalizes
++  them, and returns `actions_per_call` (default 16) per-step dicts
++  `{left_arm_joint_state, left_ee_joint_state, right_arm_joint_state, right_ee_joint_state}`,
++  in the same format as `GR00T_N17`.
++
++## deploy.yml keys beyond the standard set
++
++| key | default | meaning |
++|---|---|---|
++| `run_dir` | `null` | cosmos-framework training output directory (see Checkpoints) |
++| `checkpoint_num` | `last` | training iteration, or `last` |
++| `experiment` | `null` | Hydra experiment; `null` means the run's `job.name` |
++| `use_ema_weights` | `true` | evaluate the EMA weights |
++| `num_steps` | `30` | UniPC denoising steps (NVIDIA's LIBERO server default) |
++| `guidance` | `1.0` | classifier-free guidance scale; 1.0 means no guidance (one forward per step) |
++| `shift` | `5.0` | UniPC shift (`generate_samples_from_batch` default) |
++| `actions_per_call` | `16` | actions returned, and executed by the client, per query |
++| `use_torch_compile` | `true` | as cosmos-framework inference |
++| `warmup_calls` | `2` | generations run before the port opens, so compilation can't time out the client's first request (120 s) |
++| `default_prompt` | `null` | used only if an observation carries no instruction; falls back to `task_name` |
++
++`seed` (standard key) also seeds the per-query noise stream.
++
++## Known limitations
++
++- One policy server needs about 35-40 GB of GPU memory (15.2B parameters in bf16, plus the VAE).
++  With a RoboTwin sim client (~7 GB), that is one eval stream per 80 GB GPU.
++- Startup takes several minutes: the EMA weights (tens of GB) are read from disk, then compiled during
++  the warm-up generations.
++- `update_obs_batch` / `get_action_batch` run one observation at a time.
+diff --git a/policy/Cosmos3_Nano/__init__.py b/policy/Cosmos3_Nano/__init__.py
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/policy/Cosmos3_Nano/deploy.yml b/policy/Cosmos3_Nano/deploy.yml
+new file mode 100644
+index 00000000..5a958f3f
+--- /dev/null
++++ b/policy/Cosmos3_Nano/deploy.yml
+@@ -0,0 +1,31 @@
++# Basic experiment configuration (per-run fields are overridden at launch)
++policy_name: Cosmos3_Nano
++protocol: ws
++host: localhost
++port: null
++bench_name: null
++task_name: null
++ckpt_name: null
++env_cfg_type: null
++seed: null            # also seeds the per-call sampling noise stream
++action_type: joint    # absolute joint positions (the only supported value)
++gpu_id: null
++eval_batch: false
++
++# Checkpoint: the cosmos-framework training output dir (config.yaml + checkpoints/iter_<N>).
++# null = resolve from ckpt_name (a path, or checkpoints/<ckpt_name> under this policy dir).
++run_dir: null
++checkpoint_num: last  # training iteration (e.g. 1500), or last = checkpoints/latest_checkpoint.txt
++experiment: null      # null = the run's job.name (action_policy_robotwin_nano)
++use_ema_weights: true # evaluate the EMA weights, as cosmos-framework inference does by default
++
++# Sampling, as NVIDIA's LIBERO policy server (action_policy_server_libero.py)
++num_steps: 30
++guidance: 1.0         # 1.0 = no classifier-free guidance (one forward per step)
++shift: 5.0            # UniPC shift; generate_samples_from_batch's default
++actions_per_call: 16  # actions returned (and executed) per query, of the 16 generated
++
++# Runtime
++use_torch_compile: true
++warmup_calls: 2       # compile before the port opens (the sim client times out a call after 120 s)
++default_prompt: null  # used only if an observation has no instruction (falls back to task_name)
+diff --git a/policy/Cosmos3_Nano/model.py b/policy/Cosmos3_Nano/model.py
+new file mode 100644
+index 00000000..bc534ba0
+--- /dev/null
++++ b/policy/Cosmos3_Nano/model.py
+@@ -0,0 +1,420 @@
++"""XPolicyLab adapter for a Cosmos3-Nano action policy post-trained on RoboTwin (aloha_agilex).
++
++The model is NVIDIA's Cosmos3-Nano (cosmos-framework) fine-tuned with the
++``action_policy_robotwin_nano`` recipe. For every policy query the adapter rebuilds the
++sample that the training data path (``RoboTwinLeRobotDataset`` + ``ActionTransformPipeline``)
++builds for one window, from the current observation:
++
++* video: head camera on top, both wrist cameras at half size below
++  (``compose_robotwin_views``), as frame 0 of ``chunk_length + 1`` frames. The other frames
++  stay black: the model conditions on frame 0 only and generates the rest.
++* action: ``chunk_length + 1`` rows of 14-D absolute joint positions
++  ``[left joints(6), left gripper, right joints(6), right gripper]``. Row 0 is the current
++  state, normalized with the training stats (quantile q01/q99); the other rows are generated.
++* prompt: the episode instruction in the training JSON prompt format (domain ``robotwin``,
++  15 fps, ``concat_view``), with idle frames 0 as NVIDIA's LIBERO policy server does.
++
++The model denoises the future video and the action chunk together ("wam" mode, as trained).
++The adapter drops row 0, denormalizes the rest and returns them as absolute joint targets, in
++the same per-step dict format as the GR00T_N17 adapter.
++
++What must match training (fps, chunk length, resolution tier, prompt format, normalization
++stats) is read from the run's ``config.yaml``. Weights come from the DCP checkpoint
++``<run_dir>/checkpoints/iter_<N>`` (EMA weights by default), loaded the way the docs load
++LIBERO checkpoints (``OmniInference`` with the experiment name and the Wan VAE path).
++
++Runs in the cosmos-framework environment, not in GR00T's.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import statistics
++import tempfile
++import time
++from pathlib import Path
++from typing import Any
++
++import numpy as np
++import torch
++import yaml
++
++import cosmos_framework
++from cosmos_framework.data.generator.action.action_normalization import (
++    denormalize_action,
++    load_action_stats,
++    normalize_action,
++)
++from cosmos_framework.data.generator.action.datasets.robotwin_lerobot_dataset import (
++    ROBOTWIN_ACTION_DIM,
++    ROBOTWIN_VIEW_DESCRIPTION,
++    compose_robotwin_views,
++)
++from cosmos_framework.data.generator.action.utils.domain_utils import get_domain_id
++from cosmos_framework.data.generator.action.utils.transforms import ActionTransformPipeline
++from cosmos_framework.data.generator.joint_dataloader import IterativeJointDataLoader
++from XPolicyLab.model_template import ModelTemplate
++from XPolicyLab.utils.checkpoint_resolver import resolve_checkpoint_root
++from XPolicyLab.utils.process_data import get_robot_action_dim_info
++
++_POLICY_DIR = Path(__file__).resolve().parent
++_CHECKPOINTS_DIR = _POLICY_DIR / "checkpoints"
++COSMOS_ROOT = Path(cosmos_framework.__file__).resolve().parents[1]
++
++# Head first, then left and right wrist: the order compose_robotwin_views expects.
++CAMERA_CANDIDATES = (
++    ("cam_head", "cam_high", "head_camera"),
++    ("cam_left_wrist", "left_camera"),
++    ("cam_right_wrist", "right_camera"),
++)
++TRAIN_CAMERA_HW = (240, 320)  # every camera of the training data (RoboTwin-mix200 meta/info.json)
++STATE_KEYS = ("left_arm_joint_state", "left_ee_joint_state", "right_arm_joint_state", "right_ee_joint_state")
++
++
++def action_layout(env_cfg_type: str) -> tuple[tuple[str, int, int], ...]:
++    """(state/action key, start, end) per part of the flat vector, from the robot's registered dims.
++
++    The order (left arm, left gripper, right arm, right gripper) is the training data's and the
++    simulator's; the total must be the model's 14.
++    """
++    dims = get_robot_action_dim_info(env_cfg_type)
++    sizes = (dims["arm_dim"][0], dims["ee_dim"][0], dims["arm_dim"][1], dims["ee_dim"][1])
++    if len(dims["arm_dim"]) != 2 or sum(sizes) != ROBOTWIN_ACTION_DIM:
++        raise ValueError(f"{env_cfg_type}: dims {dims} do not match the model's {ROBOTWIN_ACTION_DIM}-D action")
++    starts = np.cumsum((0,) + sizes[:-1])
++    return tuple((key, int(start), int(start + size)) for key, start, size in zip(STATE_KEYS, starts, sizes))
++
++
++# ---- run config and checkpoint ---------------------------------------------
++
++
++def resolve_run_dir(model_cfg: dict[str, Any]) -> Path:
++    """The Cosmos training output dir (config.yaml + checkpoints/): run_dir, else ckpt_name as a path,
++    else checkpoints/<ckpt_name> under this policy (e.g. a symlink), per the shared resolver."""
++    return resolve_checkpoint_root(model_cfg, _CHECKPOINTS_DIR, policy_dir=_POLICY_DIR, explicit_keys=("run_dir",))
++
++
++def load_run_settings(run_dir: str | Path) -> dict[str, Any]:
++    """The training-data settings and model paths recorded in a run's config.yaml."""
++    config = yaml.safe_load((Path(run_dir) / "config.yaml").read_text())
++    datasets = config["dataloader_train"]["dataloader"]["datasets"]
++    if len(datasets) != 1:
++        raise ValueError(f"expected one training dataset in {run_dir}/config.yaml, got {list(datasets)}")
++    (entry,) = datasets.values()
++    dataset = entry["dataset"]
++    if not dataset["_target_"].endswith(".get_action_robotwin_sft_dataset"):
++        raise ValueError(f"{run_dir} was not trained on the RoboTwin dataset: {dataset['_target_']}")
++    return {
++        "dataset": dataset,
++        "experiment": config["job"]["name"],
++        "vae_path": config["model"]["config"]["tokenizer"]["vae_path"],
++        "max_action_dim": int(config["model"]["config"]["max_action_dim"]),
++    }
++
++
++def resolve_checkpoint(run_dir: str | Path, checkpoint_num: Any) -> Path:
++    """``<run_dir>/checkpoints/iter_<N>`` for N = checkpoint_num, or the latest for "last".
++
++    Refuses a checkpoint newer than ``latest_checkpoint.txt``: the trainer writes that file
++    only after every shard of a save is on disk, so a newer folder may still be partial.
++    """
++    checkpoints = Path(run_dir) / "checkpoints"
++    latest_file = checkpoints / "latest_checkpoint.txt"
++    if not latest_file.is_file():
++        raise FileNotFoundError(f"{latest_file} not found: no finished checkpoint in {run_dir}")
++    latest = latest_file.read_text().strip()  # e.g. iter_000001500
++    if checkpoint_num in (None, "last", "latest"):
++        name = latest
++    else:
++        iteration = int(str(checkpoint_num).removeprefix("iter_"))
++        if iteration > int(latest.removeprefix("iter_")):
++            raise FileNotFoundError(f"checkpoint {iteration} is newer than the last finished save ({latest})")
++        name = f"iter_{iteration:09d}"
++    path = checkpoints / name
++    if not (path / "model").is_dir():
++        raise FileNotFoundError(f"{path}/model not found")
++    return path
++
++
++def checkpoint_iteration(checkpoint: Path) -> int:
++    return int(checkpoint.name.removeprefix("iter_"))
++
++
++# ---- observation -> model input (CPU) ----------------------------------------
++
++
++def parse_observation(
++    obs: dict[str, Any], layout: tuple[tuple[str, int, int], ...], default_prompt: str
++) -> tuple[list[np.ndarray], np.ndarray, str]:
++    """XPolicyLab observation -> ([head, left wrist, right wrist] uint8 HxWx3 RGB, state [14], prompt)."""
++    vision = obs.get("vision", {})
++    images = []
++    for candidates in CAMERA_CANDIDATES:
++        name = next((c for c in candidates if c in vision), None)
++        if name is None:
++            raise KeyError(f"observation has none of the cameras {candidates}; got {list(vision)}")
++        image = vision[name]["color"] if isinstance(vision[name], dict) else vision[name]
++        image = np.asarray(image)
++        if image.dtype != np.uint8 or image.shape != (*TRAIN_CAMERA_HW, 3):
++            raise ValueError(
++                f"{name}: expected uint8 {TRAIN_CAMERA_HW + (3,)} RGB as in training, got {image.dtype} {image.shape}"
++            )
++        images.append(image)
++
++    state = obs["state"]
++    parts = []
++    for key, start, end in layout:
++        value = np.asarray(state[key], dtype=np.float32).reshape(-1)
++        if value.shape[0] != end - start:
++            raise ValueError(f"state {key}: expected {end - start} values, got {value.shape[0]}")
++        parts.append(value)
++
++    prompt = obs.get("instruction") or (obs.get("instructions") or [None])[0] or default_prompt
++    return images, np.concatenate(parts), str(prompt).strip()
++
++
++class InputBuilder:
++    """Builds the model input for one observation as the training data path builds one window."""
++
++    def __init__(self, dataset_cfg: dict[str, Any]):
++        ds = dataset_cfg
++        if ds["mode"] != "wam" or not ds["use_state"] or ds["action_normalization"] != "quantile":
++            raise ValueError(
++                "this adapter serves the wam + use_state + quantile recipe; the run used "
++                f"mode={ds['mode']} use_state={ds['use_state']} normalization={ds['action_normalization']}"
++            )
++        self.fps = float(ds["fps"])
++        self.chunk_length = int(ds["chunk_length"])
++        self.resolution = ds["resolution"]
++        # Same loading as RoboTwinLeRobotDataset._load_norm_stats.
++        self.stats = {k: torch.from_numpy(v).float() for k, v in load_action_stats(ds["action_stats_path"]).items()}
++        # The training transform, minus caption dropout and tokenization: at inference the
++        # model tokenizes the prompt itself (same tokenize_caption call as the training transform).
++        self.transform = ActionTransformPipeline(
++            tokenizer_config=None,
++            cfg_dropout_rate=0.0,
++            max_action_dim=int(ds["max_action_dim"]),
++            append_viewpoint_info=ds["append_viewpoint_info"],
++            append_duration_fps_timestamps=ds["append_duration_fps_timestamps"],
++            append_resolution_info=ds["append_resolution_info"],
++            append_idle_frames=ds["append_idle_frames"],
++            format_prompt_as_json=ds["format_prompt_as_json"],
++        )
++        self.domain_id = get_domain_id("robotwin")  # RoboTwinLeRobotDataset._domain_name
++
++    def build(self, images: list[np.ndarray], state: np.ndarray, prompt: str) -> dict[str, Any]:
++        """One transformed sample, as ActionSFTDataset returns it in training (prompt as a JSON string)."""
++        frames = self.chunk_length + 1
++        views = []
++        for image in images:
++            clip = torch.zeros((frames, 3, *image.shape[:2]), dtype=torch.uint8)  # [T,3,H,W]
++            clip[0] = torch.from_numpy(image.copy()).permute(2, 0, 1)  # copy: decoded arrays are read-only
++            views.append(clip.float().div_(255.0))
++        video = compose_robotwin_views(*views)  # [T,3,3H/2,W], as RoboTwinLeRobotDataset._build_item
++
++        action = torch.zeros((frames, ROBOTWIN_ACTION_DIM), dtype=torch.float32)  # [T,14]
++        action[0] = torch.from_numpy(state)
++        action = normalize_action(action, "quantile", self.stats)
++        action[1:] = 0.0  # generated rows: replaced by noise when sampling
++
++        # As ActionBaseDataset._build_result, except idle_frames (unknown before acting): 0.
++        sample = {
++            "ai_caption": prompt,
++            "video": (video * 255.0).clamp(0.0, 255.0).to(torch.uint8).permute(1, 0, 2, 3),  # [3,T,H,W]
++            "action": action,
++            "conditioning_fps": torch.tensor(self.fps, dtype=torch.long),
++            "mode": "wam",
++            "domain_id": torch.tensor(self.domain_id, dtype=torch.long),
++            "viewpoint": "concat_view",
++            "idle_frames": torch.tensor(0, dtype=torch.long),
++            "additional_view_description": ROBOTWIN_VIEW_DESCRIPTION,
++        }
++        sample = self.transform(sample, self.resolution)
++        if isinstance(sample["ai_caption"], dict):
++            sample["ai_caption"] = json.dumps(sample["ai_caption"])  # as TextTokenizerTransform does
++        return sample
++
++
++def build_data_batch(sample: dict[str, Any]) -> dict[str, Any]:
++    """One sample -> a batch of one (as action_policy_server_robolab._build_data_batch_from_sample)."""
++    batch: dict[str, Any] = {}
++    for key, value in sample.items():
++        if key in IterativeJointDataLoader._MULTI_ITEM_KEYS:
++            batch[key] = [[value]]
++        elif isinstance(value, torch.Tensor):
++            batch[key] = [value.unsqueeze(0)]
++        else:
++            batch[key] = [value]
++    return batch
++
++
++# ---- model output -> actions (CPU) ----------------------------------------------
++
++
++def decode_actions(rows: torch.Tensor, stats: dict[str, torch.Tensor]) -> np.ndarray:
++    """Generated action rows [T+1, >=14] (normalized) -> absolute joint targets [T, 14].
++
++    Keeps the 14 real channels (the model pads to max_action_dim), drops row 0 (the given
++    state) and inverts the quantile normalization.
++    """
++    rows = rows.detach().float().cpu()[:, :ROBOTWIN_ACTION_DIM]
++    return denormalize_action(rows[1:], "quantile", stats).numpy().astype(np.float32)
++
++
++def to_env_actions(chunk: np.ndarray, layout: tuple[tuple[str, int, int], ...]) -> list[dict[str, np.ndarray]]:
++    """[T, 14] -> one dict per step, the format the GR00T_N17 adapter returns."""
++    return [{key: step[start:end].copy() for key, start, end in layout} for step in np.asarray(chunk, dtype=np.float32)]
++
++
++# ---- model loading (GPU) ---------------------------------------------------------
++
++
++def load_policy_model(
++    checkpoint: Path,
++    *,
++    experiment: str,
++    vae_path: str,
++    dataset_cfg: dict[str, Any],
++    use_ema_weights: bool,
++    use_torch_compile: bool,
++) -> Any:
++    """Load the DCP checkpoint with OmniInference, as docs/action_policy_libero_posttrain.md does."""
++    from cosmos_framework.inference.common.init import init_output_dir, init_script
++
++    init_script()
++    from cosmos_framework.inference.args import OmniSetupOverrides
++    from cosmos_framework.inference.inference import OmniInference
++    from cosmos_framework.scripts.action_policy_server_utils import maybe_init_distributed
++
++    # The experiment config reads these to build the training dataloader (never built here),
++    # and fails to load without them.
++    os.environ.setdefault("ROBOTWIN_ROOT", dataset_cfg["root"])
++    os.environ.setdefault("ROBOTWIN_INDEX_CACHE", dataset_cfg["index_cache_path"])
++    # cosmos-framework configs use repo-relative paths (e.g. the Qwen3-VL config JSON).
++    os.chdir(COSMOS_ROOT)
++    maybe_init_distributed()  # single-rank process group, as NVIDIA's policy servers
++
++    overrides = OmniSetupOverrides.model_validate(
++        {
++            "checkpoint_path": str(checkpoint),
++            "experiment": experiment,
++            "experiment_overrides": [f"model.config.tokenizer.vae_path={vae_path}"],
++            "use_ema_weights": use_ema_weights,
++            "output_dir": Path(tempfile.gettempdir()) / "cosmos3_xpolicylab" / f"pid{os.getpid()}",
++            "sampler": "unipc",
++            "guardrails": False,  # policy serving never runs the output guardrails
++            "dp_shard_size": 1,
++            "use_torch_compile": use_torch_compile,
++        }
++    )
++    setup = overrides.build_setup()
++    init_output_dir(setup.output_dir)
++    pipe = OmniInference.create(setup)
++    pipe.model.eval()
++    return pipe.model
++
++
++# ---- XPolicyLab Model ---------------------------------------------------------------
++
++
++class Model(ModelTemplate):
++    def __init__(self, model_cfg: dict[str, Any]):
++        if model_cfg.get("action_type", "joint") != "joint":
++            raise ValueError(f"Cosmos3_Nano predicts absolute joint positions; got action_type={model_cfg['action_type']!r}")
++        run_dir = resolve_run_dir(model_cfg)
++        settings = load_run_settings(run_dir)
++        checkpoint = resolve_checkpoint(run_dir, model_cfg.get("checkpoint_num", "last"))
++        experiment = model_cfg.get("experiment") or settings["experiment"]
++        print(f"[Cosmos3_Nano] loading {checkpoint} (experiment {experiment}, EMA={model_cfg.get('use_ema_weights', True)})", flush=True)
++        start = time.monotonic()
++        model = load_policy_model(
++            checkpoint,
++            experiment=experiment,
++            vae_path=settings["vae_path"],
++            dataset_cfg=settings["dataset"],
++            use_ema_weights=bool(model_cfg.get("use_ema_weights", True)),
++            use_torch_compile=bool(model_cfg.get("use_torch_compile", True)),
++        )
++        print(f"[Cosmos3_Nano] loaded in {time.monotonic() - start:.0f} s", flush=True)
++        self._setup(model_cfg, settings, model)
++        self.checkpoint = checkpoint
++        self._warmup(int(model_cfg.get("warmup_calls", 2)))
++        print(
++            f"[Cosmos3_Nano] ready: checkpoint iteration {checkpoint_iteration(checkpoint)}, "
++            f"num_steps={self.num_steps} guidance={self.guidance} shift={self.shift} "
++            f"actions_per_call={self.actions_per_call}",
++            flush=True,
++        )
++
++    def _setup(self, model_cfg: dict[str, Any], settings: dict[str, Any], model: Any) -> None:
++        """Everything but loading (tests call this with a stand-in model)."""
++        self.model_cfg = model_cfg
++        self.model = model
++        self.layout = action_layout(model_cfg["env_cfg_type"])
++        self.inputs = InputBuilder(settings["dataset"])
++        self.default_prompt = model_cfg.get("default_prompt") or model_cfg.get("task_name") or ""
++        self.num_steps = int(model_cfg.get("num_steps", 30))
++        self.guidance = float(model_cfg.get("guidance", 1.0))
++        self.shift = float(model_cfg.get("shift", 5.0))
++        self.actions_per_call = int(model_cfg.get("actions_per_call", self.inputs.chunk_length))
++        if not 1 <= self.actions_per_call <= self.inputs.chunk_length:
++            raise ValueError(f"actions_per_call must be in 1..{self.inputs.chunk_length}")
++        # One noise seed per call, from a stream seeded by the shard seed (as the RoboLab server).
++        self._rng = np.random.default_rng(int(model_cfg.get("seed") or 0))
++        self._obs_list: list[dict[str, Any]] = []
++        self._call_ms: list[float] = []
++
++    def _predict(self, obs: dict[str, Any]) -> np.ndarray:
++        """Observation -> [chunk_length, 14] absolute joint targets."""
++        images, state, prompt = parse_observation(obs, self.layout, self.default_prompt)
++        batch = build_data_batch(self.inputs.build(images, state, prompt))
++        start = time.monotonic()
++        with torch.inference_mode():
++            samples = self.model.generate_samples_from_batch(
++                batch,
++                guidance=self.guidance,
++                seed=[int(self._rng.integers(0, 2**31))],
++                num_steps=self.num_steps,
++                shift=self.shift,
++            )
++        chunk = decode_actions(samples["action"][0], self.inputs.stats)
++        self._call_ms.append((time.monotonic() - start) * 1000.0)
++        n = len(self._call_ms)
++        if n <= 3 or n % 100 == 0:
++            print(f"[Cosmos3_Nano] call {n}: {self._call_ms[-1]:.0f} ms (median {statistics.median(self._call_ms):.0f} ms)", flush=True)
++        if chunk.shape != (self.inputs.chunk_length, ROBOTWIN_ACTION_DIM):
++            raise RuntimeError(f"expected a {self.inputs.chunk_length}x14 action chunk, got {chunk.shape}")
++        return chunk
++
++    def _warmup(self, calls: int) -> None:
++        """Compile before the server opens its port (a first call can outlast the client's 120 s timeout)."""
++        mid = ((self.inputs.stats["q01"] + self.inputs.stats["q99"]) / 2).numpy()
++        gray = np.full((*TRAIN_CAMERA_HW, 3), 128, dtype=np.uint8)
++        state = {key: mid[start:end] for key, start, end in self.layout}
++        prompts = ["Warm up.", "Warm up the policy server with a longer instruction so dynamic shapes compile."]
++        for i in range(calls):
++            obs = {"instruction": prompts[i % 2], "vision": {c[0]: {"color": gray} for c in CAMERA_CANDIDATES}, "state": state}
++            start = time.monotonic()
++            self._predict(obs)
++            print(f"[Cosmos3_Nano] warm-up call {i + 1}/{calls}: {time.monotonic() - start:.0f} s", flush=True)
++        self._call_ms.clear()
++
++    def update_obs(self, obs):
++        self.update_obs_batch([obs])
++
++    def update_obs_batch(self, obs_list):
++        self._obs_list = list(obs_list)
++
++    def get_action(self, **kwargs):
++        if not self._obs_list:
++            raise AssertionError("update_obs or update_obs_batch first!")
++        return self.get_action_batch()[0]
++
++    def get_action_batch(self, env_idx_list=None, **kwargs):
++        if not self._obs_list:
++            raise AssertionError("update_obs or update_obs_batch first!")
++        return [to_env_actions(self._predict(obs)[: self.actions_per_call], self.layout) for obs in self._obs_list]
++
++    def reset(self):
++        self._obs_list = []
+-- 
+2.34.1
+
