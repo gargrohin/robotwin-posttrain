@@ -1269,3 +1269,5 @@ authorized).
   loss), e.g. 0.848 = 10 × (0.080 + 0.0047) at iteration ~1,100 locally.
   - So the main loss curve mostly tracks future-frame prediction.
   - For actions, watch `train@2_detail/flow_matching_loss_action`, or our open-loop check.
+- 16:35 EST: deleted the two test checkpoints (354 GB) with your OK, using a storage role
+  that's allowed to delete. Their logs and wandb ids are kept.
