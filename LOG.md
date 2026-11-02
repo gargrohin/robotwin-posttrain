@@ -1146,7 +1146,7 @@ per iteration, against ~35.5 s on our 5 local GPUs (1.8× faster).**
   - The batch would be 2,048 vs 2,080 locally, unless set to 26 per GPU × 8 × 10 = 2,080.
 - Your call: move or not.
 
-**11:50 EST (Mon Nov 2)** **Cluster: prepared a 2-node (16-GPU) run, as you asked.** All
+**11:30 EST (Mon Nov 2)** **Cluster: prepared a 2-node (16-GPU) run, as you asked.** All
 changes are in the private local folder; nothing committed.
 - **wandb:** cluster jobs now use your own key from `~/.netrc`, the same login the local run
   uses, so their runs land next to it.
@@ -1158,3 +1158,5 @@ changes are in the private local folder; nothing committed.
   - The submit dry run looks right.
 - **Next:** you submit a 2-node test (20 iterations, ending with a checkpoint that both nodes
   upload). If it passes, a full 5,000-iteration run from scratch on 2 nodes.
+
+**11:40 EST (Mon Nov 2)** You submitted the 2-node test at 11:29 EST; it's queued. I'm watching it.
