@@ -7,6 +7,9 @@
 #        TASKS="beat_block_hammer lift_pot" TASK_CONFIG=demo_clean GPUS="6" \
 #        SHARDS=4 EPS=100 gr00t/benchmark.sh
 #
+# EVAL_SH=cosmos3/eval.sh benchmarks a Cosmos3-Nano checkpoint instead (CKPT is then its label,
+# e.g. cosmos3_nano_mix200, and CHECKPOINT_NUM its training iteration).
+#
 # Don't replace this with RoboTwin's --eval_batch/--num_workers: those workers share
 # one policy server, and the client sends update_obs and get_action as separate
 # calls, so concurrent workers can get actions computed from each other's
@@ -18,6 +21,8 @@ TASKS="${TASKS:-beat_block_hammer lift_pot handover_block stack_blocks_two open_
 SHARDS="${SHARDS:-4}"
 EPS="${EPS:-100}"
 SEED_OFFSET="${SEED_OFFSET:-0}"  # shards use SEED=OFFSET..OFFSET+SHARDS-1 (new seeds to top up a run)
+EVAL_SH="${EVAL_SH:-$ROOT/gr00t/eval.sh}"
+[[ "$EVAL_SH" = /* ]] || EVAL_SH="$ROOT/$EVAL_SH"
 read -r -a gpus <<< "${GPUS:-6}"
 per_shard=$(( (EPS + SHARDS - 1) / SHARDS ))
 
@@ -27,7 +32,7 @@ for task in $TASKS; do
   for ((i = 0; i < SHARDS; i++)); do
     gpu="${gpus[$((i % ${#gpus[@]}))]}"
     TASK="$task" SEED="$((SEED_OFFSET + i))" TEST_NUM="$per_shard" POLICY_GPU="$gpu" ENV_GPU="$gpu" \
-      bash "$ROOT/gr00t/eval.sh" > /dev/null 2>&1 &
+      bash "$EVAL_SH" > /dev/null 2>&1 &
     pids+=($!)
     sleep 20  # stagger startup, so shards don't race for the same free port
   done

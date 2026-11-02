@@ -110,6 +110,33 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   - Gotcha: GR00T rewrites `meta/relative_stats.json` at every startup; two runs
     starting at once on the same dataset can read it mid-write.
 
+## Cosmos3-Nano eval (2026-11-02; adapter written and CPU-checked, not yet run on a GPU)
+- Adapter `RoboTwin/XPolicyLab/policy/Cosmos3_Nano/` (commit `92c0a8c` on XPolicyLab's `local/aloha-gr00t`; see
+  its README). It runs in the Cosmos venv, where XPolicyLab is installed `--no-deps -e` plus
+  `msgpack-numpy` (the only two additions; no cosmos-framework pin changed). Per query it rebuilds
+  the training sample for the current moment from the run's `config.yaml` (cameras composed with
+  `compose_robotwin_views`, normalized state as action row 0, JSON prompt, idle frames 0) and
+  returns 16 absolute joint actions in GR00T's dict format.
+- One stream: `CHECKPOINT_NUM=1500 TASK=.. TASK_CONFIG=.. TEST_NUM=.. POLICY_GPU=.. ENV_GPU=..
+  cosmos3/eval.sh` (GPUs required, no default). Same log names as `gr00t/eval.sh` with
+  `CKPT=cosmos3_nano_mix200`; `last` is resolved to the iteration number before naming logs.
+  Results go to `eval_result/<task>/Cosmos3_Nano/...`. `POLICY_OVERRIDES="num_steps=10"` etc.
+  changes sampling settings.
+- Queued: `EVAL_SH=cosmos3/eval.sh PER_STREAM_MB=48000 MAX_SHARDS=1` with
+  `gr00t/benchmark_worker.sh`, queue entries `<queue>=cosmos3_nano_mix200=<iteration>` (an explicit
+  iteration, not `last`). `gr00t/paired_queue.py` queues replay GR00T's scenes.
+- Checks: `cosmos3/check_adapter.py` (CPU, ~4 min): the adapter's model input is bit-identical to
+  the training sample for the same frames, prompt and state; demo images through the eval path
+  differ from training only by codec noise (mean |diff| ~1/255); output decoding returns the exact
+  actions to the sim. `cosmos3/heldout_check.py` (GPU): open-loop arm error on GR00T's
+  `heldout_check` moments, same metric and output folder.
+- Gotchas: a policy server needs ~35-40 GB (estimate; measure on first launch), so one stream per
+  GPU. Startup is minutes (weights from EFS, then 2 warm-up generations so torch.compile finishes
+  before the port opens; the sim client times out a call after 120 s). The adapter `chdir`s to the
+  cosmos-framework root (its configs use repo-relative paths) and sets `ROBOTWIN_ROOT` /
+  `ROBOTWIN_INDEX_CACHE` (the experiment config fails without them). It refuses a checkpoint newer
+  than `checkpoints/latest_checkpoint.txt` (the trainer writes it after a save completes).
+
 ## Decisions
 - Model: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`). It's the only assigned model with an
   XPolicyLab adapter.
