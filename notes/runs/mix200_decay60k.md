@@ -73,3 +73,35 @@ Identical to `mix200_150k` (`notes/runs/mix200_150k.md`) except:
   5000. Log `logs/heldout_decay60k.log`.
 - **Compare against:** `mix200_150k` at 60k and at 150k, restricted to the same first 10
   seeds per task.
+
+## Results
+
+**Training:** finished 2026-11-01 11:27 EST, 10,000 steps in 1 h 41 min at 1.66 steps/s on
+average.
+
+**Simulator** (finished 15:25 EST). 10 tasks, first 10 old seeds each; every model is
+scored on exactly the same seeds (`gr00t/paired_compare.py`):
+
+| model | randomized | clean |
+|---|---|---|
+| 50task_60k (clean only, 60k, settled) | 17/98 (17%) | 63/98 (64%) |
+| mix200_150k at 60k (not settled) | 14/99 (14%) | 22/98 (22%) |
+| **mix200_decay60k (60k + 10k settling)** | **46/100 (46%)** | **50/100 (50%)** |
+| mix200_150k at 150k | 66/99 (67%) | 62/99 (63%) |
+
+**Prediction error** (`gr00t/heldout_check.py`; radians; trained-on randomized / unseen
+randomized / clean):
+- after 5k of the 10k settling steps: 0.0250 / 0.0228 / 0.0221
+- after all 10k: 0.0218 / 0.0192 / 0.0192
+- for reference, mix200_150k at 60k: 0.0295 / 0.0263 / 0.0266; at 150k: 0.0176 / 0.0156 / 0.0159
+
+**Conclusions:**
+- **Settling explains most of the 60k → 150k jump:** 60% of the randomized gap
+  ((46−14)/(67−14)) and 68% of the clean gap ((50−22)/(63−22)). The remaining ~35% is
+  more practice, or longer settling; this run can't separate the two.
+- **At roughly equal training cost** (70k vs 60k steps), the new data wins on randomized
+  (46% vs 17%) but loses on clean (50% vs 64%; luck range ±10 points at 100 episodes).
+  The likely cause is less practice per clean demo: 1.6 vs 7 passes. With 150k steps,
+  clean catches up (63% vs 64%).
+- **For future runs:** judge only settled checkpoints. More varied data needs
+  proportionally more training to keep clean-scene skill.

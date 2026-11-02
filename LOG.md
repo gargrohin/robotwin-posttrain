@@ -897,3 +897,22 @@ card `notes/runs/mix200_decay60k.md`) on GPUs 4 and 5, which you said were free.
   - the simulator eval of checkpoint-10000: the 10 tasks, clean + randomized, the first
     10 old seeds each, on GPUs 4 and 5;
   - the prediction-error check of checkpoints 10000 and 5000.
+
+**20:30 EST (Sun Nov 1)** **Learning-rate decay experiment: done.** Full table:
+`notes/runs/mix200_decay60k.md`.
+- **Results** (10 tasks, identical seeds, ~100 episodes per cell):
+
+  | model | randomized | clean |
+  |---|---|---|
+  | old | 17% | 64% |
+  | new 60k | 14% | 22% |
+  | **new 60k + 10k settling** | **46%** | **50%** |
+  | new 150k | 67% | 63% |
+
+- **Settling** explains ~60% (randomized) and ~68% (clean) of the 60k → 150k jump; more
+  practice the rest.
+- **At about equal training cost,** randomized demos win big on randomized scenes but cost
+  clean performance (50% vs 64%) until the model trains longer.
+- **Correction:** my 5-task early read (75% of the gap) overstated it; with all 10 tasks
+  it's 60%.
+- **GPUs:** 0, 4, 5, 7 free since ~15:25 EST; nothing queued.
