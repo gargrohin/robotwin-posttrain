@@ -6,6 +6,8 @@
 # cosmos-framework). If training exits before MAX_ITER, it waits 5 min, waits until every GPU
 # in GPUS is nearly empty (a 16B full fine-tune needs ~all of an 80 GB GPU), and relaunches;
 # the trainer resumes from the run folder's latest_checkpoint.txt (up to 3 attempts).
+# Logs to wandb (server and login from the user's wandb settings and ~/.netrc). The project is
+# set via WANDB_PROJECT, so job.project and the run folder stay unchanged and resume still works.
 set -uo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CF=/mnt/efs/rohingarg/cri/cosmos3/cosmos-framework
@@ -35,6 +37,8 @@ for attempt in 1 2 3; do
     ROBOTWIN_ROOT="$ROOT/data/lerobot/RoboTwin-mix200-aloha_agilex-joint" \
     ROBOTWIN_INDEX_CACHE=/mnt/efs/rohingarg/cri/cosmos3/robotwin_cache/RoboTwin-mix200-aloha_agilex-joint.index.npz \
     OUTPUT_ROOT="$OUTPUT_ROOT" LOG_FILENAME="action_policy_robotwin_nano_attempt$attempt.log" \
+    WANDB_PROJECT=robotwin-posttrain \
+    EXTRA_TAIL_OVERRIDES="job.wandb_mode=online" \
     bash examples/launch_sft_action_policy_robotwin_nano.sh)
   [ "$(latest)" = "iter_$(printf %09d $MAX_ITER)" ] && { log "training finished"; exit 0; }
   log "training exited before iteration $MAX_ITER (latest: $(latest || echo none)); retrying in 5 min"; sleep 300

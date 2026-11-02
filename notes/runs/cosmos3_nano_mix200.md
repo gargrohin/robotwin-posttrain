@@ -61,4 +61,14 @@ is our own later experiment.
 
 - Evaluate checkpoints 1,500 and 2,000 while training continues; stop early if they're good
   or flat.
-- The RoboTwin eval adapter for Cosmos is still to write.
+- Eval: `cosmos3/eval.sh` (sim) and `cosmos3/heldout_check.py` (open-loop), adapter in
+  XPolicyLab `policy/Cosmos3_Nano`.
+
+## Log
+
+- 2026-11-02 03:24 EST: started on GPUs 0, 4, 5, 6, 7, wandb off.
+- 08:38 EST: iteration 500 checkpoint saved. Loss ~14.5 at the start, ~0.6–1.07 by 500–507.
+  ~37 s per iteration, ~14 s of it VAE encoding of the camera frames.
+- 08:43 EST: stopped at 507 and relaunched with wandb on (project `robotwin-posttrain`).
+  It resumes from 500. Recipe and run folder unchanged. Earlier log:
+  `logs/cosmos3_nano_mix200.part1_iter0-507_nowandb.log`.

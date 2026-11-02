@@ -48,7 +48,7 @@ dataset it used.
 | `RoboTwin-5task-aloha_agilex-joint` | 5 tasks × 50 clean demos | 250 |
 | `RoboTwin-50task-aloha_agilex-joint` | 50 tasks × 50 clean demos | 2,500 |
 | `RoboTwin-mix200-aloha_agilex-joint` | 50 tasks × (50 clean + randomized episodes 0–199) | 12,500 |
-| `RoboTwin-mix500-aloha_agilex-joint` (being built) | 50 tasks × (50 clean + randomized episodes 0–494) | 27,250 |
+| `RoboTwin-mix500-aloha_agilex-joint` (built 2026-11-02, not yet trained on) | 50 tasks × (50 clean + randomized episodes 0–494) | 27,250 |
 
 **Held out from all training** (for the memorization check):
 - randomized episodes 200–204 of the 10 tasks (`RoboTwin/data/demo_randomized_heldout`).
