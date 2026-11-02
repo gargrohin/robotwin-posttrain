@@ -916,3 +916,26 @@ card `notes/runs/mix200_decay60k.md`) on GPUs 4 and 5, which you said were free.
 - **Correction:** my 5-task early read (75% of the gap) overstated it; with all 10 tasks
   it's 60%.
 - **GPUs:** 0, 4, 5, 7 free since ~15:25 EST; nothing queued.
+
+**20:55 EST (Sun Nov 1)** **Run registry, more-data prep, and continued training.**
+- **Registry:** `notes/runs/README.md` lists every training run with its lineage (which
+  checkpoint it started from), data, schedule, GPUs, checkpoints kept, results and run
+  card.
+  - Each run's checkpoint folder now has a `run_info.json`. Written after the fact for the
+    5 existing runs; future runs write it at launch (`gr00t/write_run_info.py`, called by
+    `train.sh` and `train_decay.sh`).
+- **Data prep for `mix500`** (priority): 50 clean + randomized episodes 0–494 per task,
+  27,250 episodes.
+  - Fetching randomized episodes 200–494 for all 50 tasks (14,750) since 20:45, ~40 min;
+    log `logs/fetch_mix500.log`.
+  - Episodes 495–499 per task are fetched separately and kept out of training, for the
+    memorization check.
+  - `gr00t/build_mix500.sh` (detached, log `logs/build_mix500.log`) then converts only
+    the new groups, reuses mix200's pieces, merges 550 pieces, computes stats, checks
+    every video, and compares every episode with its source file.
+- **Continued training of the best model:** `mix200_150k_rewarm50k` (run card
+  `notes/runs/mix200_150k_rewarm50k.md`), 50k steps from checkpoint-150000, learning rate
+  back up to 5e-5 then down to 0.
+  - **GPU mix-up:** another account ("ubuntu") started 56 GB jobs on GPUs 0 and 4 minutes
+    before my dry run. Only ~3 GB would have been left over, so I stopped my dry run
+    (1 minute old, no progress) and moved it to GPUs 5 and 7.

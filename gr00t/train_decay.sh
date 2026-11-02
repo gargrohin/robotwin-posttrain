@@ -27,6 +27,10 @@ dataset="$GR00T_LEROBOT_HOME/$name"
 [ -e "$dataset" ] || ln -s "RoboTwin-${DATASET:-mix200}-aloha_agilex-joint" "$dataset"
 out="$POLICY/checkpoints/$name-$SEED"
 mkdir -p "$out" "$ROOT/logs"
+python3 "$ROOT/gr00t/write_run_info.py" "$out" run="$RUN" started_from="$FROM (weights only)" \
+  dataset="$(readlink -f "$dataset")" learning_rate="$LR peak, 5% warm-up, cosine to 0" \
+  max_steps="$MAX_STEPS" save_steps="${SAVE_STEPS:-$MAX_STEPS}" gpus="$GPUS" global_batch=64 \
+  command="FROM=$FROM RUN=$RUN GPUS=$GPUS LR=$LR MAX_STEPS=$MAX_STEPS SAVE_STEPS=${SAVE_STEPS:-$MAX_STEPS} bash gr00t/train_decay.sh"
 cd "$POLICY/gr00t_n17"
 source .venv/bin/activate
 uv run --no-sync torchrun --nproc_per_node="$NUM_GPUS" --master_port="${MASTER_PORT:-29618}" \
