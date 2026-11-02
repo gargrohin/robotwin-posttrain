@@ -1176,3 +1176,6 @@ our team's own quota.
   in my message). If they start anyway, each just runs the same 15-min test (~4 GPU-hours).
 - 13:20 EST: with your permission, cancelled the two normal-priority copies. Only the
   high-priority 2-node test is left in the queue.
+- 13:30 EST: also submitted the test in the shared pool (borrowing) at high priority, as you
+  want for tests. I'll cancel whichever of the two high-priority tests hasn't started when the
+  other does. Only the full run uses our team's own quota.
