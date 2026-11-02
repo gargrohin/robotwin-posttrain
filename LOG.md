@@ -1203,3 +1203,24 @@ found and fixed; resubmitted.**
 - Whichever of the three tests starts first, I'll cancel the other two.
 - The local run is back to ~36 s per iteration (the other user's job left GPU 7). It saved
   iteration 1,000 at 15:11, and the open-loop check of that checkpoint is running on GPU 3.
+
+**15:35 EST (Mon Nov 2)** **Open-loop check, Cosmos iteration 1,000:** it now learns faster
+per training example than GR00T.
+
+Mean arm-joint error in rad; in brackets, error ÷ the error of holding still (lower is better):
+
+| model | examples seen | train randomized | train clean | unseen randomized |
+|---|---|---|---|---|
+| Cosmos, iteration 500 | 1.04M | 0.046 (0.78) | 0.038 (0.59) | 0.045 (0.74) |
+| **Cosmos, iteration 1,000** | 2.08M | **0.030 (0.51)** | **0.029 (0.44)** | **0.028 (0.46)** |
+| GR00T mix200, step 30k | 1.92M | 0.039 (0.61) | 0.036 (0.55) | 0.037 (0.57) |
+| GR00T mix200, step 60k | 3.84M | 0.030 (0.47) | 0.027 (0.41) | 0.026 (0.41) |
+
+- Cosmos at 1,000 is about where GR00T was at 60k, with ~half the examples.
+- The unseen demos score no worse than the trained ones, so no sign of memorization.
+- Caveats:
+  - This is the quick check (80 moments per set).
+  - Lower prediction error doesn't guarantee more sim successes. At GR00T 60k, the 10-task
+    randomized sim success was 16%.
+- Model load took 696 s this time (vs ~90 s at iteration 500), probably because the shared
+  drive was slow.

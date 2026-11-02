@@ -78,3 +78,6 @@ is our own later experiment.
   train clean / unseen randomized; holding still 0.058 / 0.066 / 0.061), close to GR00T mix200
   at 15k steps (same number of examples seen). Sim: beat_block_hammer clean 1/3.
   `outputs/heldout_check/cosmos3_nano_mix200_500_stride5.json`.
+- Iteration 1,000 (saved 15:11 EST): open-loop (stride 5) 0.030 / 0.029 / 0.028 rad (ratio to holding
+  still 0.51 / 0.44 / 0.46): about GR00T mix200 at 60k steps, with ~half the examples.
+  `outputs/heldout_check/cosmos3_nano_mix200_1000_stride5.json`.
