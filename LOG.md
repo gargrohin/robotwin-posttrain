@@ -988,3 +988,27 @@ priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
   NVMe is wiped if the machine restarts; the env rebuilds from the lock file in minutes.
 - **Next:** the subagent can now compute the stats, test the data loading and dry-run the
   config. Gotcha added to AGENTS.md.
+
+**03:06 EST (Mon Nov 2)** **Cosmos3-Nano: recipe ready, GPU test running.**
+- **Subagent finished the RoboTwin recipe** (branch `robotwin` of the cosmos-framework clone,
+  7 commits). The config dry-run passed, and all 30 CPU data-loading checks passed (images,
+  actions, instructions).
+- **Choices** (each following an official NVIDIA recipe):
+  - 14-D absolute joint positions, with the current state as the first, given row (NVIDIA's
+    DROID joint-position recipe);
+  - head camera on top, both wrists below at half size (NVIDIA's AgiBot layout);
+  - 15 fps, 16-action chunks, quantile normalization with our own stats;
+  - no clipping, as the official code does: values above 1 in magnitude appear in 15.3% of
+    frames, above 10 in 0.12%;
+  - RoboTwin already has a slot in Cosmos's action heads (domain 17, 14-D); it starts
+    untrained in the public checkpoint.
+- **Subagent's estimates (not measured):** ~60–73 GB per GPU on 5 GPUs; ~26–42 s per
+  iteration, so ~36–58 h for 5,000; ~180 GB per checkpoint, ~2 TB in all.
+- **GPUs:** stopped the continued-training run at step ~29,400 (its 10k and 20k
+  checkpoints kept; registry updated) and cancelled its follow-up check, to free GPUs 5
+  and 7. GPU 3 had been taken by another user.
+- **GPU test:** 10 iterations on GPUs 0, 4, 5, 6, 7 (batch 32 × 5 × 13 = 2,080) since 03:05
+  EST, output to NVMe scratch. It measures peak memory and seconds per iteration; the real
+  launch follows if it passes.
+- **Still to do:** the RoboTwin eval adapter for Cosmos (training takes ~2 days, so there's
+  time).
