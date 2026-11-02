@@ -1271,3 +1271,13 @@ authorized).
   - For actions, watch `train@2_detail/flow_matching_loss_action`, or our open-loop check.
 - 16:35 EST: deleted the two test checkpoints (354 GB) with your OK, using a storage role
   that's allowed to delete. Their logs and wandb ids are kept.
+
+**17:20 EST (Mon Nov 2)** **The 16-GPU cluster run was stopped at iteration ~240 and put back
+in the queue.**
+- It last logged at 17:16 (iteration 240, ~10.2–10.4 s per iteration, loss 1.18). By 17:19
+  its status was "queued" again.
+- No logs reached storage, so it was cut off abruptly, not a crash inside training. That
+  points to being evicted (a higher-priority job takes the GPUs) or a node failure.
+- No checkpoint existed yet (the first is at 500), so ~45 min on 16 GPUs is lost.
+- When it gets nodes again, it starts over from the base model by itself, with a new wandb
+  run.
