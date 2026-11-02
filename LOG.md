@@ -939,3 +939,22 @@ card `notes/runs/mix200_decay60k.md`) on GPUs 4 and 5, which you said were free.
   - **GPU mix-up:** another account ("ubuntu") started 56 GB jobs on GPUs 0 and 4 minutes
     before my dry run. Only ~3 GB would have been left over, so I stopped my dry run
     (1 minute old, no progress) and moved it to GPUs 5 and 7.
+
+**02:05 EST (Mon Nov 2)** **Started: NVIDIA Cosmos 3 Nano as a policy on our data** (your top
+priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
+(`RoboTwin-mix200-aloha_agilex-joint`) and compare on the same RoboTwin scenes.
+- **What Cosmos 3 is.** NVIDIA's mid-2026 "omni" world model: one Mixture-of-Transformers
+  model for reasoning, video generation and robot actions; Nano = 16B parameters.
+  - Policy post-training comes from NVIDIA's `cosmos-framework` (github.com/NVIDIA/cosmos-framework),
+    which ships recipes for LIBERO and DROID: full fine-tuning, 2×8 GPUs, global batch 2048.
+  - No RoboTwin or XPolicyLab adapter exists (checked XPolicyLab upstream too).
+  - Our robot isn't one of its built-in embodiments (14-D joint positions, 3 cameras, 15 fps),
+    so it needs a RoboTwin dataset/experiment config and an eval adapter.
+- **Hugging Face:** every Cosmos 3 repo is ungated and our token has access; nothing to accept.
+- **Done so far:**
+  - downloaded `nvidia/Cosmos3-Nano` (33 GB, HF cache on NVMe) and the Wan2.2 VAE (2.8 GB);
+  - started installing `cosmos-framework`'s CUDA-13 training env (its own `.venv`), in
+    `/mnt/efs/rohingarg/cri/cosmos3/` (outside this repo, like `RoboTwin/`);
+  - a subagent is studying NVIDIA's LIBERO recipe and writing the RoboTwin version on a
+    local `robotwin` branch of the clone (dataset class, experiment config, normalization
+    stats, dryrun and data-loader test). No GPU use yet.
