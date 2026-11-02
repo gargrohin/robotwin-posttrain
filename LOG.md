@@ -1160,3 +1160,10 @@ changes are in the private local folder; nothing committed.
   upload). If it passes, a full 5,000-iteration run from scratch on 2 nodes.
 
 **11:40 EST (Mon Nov 2)** You submitted the 2-node test at 11:29 EST; it's queued. I'm watching it.
+
+**12:45 EST (Mon Nov 2)** **The local Cosmos run has slowed to ~71 s per iteration (from 35.5 s).**
+- Cause: another user's training job started on GPU 7 at ~11:35 EST. Our 5 GPUs step in
+  lockstep, so the whole run waits on the shared one. Not ours to stop.
+- At this speed the local run would need ~80 h more, so the cluster run matters more.
+- The 2-node test has been queued since 11:29 (shared pool). If it hasn't started by ~13:00,
+  I'll cancel it and resubmit it on our team's own quota (no borrowing).
