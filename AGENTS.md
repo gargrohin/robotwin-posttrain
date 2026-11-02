@@ -110,7 +110,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   - Gotcha: GR00T rewrites `meta/relative_stats.json` at every startup; two runs
     starting at once on the same dataset can read it mid-write.
 
-## Cosmos3-Nano eval (2026-11-02; adapter written and CPU-checked, not yet run on a GPU)
+## Cosmos3-Nano eval (2026-11-02; adapter CPU-checked, ran end to end on a GPU at iteration 500)
+- Needs cosmos-framework `robotwin` at 30bd31a or later. Older commits crash on load with
+  `Key '_auto_camera_fps' not in 'OmniMoTModelConfig'`: NVIDIA's inference adds that key to a
+  structured config loaded from a DCP checkpoint.
+- Measured at iteration 500: model load ~80–90 s, ~32 GB, ~1.4 s per call (16 actions); policy
+  plus sim ~38.5 GB; ~4 min per sim episode (from 3 episodes).
 - Adapter `RoboTwin/XPolicyLab/policy/Cosmos3_Nano/` (commit `92c0a8c` on XPolicyLab's `local/aloha-gr00t`; see
   its README). It runs in the Cosmos venv, where XPolicyLab is installed `--no-deps -e` plus
   `msgpack-numpy` (the only two additions; no cosmos-framework pin changed). Per query it rebuilds
