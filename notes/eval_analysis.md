@@ -32,9 +32,23 @@ clean demos.
 | over 350 | 6 | 6% | 12% | 0% (open_microwave) to 19% (stack_bowls_three) |
 
 Success is the average of the tasks' rates in each group. Randomized success falls from 56%
-to 50%, 35% and 6% as tasks get longer.
+to 50%, 35% and 6% as tasks get longer. A task's demos barely vary in length, so its median
+is a fair summary (checked in appendix A).
 
-### Is the median a fair summary of a task's length?
+### What this doesn't show
+
+- **Length is not the only reason.** Short tasks fail too: of the 20 tasks of 150 steps or
+  fewer, 6 score 35% or less on randomized: lift_pot 5%, place_fan 15%, place_mouse_pad 15%,
+  place_object_scale 20%, stamp_seal 33%, turn_switch 35%.
+- **Long tasks mostly use both arms** (5 of the 6 tasks over 350 steps). So this can't tell
+  whether the length itself or the two-arm coordination is what's hard.
+- **Single-task numbers are rough.** Each task has about 20 randomized episodes and 10 or
+  20 clean ones. Group averages are steadier than any one task's rate.
+
+**Reproduce:** `analysis/.venv/bin/python analysis/length_spread.py` prints these tables
+(and the ones in the appendix).
+
+## Appendix A: is the median a fair summary of a task's length?
 
 Yes, for 45 of the 50 tasks: their demos barely vary in length.
 - **Typical spread** (standard deviation divided by mean, median over the 50 tasks): 3.7% for
@@ -59,20 +73,7 @@ Yes, for 45 of the 50 tasks: their demos barely vary in length.
     rank correlation of −0.44, whether length is the median of the clean demos, the median
     of the randomized demos, or the mean of the clean demos.
 
-### What this doesn't show
-
-- **Length is only part of the story.** Within each group, success ranges widely: tasks of
-  150 steps or fewer go from 5% (lift_pot) to 100% (click_bell). A rank correlation of −0.44
-  means longer tasks tend to do worse, with many exceptions.
-- **Long tasks mostly use both arms** (5 of the 6 tasks over 350 steps). So this can't tell
-  whether the length itself or the two-arm coordination is what's hard.
-- **Single-task numbers are rough.** Each task has about 20 randomized episodes and 10 or
-  20 clean ones. Group averages are steadier than any one task's rate.
-
-**Reproduce:** `analysis/.venv/bin/python analysis/length_spread.py` prints these tables
-(the per-task one is below).
-
-## Appendix: every task
+## Appendix B: every task
 
 Demo length in steps, over each task's 50 clean demos. Spread is the standard deviation
 divided by the mean. Success is checkpoint 150000's.
