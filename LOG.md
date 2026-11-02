@@ -1145,3 +1145,16 @@ per iteration, against ~35.5 s on our 5 local GPUs (1.8× faster).**
   - Untested: resuming a 5-GPU checkpoint on 8 GPUs.
   - The batch would be 2,048 vs 2,080 locally, unless set to 26 per GPU × 8 × 10 = 2,080.
 - Your call: move or not.
+
+**11:50 EST (Mon Nov 2)** **Cluster: prepared a 2-node (16-GPU) run, as you asked.** All
+changes are in the private local folder; nothing committed.
+- **wandb:** cluster jobs now use your own key from `~/.netrc`, the same login the local run
+  uses, so their runs land next to it.
+- **2-node layout:** on 2 nodes, the cluster script now uses NVIDIA's own layout from their
+  LIBERO recipe (2 nodes × 8 GPUs): each model copy is split across one node's 8 GPUs, and the
+  two nodes exchange only gradients.
+  - Batch: 32 per GPU × 16 GPUs × 4 accumulation = 2,048, NVIDIA's.
+  - The trainer's CPU config check resolved these settings correctly.
+  - The submit dry run looks right.
+- **Next:** you submit a 2-node test (20 iterations, ending with a checkpoint that both nodes
+  upload). If it passes, a full 5,000-iteration run from scratch on 2 nodes.
