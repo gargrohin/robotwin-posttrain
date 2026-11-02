@@ -28,6 +28,11 @@ dataset="$GR00T_LEROBOT_HOME/RoboTwin-$RUN-aloha_agilex-joint"
 [ -e "$dataset" ] || ln -s "RoboTwin-${DATASET:-5task}-aloha_agilex-joint" "$dataset"
 
 mkdir -p "$ROOT/logs"
+python3 "$ROOT/gr00t/write_run_info.py" \
+  "$ROOT/RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-$RUN-aloha_agilex-joint-$SEED" \
+  run="$RUN" started_from="${GR00T_BASE_MODEL:-nvidia/GR00T-N1.7-3B}" dataset="$(readlink -f "$dataset")" \
+  learning_rate="1e-4 peak, 5% warm-up, cosine to 0" max_steps="$MAX_STEPS" save_steps="$SAVE_STEPS" \
+  gpus="$GPUS" global_batch="$GLOBAL_BATCH_SIZE"
 cd "$ROOT/RoboTwin/XPolicyLab/policy/GR00T_N17"
 bash train.sh RoboTwin "$RUN" aloha_agilex joint "$SEED" "$GPUS" 2>&1 \
   | tee "$ROOT/logs/train_${RUN}_seed${SEED}.log"

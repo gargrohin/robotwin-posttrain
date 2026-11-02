@@ -25,6 +25,15 @@ doing anything outward-facing or destructive.
   `QUEUES="q1=ckpt=num q2=ckpt=num"` are popped in order. One worker per GPU on all
   8 GPUs since 2026-10-27 19:00 ET; logs `logs/worker_gpu<N>.log`; queues
   `logs/queue_50task_v2.txt` (new model) then `logs/queue_30k_v2.txt` (old model).
+- **`notes/runs/README.md`: registry of every training run** (lineage: which checkpoint
+  each run started from, data, schedule, GPUs, checkpoints kept, results). Keep it updated
+  whenever a run starts or finishes. Each run folder under `checkpoints/` also has a
+  `run_info.json`; `gr00t/train.sh` and `gr00t/train_decay.sh` write it at launch
+  (`gr00t/write_run_info.py`).
+- `gr00t/train_decay.sh`: new run from a checkpoint's weights with its own learning-rate
+  schedule (`FROM=<checkpoint dir> RUN=.. GPUS=.. LR=.. MAX_STEPS=..`).
+- `gr00t/build_mix500.sh`: builds `RoboTwin-mix500-aloha_agilex-joint` (50 clean + randomized
+  episodes 0–494 per task; 495–499 held out).
 - `gr00t/train.sh`: fine-tuning launcher. Use `RUN=<name> GPUS=5,6 MAX_STEPS=..
   GLOBAL_BATCH_SIZE=..`; checkpoints go to
   `RoboTwin/XPolicyLab/policy/GR00T_N17/checkpoints/RoboTwin-<RUN>-aloha_agilex-joint-<SEED>/`
