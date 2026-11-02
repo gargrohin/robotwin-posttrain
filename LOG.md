@@ -1174,3 +1174,5 @@ our team's own quota.
   at 13:02 on our team's quota.
 - Claude Code's permission system blocked me from cancelling them, so they need you (commands
   in my message). If they start anyway, each just runs the same 15-min test (~4 GPU-hours).
+- 13:20 EST: with your permission, cancelled the two normal-priority copies. Only the
+  high-priority 2-node test is left in the queue.
