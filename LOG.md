@@ -1257,3 +1257,15 @@ authorized).
   be needed without borrowing.
 - **The local 5-GPU run continues**, as a cross-check: same recipe, batch 2,080 vs 2,048, so
   the loss curves should match. I'll stop it only with your OK once the cluster run passes it.
+
+**16:30 EST (Mon Nov 2)** **The full 16-GPU Cosmos run (`nano-mix200-2n`) started**, after
+19 min in the queue. At ~10.1 s per iteration it should finish ~Nov 3 07:00 EST.
+- **Deleting the two test checkpoints (354 GB) failed:** this machine's storage role can
+  write but not delete. Nothing was removed; it needs you or a role allowed to delete.
+- **Checkpoint size:** 177 GB each.
+  - model: 121 GB, the 15.2B weights at full precision plus their running average (EMA);
+  - optimizer: 56 GB, two running averages per trainable weight.
+- **What the training loss measures:** `train/loss` = 10 × (video-prediction loss + action
+  loss), e.g. 0.848 = 10 × (0.080 + 0.0047) at iteration ~1,100 locally.
+  - So the main loss curve mostly tracks future-frame prediction.
+  - For actions, watch `train@2_detail/flow_matching_loss_action`, or our open-loop check.
