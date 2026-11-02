@@ -1121,3 +1121,7 @@ numbers at iteration 500.**
 - **Next:** evaluate checkpoints 1,500 and 2,000 once they're saved (~18:45 and
   ~23:40 EST; the run should finish ~Nov 4 06:00 EST). The sim eval size needs your budget decision. The open-loop check is cheap
   (~15 min per checkpoint), and I'll run it when a GPU is free.
+
+**10:25 EST (Mon Nov 2)** **You submitted the 1-node cluster test at 10:10 EST. It's waiting
+in the queue (borrowing pool, 2-hour limit, 20 iterations).** I'm watching its status. When it
+runs, the time per iteration shows up in wandb (`robotwin-posttrain`) next to the local run.
