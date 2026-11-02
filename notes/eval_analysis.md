@@ -48,6 +48,78 @@ is a fair summary (checked in appendix A).
 **Reproduce:** `analysis/.venv/bin/python analysis/length_spread.py` prints these tables
 (and the ones in the appendix).
 
+## 2. Clean success didn't improve with 200 more demos per task
+
+- **Clean:** 42.6% (`50task_60k`) → 46.0% (150k). On the 10 tasks with 20 clean episodes:
+  62% → 65%. Over the 581 clean scenes both models ran, 93 are solved only by the new model
+  and 71 only by the old one.
+- **Randomized:** 9.7% → 45.2%. Clean and randomized now score about the same.
+- **The new model trained more overall, but less on the clean demos** (assuming training
+  picks frames evenly, as the run card's pass counts do):
+
+  | | 50task_60k | mix200_150k |
+  |---|---|---|
+  | training samples | 60,000 steps × 64 = 3.84M | 150,000 steps × 64 = 9.6M |
+  | training frames | 548,893, all clean | 2,759,740, of which 548,893 (20%) clean |
+  | passes over the clean demos | 3.84M / 548,893 = 7.0 | 9.6M × 20% / 548,893 = 3.5 |
+
+- **The randomized demos almost never look clean:** every table is cluttered, and the
+  background is plain in only 2% of them (`clean_background_rate: 0.02` in
+  `RoboTwin/env_cfg/task_config/demo_randomized.yml`).
+
+**Reading:** the extra demos taught the model to handle clutter, but not to do the tasks
+better. Seeing the scene no longer looks like the main problem; doing the task does.
+
+### Possible causes
+
+We focus on the first two for now.
+
+1. **The parts of GR00T we don't train.** Our runs train the action model (the part that
+   turns features into actions), the projectors, and a small normalization layer on the
+   VLM's output. The VLM itself, i.e. the vision encoder that reads the camera images and
+   the language model, stays as NVIDIA released it (`tune_visual: false`, `tune_llm: false`,
+   `tune_top_llm_layers: 0` in the checkpoint's `experiment_cfg/final_model_config.json`).
+   If what the VLM passes on doesn't carry what the action needs, for example exactly where
+   a handle is, the action model can't make up for it.
+   - Idea: train the VLM too, all of it or only its top layers.
+   - Idea: before paying for that, look at what the action model receives from the VLM, to
+     see whether the VLM is the problem. Possible ways, not tried:
+     - from the VLM's outputs on demo frames, train a small predictor of something the
+       action needs (e.g. where the target object is). If it can't, that information isn't
+       getting through;
+     - swap in the VLM output of a different frame and measure how much the predicted
+       actions change. If they hardly change, the action model barely uses the images.
+2. **No recoveries in the demos.** RoboTwin's demo recorder keeps a run only if its scripted
+   robot succeeded (`RoboTwin/scripts/collect_data.py:179–191`), and the downloaded demos'
+   `seed.txt` skips numbers (5, 12, 17, …), which fits failed runs being thrown away. So the
+   model has never seen a failed attempt, and as far as we know none where a mistake gets
+   fixed. Once it drifts a little from the demos, it may not know how to get back. This
+   would also fit section 1: longer tasks give more chances to slip.
+   - Check: in the videos, look for failures where a small mistake (a bump, a drop, a grasp
+     slightly off) is never corrected.
+   - Possible fixes, later: demos that include recoveries, or RL (training from the robot's
+     own attempts).
+3. **Luck (not measured).** The model's own randomness can make the same scene succeed once
+   and fail the next time. We have never run one model twice on the same scenes, because
+   evals are expensive, so we can't say how much of the scene-by-scene difference between
+   the two models is luck.
+
+### Next: watch clean failures
+
+In the eval viewer: `mix200_150k`, checkpoint `150000`, `clean`, episodes "failures". Start
+with 3 tasks that have 20 clean episodes and middling success on both models: move_can_pot
+(6/20 both), place_phone_stand (old 8/20, new 7/20), handover_mic (8/20 both); 5 failures
+each. For each failure, note which happened:
+- **a.** Close but not quite: right object, right motion, but the grasp misses by a little or
+  the object slips (points to cause 1).
+- **b.** Wrong plan: wrong object, wrong arm, wrong place or wrong order.
+- **c.** A small mistake it never fixes: it knocks or drops the object, then hovers or repeats
+  the same move (points to cause 2).
+- **d.** It stops moving before the task is done.
+
+Then open the same seed for `50task_60k`: if the old model fails the same way, it's a limit
+both models share.
+
 ## Appendix A: is the median a fair summary of a task's length?
 
 Yes, for 45 of the 50 tasks: their demos barely vary in length.
