@@ -1125,3 +1125,23 @@ numbers at iteration 500.**
 **10:25 EST (Mon Nov 2)** **You submitted the 1-node cluster test at 10:10 EST. It's waiting
 in the queue (borrowing pool, 2-hour limit, 20 iterations).** I'm watching its status. When it
 runs, the time per iteration shows up in wandb (`robotwin-posttrain`) next to the local run.
+
+**11:15 EST (Mon Nov 2)** **Cluster test passed: 8 H100s on one node train Cosmos at ~19.9 s
+per iteration, against ~35.5 s on our 5 local GPUs (1.8× faster).**
+- Timeline: queued 10:10–10:55 EST (shared pool), then everything ran in 15 min.
+  - inputs downloaded in 66 s;
+  - first iteration 99 s (warm-up);
+  - iterations 2–19: 19.5–20.3 s each, batch 2,048 (32 per GPU × 8 GPUs × 8 accumulation);
+  - checkpoint at 20: saved in ~100 s, uploaded in 49 s (166 GB);
+  - exited cleanly.
+- The loss started at ~14–15.6, as the local run's did.
+- **wandb:** the test landed in the team workspace, not next to the local run, because the
+  cluster job used a different wandb key than the local login. To fix before a full run.
+- **Projection:**
+  - The local run reaches 5,000 iterations ~Nov 4 06:00 EST.
+  - Moving it to one cluster node from the local iteration-1,000 checkpoint (~13:55 today)
+    would mean ~4,000 × 19.9 s ≈ 22 h of training, plus queueing and copying. It would finish
+    ~Nov 3 afternoon and free our 5 GPUs for evals.
+  - Untested: resuming a 5-GPU checkpoint on 8 GPUs.
+  - The batch would be 2,048 vs 2,080 locally, unless set to 26 per GPU × 8 × 10 = 2,080.
+- Your call: move or not.
