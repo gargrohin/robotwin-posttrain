@@ -958,3 +958,23 @@ priority). Goal: post-train Cosmos3-Nano on the same data as GR00T `mix200_150k`
   - a subagent is studying NVIDIA's LIBERO recipe and writing the RoboTwin version on a
     local `robotwin` branch of the clone (dataset class, experiment config, normalization
     stats, dryrun and data-loader test). No GPU use yet.
+
+**02:50 EST (Mon Nov 2)** **Cosmos3-Nano recipe decided: NVIDIA's own, kept exactly.**
+- **Settings** (NVIDIA's LIBERO policy recipe, `action_policy_libero_nano.py` + its TOML):
+  - full fine-tuning of all 16B parameters;
+  - fused AdamW, betas (0.9, 0.99), weight decay 0.05;
+  - learning rate 5e-5, 500-step warm-up, then linear decay over a 16,000-step cycle;
+  - global batch ~2,048 (per-GPU batch × GPUs × gradient accumulation; 2,080 on 5 GPUs);
+  - checkpoint every 500 iterations.
+- **Length:** 5,000 iterations, NVIDIA's own length for its 4-suite LIBERO run. It also
+  roughly matches the number of examples GR00T saw: 5,000 × 2,048 = 10.2M vs 150,000 × 64
+  = 9.6M.
+- **The learning rate won't be settled at the end.** NVIDIA stops at 2,000 / 5,000
+  iterations of a 16,000 cycle, so at iteration 5,000 it is still 5e-5 × (1 − 4,500 ÷
+  15,500) = 3.55e-5. That is their tested setup, so it is the baseline. Letting it decay
+  to 0 is our own variant, run separately later (a short decay from a saved checkpoint,
+  as with GR00T's `mix200_decay60k`).
+- **GPUs:** whatever is free at launch (up to 5–6); per-GPU memory will show whether 4 would
+  suffice.
+- **Speed is unknown:** my very rough guess is ~50 s per iteration on 5 GPUs. I'll measure
+  it in the first minutes before committing to the full length.
