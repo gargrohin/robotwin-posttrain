@@ -19,6 +19,9 @@
 # usage: GPU=3 QUEUES="logs/queue_50task_v2.txt=RoboTwin-50task_60k-aloha_agilex-joint-0=60000" \
 #        gr00t/benchmark_worker.sh
 #   WAIT_PID=<pid>: start only after that process exits (e.g. an older worker's job).
+# Cosmos3-Nano checkpoints: EVAL_SH=cosmos3/eval.sh PER_STREAM_MB=48000 (policy server ~35-40 GB
+# + sim ~7 GB, so one stream per 80 GB GPU), queue entries <queue>=cosmos3_nano_mix200=<iteration>
+# with an explicit iteration (not "last": the logs are named with the resolved number).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 : "${GPU:?set GPU}" "${QUEUES:?set QUEUES}"
