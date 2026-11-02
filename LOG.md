@@ -1167,3 +1167,10 @@ changes are in the private local folder; nothing committed.
 - At this speed the local run would need ~80 h more, so the cluster run matters more.
 - The 2-node test has been queued since 11:29 (shared pool). If it hasn't started by ~13:00,
   I'll cancel it and resubmit it on our team's own quota (no borrowing).
+
+**13:15 EST (Mon Nov 2)** **2-node test resubmitted at high priority** (your suggestion), on
+our team's own quota.
+- The two normal-priority copies are still queued: one in the shared pool, one I submitted
+  at 13:02 on our team's quota.
+- Claude Code's permission system blocked me from cancelling them, so they need you (commands
+  in my message). If they start anyway, each just runs the same 15-min test (~4 GPU-hours).
