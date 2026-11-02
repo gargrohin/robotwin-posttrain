@@ -1281,3 +1281,11 @@ in the queue.**
 - No checkpoint existed yet (the first is at 500), so ~45 min on 16 GPUs is lost.
 - When it gets nodes again, it starts over from the base model by itself, with a new wandb
   run.
+- 17:28 EST: resubmitted the 16-GPU run at **high priority** (your call), so normal-priority
+  jobs can't evict it.
+  - Same run name and settings: from scratch, 5,000 iterations, checkpoint every 500, no
+    borrowing, 24-hour limit.
+  - I cancelled the requeued normal-priority job first. It had no checkpoint, so nothing was
+    lost.
+  - The local run keeps going as insurance until the cluster run has passed it and saved a
+    checkpoint.
