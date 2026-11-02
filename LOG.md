@@ -1289,3 +1289,5 @@ in the queue.**
     lost.
   - The local run keeps going as insurance until the cluster run has passed it and saved a
     checkpoint.
+- 17:41 EST: the high-priority 16-GPU run started after 13 min in the queue. At ~10.2 s per
+  iteration: first checkpoint (500) ~19:15 EST, finish ~Nov 3 08:30 EST.
