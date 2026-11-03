@@ -1488,3 +1488,9 @@ the same 10-task scenes.
 - Single-task changes of ±1–2 are noise at 10 scenes.
 - Local copy of the checkpoint deleted. 5,000 (the last) lands ~08:30 EST and is evaluated
   automatically.
+
+**08:35 EST (Tue Nov 3)** **The 16-GPU Cosmos run finished**: 5,000 iterations at 08:29 EST,
+14 h 48 min after it started (~10.3 s per iteration), with no interruptions after the
+high-priority resubmit. Final checkpoint (5,000) is in cloud storage; its sim eval on the same
+10-task scenes is starting automatically (~1 h). All 10 checkpoints (500–5,000, ~177 GB each,
+~1.8 TB total) are kept in cloud storage for now.
