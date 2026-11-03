@@ -1553,7 +1553,7 @@ checkpoint** (from the Flux subagent).
     the borrowed one is evicted, resubmit to our quota.
   - Eval: split into borrowed 2-GPU-slice jobs, each with a share of the 50 tasks. The
     whole-node job stays as the fallback, with no episodes run twice.
-- 14:40 EST: **clean-scene 50-task eval of Cosmos 5,000 added, all on the cluster** (your call).
+- 15:35 EST: **clean-scene 50-task eval of Cosmos 5,000 added, all on the cluster** (your call).
   - The randomized-only scope had been carried over from the first 10-task eval; clean scenes
     show task skill without clutter, which is the question the GR00T analysis raised.
   - Same setup as randomized: first 10 GR00T clean scenes per task (~500 episodes), ~4 borrowed
@@ -1572,7 +1572,7 @@ for it.** 10 tasks, randomized, 100 scenes both ran (`analysis/cache/episodes.pa
   pairs because RoboTwin's sentence pick depends on the stream's episode count (AGENTS.md
   gotcha).
 - Viewer: new "two models, same scenes" view; the local Cosmos run is hidden (your call).
-- 14:55 EST: **randomized 50-task eval extended to GR00T's full protocol** (~20 scenes per task;
+- ~16:15 EST: **randomized 50-task eval extended to GR00T's full protocol** (~20 scenes per task;
   your call).
   - I had cut it to 10 per task in the subagent's brief to halve the cost, without asking you.
     That was my mistake.
