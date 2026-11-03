@@ -16,7 +16,9 @@ def episodes(ck, num, task, cfg):  # {seed: success} from all of that eval's cli
 NEW = "RoboTwin-mix200_150k-aloha_agilex-joint-0"; DEC = "RoboTwin-mix200_decay60k-aloha_agilex-joint-0"
 OLD = "RoboTwin-50task_60k-aloha_agilex-joint-0"
 MODELS = (("old", OLD, 60000), ("new 60k", NEW, 60000), ("decayed 60k", DEC, 10000), ("new 150k", NEW, 150000),
-          ("cosmos 1500", "cosmos3_nano_mix200", 1500))
+          ("cosmos 1500", "cosmos3_nano_mix200", 1500)) + tuple(
+    (f"cosmos16 {n}", "cosmos3_nano_mix200_2n", n) for n in (2500, 3000, 4000, 5000)
+    if glob.glob(f"logs/eval_cosmos3_nano_mix200_2n_ckpt-{n}_*.client.log"))  # 16-GPU run, once evaluated
 TEN = ["pick_dual_bottles", "place_object_stand", "move_pillbottle_pad", "place_empty_cup", "place_phone_stand",
        "move_can_pot", "dump_bin_bigbin", "handover_mic", "grab_roller", "click_bell"]
 plan = collections.Counter((l.split()[0], l.split()[1]) for l in open("logs/queue_decay60k_10000.txt"))
