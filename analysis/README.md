@@ -2,7 +2,9 @@
 
 Browse RoboTwin eval results episode by episode: pick a model, checkpoint, setting and
 task, see its success rate, click an episode, and watch (or step through) its rollout
-video. CPU only; read-only on `logs/`, `RoboTwin/eval_result/` and the datasets.
+video. Next to it plays a training demo of the same task (clean or randomized,
+matching the setting), so you can compare what the model does with what it was taught.
+Both players start at 10 steps per second, so they move in step. CPU only; read-only on `logs/`, `RoboTwin/eval_result/` and the datasets.
 
 ## Start
 
