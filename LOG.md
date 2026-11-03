@@ -1411,3 +1411,10 @@ built or submitted.
   - We'd need a measured speed, then a reduced schedule.
 - Notes: `/mnt/efs/rohingarg/cri/flux3/NOTES.md`; official repo cloned (read-only) under
   `/mnt/efs/rohingarg/cri/flux3/flux-action`.
+- 01:30 EST: **your decisions for Flux:**
+  - the assignment fits the license terms;
+  - run it on another team's quota, not ours;
+  - train for 24–36 h of wall time (2 nodes) instead of the full recipe.
+  - The subagent resumed: license access check → test job (high priority, measures speed) →
+    reduced schedule sized to ~30 h, official hyperparameters otherwise → full run (no
+    borrowing, normal priority; high if evicted).
