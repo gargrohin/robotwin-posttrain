@@ -1333,3 +1333,16 @@ arm error to the error of holding still; lower is better:
   1,000.
 - No sign of memorization (unseen ≈ trained).
 - Model load took 882 s, slow again on the shared drive.
+
+**22:50 EST (Mon Nov 2)** **Local Cosmos run stopped (your OK); its GPUs now run the first
+Cosmos sim eval.**
+- The 16-GPU cluster run passed the local run at 22:45 (iteration 1,700 vs 1,698), after
+  saving three checkpoints and passing the load-and-compare check. I stopped the local run at
+  22:47. Its checkpoints 500, 1,000 and 1,500 stay on disk.
+- **Sim eval, Cosmos iteration 1,500** (local checkpoint): the 10 tasks, randomized, each
+  task's first 10 scenes, the same scenes as GR00T's 10-task evals (`gr00t/paired_queue.py`).
+  - 13 jobs, 100 episodes, `logs/queue_cosmos1500_rand10.txt`.
+  - One stream per GPU on GPUs 0, 4, 5, 6, 7 (`benchmark_worker.sh` with
+    `EVAL_SH=cosmos3/eval.sh`).
+  - ~1.5–2 h.
+  - Compare with GR00T mix200 on the same scenes: 60k, 150k, and decay60k.
