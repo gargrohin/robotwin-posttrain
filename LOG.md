@@ -1312,3 +1312,5 @@ in every view.
   - It loads in 99 s and takes 1.2 s per call.
   - Download of the model part only (114 GB): 6 min. The temporary copy is deleted.
   - So the cluster run can replace the local one once it has passed it.
+- 20:42 EST: 16-GPU run iteration 1,000: checkpoint in cloud storage, loss ~1.0, ~10.3 s per
+  iteration. The local run saved iteration 1,500; its open-loop check is running on GPU 3.
