@@ -1443,3 +1443,16 @@ scenes.**
   noise, but repeat runs haven't measured it.
 - Checkpoint downloaded from cloud storage to NVMe in 73 s.
 - Next: iteration 3,000 (~02:30 EST) is evaluated automatically, then 4,000 and 5,000.
+
+**03:35 EST (Tue Nov 3)** **Cosmos 16-GPU run at iteration 3,000: 79/99 (80%) randomized** on
+the same 10-task scenes.
+- Learning curve so far: 1,500 → 67%, 2,500 → 78%, 3,000 → 80%. GR00T's best is 67%.
+- The gain from 2,500 to 3,000 (+2 episodes) is within noise; it may be flattening.
+- Per task vs 2,500:
+  - grab_roller 10 (was 9), move_pillbottle_pad 7 (6), move_can_pot 6 (5),
+    pick_dual_bottles 4 (3);
+  - handover_mic 9 (10), place_phone_stand 5 (6);
+  - the rest the same.
+- pick_dual_bottles is still Cosmos's weakest task vs GR00T (4 vs 7).
+- Local copy of the checkpoint deleted after the eval. 4,000 (~05:20 EST) and 5,000
+  (~08:30) are next, evaluated automatically.
