@@ -1559,3 +1559,16 @@ checkpoint** (from the Flux subagent).
   - Same setup as randomized: first 10 GR00T clean scenes per task (~500 episodes), ~4 borrowed
     2-GPU slice jobs, high priority.
   - Expected ~5 h after the slices start.
+
+**15:37 EST (Tue Nov 3)** **GR00T 150k vs Cosmos 5,000 (cluster run), scene by scene, and a viewer
+for it.** 10 tasks, randomized, 100 scenes both ran (`analysis/cache/episodes.parquet`):
+- GR00T 67, Cosmos 87. Both solve 61, only Cosmos 26, only GR00T 6, neither 7. If the two
+  were equally good, 26 of the 32 one-sided scenes going one way would happen about 1 time
+  in 1,900 (two-sided sign test).
+- Biggest gaps (Cosmos minus GR00T, of 10): handover_mic +7 (9 vs 2), dump_bin_bigbin,
+  place_object_stand and place_empty_cup +3 each. GR00T ahead only on pick_dual_bottles (−1).
+- On the 61 scenes both solve, Cosmos is faster on 45 (median 111 vs 117 steps).
+- Same scenes, checked from first frames; the instruction sentence differs in 80 of 100
+  pairs because RoboTwin's sentence pick depends on the stream's episode count (AGENTS.md
+  gotcha).
+- Viewer: new "two models, same scenes" view; the local Cosmos run is hidden (your call).
