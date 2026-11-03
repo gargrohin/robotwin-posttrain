@@ -1291,3 +1291,11 @@ in the queue.**
     checkpoint.
 - 17:41 EST: the high-priority 16-GPU run started after 13 min in the queue. At ~10.2 s per
   iteration: first checkpoint (500) ~19:15 EST, finish ~Nov 3 08:30 EST.
+
+**19:01 EST (Tue Nov 3)** **Eval viewer: training demo next to the rollout** (your request). Picking a
+task now also plays one of its training demos from the mix200 dataset (clean demos for
+clean, randomized for randomized; choose demo 0–49 or 0–199). Both players start at 10 steps
+per second; the demo files are 15 frames per second and the rollouts 10, so side by side
+they'd otherwise run at different speeds. Checked: all 12,500 demos map to the right task
+(4 spot checks against known episodes, frame count = step count), and the app runs headless
+in every view.

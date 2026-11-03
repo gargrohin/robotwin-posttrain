@@ -5,6 +5,7 @@ rebuild it after new evals with: analysis/.venv/bin/python analysis/build_index.
 """
 
 import base64
+import json
 import math
 from pathlib import Path
 
@@ -13,7 +14,9 @@ import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
 INDEX = ROOT / "analysis/cache/episodes.parquet"
+DEMOS = ROOT / "data/lerobot/RoboTwin-mix200-aloha_agilex-joint"  # training demos of mix200_150k
 EVAL_FPS = 10  # RoboTwin rollout videos: 10 fps, one frame per action step
+DEMO_FPS = 15  # training demo videos: 15 fps, one frame per step
 SETTINGS = {"demo_clean": "clean", "demo_randomized": "randomized"}
 ET = "America/New_York"
 
@@ -26,8 +29,8 @@ PLAYER = """
   <button onclick="toggle()">play / pause</button>
   <button onclick="step(1)">frame &#9654;</button>
   <button onclick="step(10)">+10</button>
-  speed <select onchange="v.playbackRate = this.value">
-    <option>0.25</option><option>0.5</option><option selected>1</option><option>2</option><option>4</option>
+  steps per second <select onchange="v.playbackRate = this.value / fps">
+    <option>2.5</option><option>5</option><option selected>10</option><option>20</option><option>40</option>
   </select>
   <b id="label" style="margin-left:8px"></b>
   <div style="color:#888;font-size:12px">click the video, then: &larr; &rarr; one frame,
@@ -36,6 +39,7 @@ PLAYER = """
 <script>
 const v = document.getElementById("v"), label = document.getElementById("label");
 const fps = __FPS__, n = __FRAMES__;
+v.defaultPlaybackRate = v.playbackRate = 10 / fps;  // every player starts at 10 steps per second
 const frame = () => Math.min(n - 1, Math.floor(v.currentTime * fps + 1e-6));
 function step(d) {
   v.pause();
@@ -59,6 +63,29 @@ def load_index(mtime):  # mtime: reload after a rebuild
     return df
 
 
+@st.cache_data
+def load_demos():
+    """One row per training demo: 50 clean + 200 randomized per task.
+
+    Dataset order (run card notes/runs/mix200_150k.md, "Merge order"): episodes 0-2499 are
+    the clean demos, tasks sorted, 50 each; then 4 groups of 2,500 randomized demos in the
+    same order, holding randomized demos 0-49, 50-99, 100-149 and 150-199 of each task.
+    """
+    tasks = sorted(p.name for p in (ROOT / "RoboTwin/data/demo_clean").iterdir())
+    info = json.loads((DEMOS / "meta/info.json").read_text())
+    rows = []
+    for i, line in enumerate((DEMOS / "meta/episodes.jsonl").open()):
+        ep, k = json.loads(line), i % 2500
+        video = info["video_path"].format(episode_chunk=i // info["chunks_size"], episode_index=i,
+                                          video_key="observation.images.cam_high")
+        rows.append({"task": tasks[k // 50],
+                     "setting": "demo_clean" if i < 2500 else "demo_randomized",
+                     "number": k % 50 + 50 * max(0, i // 2500 - 1),
+                     "length": ep["length"], "instruction": ep["tasks"][0],
+                     "video": str((DEMOS / video).relative_to(ROOT))})
+    return pd.DataFrame(rows)
+
+
 @st.cache_data(max_entries=32)
 def video_b64(path):
     return base64.b64encode((ROOT / path).read_bytes()).decode()
@@ -71,8 +98,8 @@ def wilson(k, n, z=1.96):
     return max(0.0, c - h), min(1.0, c + h)
 
 
-def player(path, frames):
-    html = (PLAYER.replace("__B64__", video_b64(path)).replace("__FPS__", str(EVAL_FPS))
+def player(path, frames, fps):
+    html = (PLAYER.replace("__B64__", video_b64(path)).replace("__FPS__", str(fps))
             .replace("__FRAMES__", str(frames)))
     st.iframe(html, height=560)
 
@@ -140,14 +167,26 @@ event = st.dataframe(
 )
 ep = view.iloc[event.selection.rows[0] if event.selection.rows else 0]
 
-left, right = st.columns([3, 2])
+left, right = st.columns(2)
+with right:
+    st.markdown("**Training demo of this task**", help=(
+        "Recorded by RoboTwin's scripted robot, which knows where every object is and follows "
+        "a planned motion; only successful runs were kept. These are mix200_150k's training "
+        "demos (the 50 clean ones are also 50task_60k's)."))
+    demos = load_demos()
+    dm = demos[(demos.task == task) & (demos.setting == setting)].set_index("number")
+    num = st.number_input(f"{SETTINGS[setting]} demo (0 to {len(dm) - 1})", 0, len(dm) - 1, 0,
+                          key=f"demo|{task}|{setting}")
+    demo = dm.loc[num]
+    player(demo.video, int(demo.length), DEMO_FPS)
+    st.markdown(f"- {demo.length} steps\n- instruction: “{demo.instruction}”")
 with left:
+    st.markdown("**Rollout**")
     if pd.notna(ep.video):
-        player(ep.video, int(ep.video_frames))
+        player(ep.video, int(ep.video_frames), EVAL_FPS)
     else:
         st.warning("No video for this episode: its folder was deleted, moved mid-run, or "
                    "can't be told apart from a sibling stream's (see build_index.py).")
-with right:
     result = "sim crash (not a policy failure)" if ep.sim_error else (
         "success" if ep.success else "fail")
     st.markdown(f"**shard {ep.shard}, episode {ep.episode}** — {result}")
