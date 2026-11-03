@@ -1456,3 +1456,26 @@ the same 10-task scenes.
 - pick_dual_bottles is still Cosmos's weakest task vs GR00T (4 vs 7).
 - Local copy of the checkpoint deleted after the eval. 4,000 (~05:20 EST) and 5,000
   (~08:30) are next, evaluated automatically.
+
+**04:45 EST (Tue Nov 3)** **Flux 3 Action: package built and a 1-node test trained, but the
+full run isn't launched. Needs your decision on how to queue it.**
+- **Recipe:** the official full fine-tune for the DROID robot dataset (BFL's
+  `configs/droid/train.json`), adapted only for our robot and data:
+  - new 14-D action heads;
+  - the official LeRobot indexer;
+  - DROID camera layout, with our 240×320 images stretched to 360×640;
+  - batch and length for the budget.
+  - Optimizer, learning rates, loss weights, EMA etc. unchanged. Code is on a local branch.
+- **1-node test** (high priority, borrowed pool):
+  - trained, saved a 129 GB checkpoint, uploaded;
+  - 69 s per update at batch 512, max 2 windows per GPU (72.8/79 GB);
+  - **resume ran out of memory**: the fix is written but not yet tested on the cluster;
+  - the wandb logging bug is fixed locally.
+- **Draft full run:** 2 nodes, batch 512, 3,000 updates (official schedule scaled to 1/10),
+  checkpoint every 150 updates (~1.5 h), ~30 h. Estimated from the 1-node speed.
+- **Queue problem:** the second team's quota is full, with a long high-priority backlog. A
+  normal-priority run would wait behind all of it. Our team's quota is also nearly full.
+- **Still queued:** a 2-node test and a 1-node test of the resume fix (shared pool, high
+  priority).
+- **Asked you:** queue option (a–e), and whether to delete the 129 GB test checkpoint.
+- Local notes: `/mnt/efs/rohingarg/cri/flux3/NOTES.md`.
