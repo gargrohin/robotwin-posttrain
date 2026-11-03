@@ -1314,3 +1314,22 @@ in every view.
   - So the cluster run can replace the local one once it has passed it.
 - 20:42 EST: 16-GPU run iteration 1,000: checkpoint in cloud storage, loss ~1.0, ~10.3 s per
   iteration. The local run saved iteration 1,500; its open-loop check is running on GPU 3.
+
+**21:05 EST (Mon Nov 2)** **Open-loop check, Cosmos (local run) iteration 1,500.** Ratio of
+arm error to the error of holding still; lower is better:
+
+| model | examples seen | train randomized | train clean | unseen randomized |
+|---|---|---|---|---|
+| Cosmos 500 | 1.04M | 0.78 | 0.59 | 0.74 |
+| Cosmos 1,000 | 2.08M | 0.51 | 0.44 | 0.46 |
+| **Cosmos 1,500** | 3.12M | **0.44** | **0.35** | **0.41** |
+| GR00T mix200 60k | 3.84M | 0.47 | 0.41 | 0.41 |
+| GR00T mix200 90k | 5.76M | 0.36 | 0.30 | 0.31 |
+| GR00T mix200 150k | 9.6M | 0.28 | 0.24 | 0.24 |
+
+- Still at least as good as GR00T per example seen: Cosmos 1,500 (3.1M) is between GR00T 60k
+  and 90k.
+- The gain is slowing: 0.51 → 0.44 from 1,000 to 1,500, after 0.78 → 0.51 from 500 to
+  1,000.
+- No sign of memorization (unseen ≈ trained).
+- Model load took 882 s, slow again on the shared drive.
