@@ -1299,3 +1299,9 @@ per second; the demo files are 15 frames per second and the rollouts 10, so side
 they'd otherwise run at different speeds. Checked: all 12,500 demos map to the right task
 (4 spot checks against known episodes, frame count = step count), and the app runs headless
 in every view.
+- 19:15 EST: the 16-GPU run's **first checkpoint (iteration 500) reached cloud storage**.
+  - It's complete (177 GB), both nodes reported done, and it's marked as the latest.
+  - No slowdown in training.
+  - This is the first real-run test of the 2-node save and upload, and it worked.
+  - Now checking that it loads in our eval code and gives an open-loop error similar to the
+    local run's iteration 500 (on GPU 3, ~30 min including the download).
