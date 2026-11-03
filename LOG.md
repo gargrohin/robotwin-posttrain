@@ -1305,3 +1305,10 @@ in every view.
   - This is the first real-run test of the 2-node save and upload, and it worked.
   - Now checking that it loads in our eval code and gives an open-loop error similar to the
     local run's iteration 500 (on GPU 3, ~30 min including the download).
+- 19:35 EST: **the 16-GPU run's iteration-500 checkpoint works in our eval code**, and matches
+  the local run's iteration 500 on the quick open-loop check.
+  - Ratio to holding still: cluster 0.72 / 0.58 / 0.72 vs local 0.78 / 0.59 / 0.74 (train
+    randomized / train clean / unseen randomized). That's within the check's noise.
+  - It loads in 99 s and takes 1.2 s per call.
+  - Download of the model part only (114 GB): 6 min. The temporary copy is deleted.
+  - So the cluster run can replace the local one once it has passed it.
