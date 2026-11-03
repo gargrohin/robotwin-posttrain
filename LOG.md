@@ -1494,3 +1494,22 @@ the same 10-task scenes.
 high-priority resubmit. Final checkpoint (5,000) is in cloud storage; its sim eval on the same
 10-task scenes is starting automatically (~1 h). All 10 checkpoints (500–5,000, ~177 GB each,
 ~1.8 TB total) are kept in cloud storage for now.
+
+**10:05 EST (Tue Nov 3)** **Final Cosmos checkpoint (5,000): 86/99 (87%) randomized** on the same
+10-task scenes. GR00T's best is 66/99 (67%).
+
+| Cosmos iteration | 1,500 | 2,500 | 3,000 | 4,000 | 5,000 |
+|---|---|---|---|---|---|
+| randomized, 10 tasks | 67% | 78% | 80% | 86% | 87% |
+
+- **The curve is flattening:** +1 episode from 4,000 to 5,000, which is within noise. More of
+  the same training probably won't add much on these tasks.
+- **Per task at 5,000 vs GR00T 150k:**
+  - ahead: handover_mic 9 vs 2, place_object_stand 8 vs 5, place_empty_cup 10 vs 7,
+    dump_bin_bigbin 10 vs 7, move_pillbottle_pad 8 vs 6;
+  - equal or within 1: the other 5.
+  - pick_dual_bottles moved 9 → 6 between 4,000 and 5,000, and place_phone_stand 4 → 8.
+    Swings of that size at 10 scenes show how noisy single tasks are.
+- **Not measured yet:** clean scenes, the other 40 tasks, and repeat runs of the same scenes.
+- GPU 3 was taken by another user for this eval, so it ran on 4 streams. Local checkpoint
+  copies are deleted. The eval workers are stopped.

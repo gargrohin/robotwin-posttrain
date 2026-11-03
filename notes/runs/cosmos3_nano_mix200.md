@@ -88,3 +88,6 @@ is our own later experiment.
   90k. `outputs/heldout_check/cosmos3_nano_mix200_1500_stride5.json`.
 - **Sim, iteration 1,500, 10 tasks randomized (same scenes as GR00T): 66/99 (67%)**, equal to GR00T
   mix200 at 150k (66/99) with ~1/3 of the training examples. `python3 gr00t/paired_compare.py --per-task`.
+- **16-GPU copy, sim learning curve (10 tasks randomized, same scenes as GR00T):** 2,500 77/99 (78%),
+  3,000 79/99 (80%), 4,000 85/99 (86%), **5,000 86/99 (87%)**; GR00T mix200 150k 66/99 (67%).
+  `python3 gr00t/paired_compare.py --per-task`.
