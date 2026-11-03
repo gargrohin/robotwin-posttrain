@@ -84,3 +84,5 @@ is our own later experiment.
 - 16-GPU cluster copy (`cosmos3_nano_mix200_2n`, batch 2,048, NVIDIA's 2-node layout), iteration
   500: open-loop ratio 0.72 / 0.58 / 0.72 vs this run's 0.78 / 0.59 / 0.74, the same within noise.
   `outputs/heldout_check/cosmos3_nano_mix200_2n_500_stride5.json`.
+- Iteration 1,500 (local run): open-loop ratio 0.44 / 0.35 / 0.41, between GR00T mix200 60k and
+  90k. `outputs/heldout_check/cosmos3_nano_mix200_1500_stride5.json`.
