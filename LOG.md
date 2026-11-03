@@ -1430,14 +1430,14 @@ built or submitted.
 - The download-and-queue script is local (it contains the storage path).
 - Expected: 2,500 eval ~01:15–02:30 EST; 5,000 lands ~08:30.
 
-**02:10 EST (Tue Nov 3)** **Sim eval of the 16-GPU Cosmos run at iteration 2,500: 77%
+**02:10 EST (Tue Nov 3)** **Sim eval of the 16-GPU Cosmos run at iteration 2,500: 77/99 (78%)
 randomized, ahead of GR00T's best (67%) and of Cosmos at 1,500 (67%), on the same 10-task
 scenes.**
 - `python3 gr00t/paired_compare.py --per-task`: see the table in my message.
 - Cosmos 2,500 vs GR00T 150k, per task:
   - ahead: handover_mic 10 vs 2, place_object_stand 9 vs 5, place_empty_cup 10 vs 7,
     dump_bin_bigbin 9 vs 7;
-  - behind: pick_dual_bottles 3 vs 7, move_can_pot (see table) vs 6;
+  - behind: pick_dual_bottles 3 vs 7, move_can_pot 5 vs 6;
   - equal or within 1: the others.
 - One eval without repeat runs. A ~10-point gap on ~100 scenes is larger than the usual
   noise, but repeat runs haven't measured it.
