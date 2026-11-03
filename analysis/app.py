@@ -19,6 +19,9 @@ EVAL_FPS = 10  # RoboTwin rollout videos: 10 fps, one frame per action step
 DEMO_FPS = 15  # training demo videos: 15 fps, one frame per step
 SETTINGS = {"demo_clean": "clean", "demo_randomized": "randomized"}
 ET = "America/New_York"
+# the local Cosmos run (stopped at ~1,700 iterations); only the cluster run
+# cosmos3_nano_mix200_2n is used (user, 2026-11-03)
+HIDDEN_MODELS = {"cosmos3_nano_mix200"}
 
 PLAYER = """
 <video id="v" src="data:video/mp4;base64,__B64__" controls muted playsinline
@@ -104,11 +107,98 @@ def player(path, frames, fps):
     st.iframe(html, height=560)
 
 
+def pick_model(label, df, default):
+    """Model and checkpoint selectors for side `label`; returns its name and episodes."""
+    models = sorted(df.model.unique())
+    model = st.selectbox(f"model {label}", models, key=f"model {label}",
+                         index=models.index(default) if default in models else 0)
+    d = df[df.model == model]
+    ckpt = st.selectbox(f"checkpoint {label}", key=f"checkpoint {label}", options=sorted(
+        d.ckpt_label.unique(), key=lambda c: -int(c) if c.isdigit() else 1))
+    return f"{model} @ {ckpt}", d[(d.ckpt_label == ckpt) & ~d.spot_check]
+
+
+def result_text(success, sim_error):
+    return "⚠️ sim crash" if sim_error else ("✅ success" if success else "❌ fail")
+
+
+def compare_view(df):
+    """Two models on the scenes (task, setting, seed) both ran, rollouts side by side."""
+    key = ["task", "setting", "seed"]
+    with st.sidebar:
+        name_a, a = pick_model("A", df, "mix200_150k")
+        name_b, b = pick_model("B", df, "cosmos3_nano_mix200_2n")
+        j = a.drop_duplicates(key).merge(b.drop_duplicates(key), on=key, suffixes=("_a", "_b"))
+        if j.empty:
+            st.warning("These two have no scenes in common.")
+            st.stop()
+        setting = st.radio("setting", [s for s in SETTINGS if s in set(j.setting)],
+                           format_func=SETTINGS.get, horizontal=True, key="compare setting")
+        j = j[j.setting == setting]
+        per_task = j.groupby("task").agg(a=("success_a", "sum"), b=("success_b", "sum"),
+                                         n=("seed", "size"))
+        task = st.selectbox(
+            "task (biggest B minus A first)", key="compare task",
+            options=(per_task.b - per_task.a).sort_values(ascending=False).index,
+            format_func=lambda t: f"{t}  (A {per_task.a[t]}, B {per_task.b[t]} of {per_task.n[t]})")
+        show = st.radio("scenes", ["all", "only B succeeds", "only A succeeds", "both fail",
+                                   "both succeed"], key="compare show")
+        st.caption(f"A = {name_a}\n\nB = {name_b}\n\nOver all {len(j)} shared {SETTINGS[setting]} "
+                   f"scenes: A {int(j.success_a.sum())}, B {int(j.success_b.sum())}.")
+
+    t = j[j.task == task].sort_values("seed")
+    sa, sb = t.success_a, t.success_b
+    st.subheader(f"{task} · {SETTINGS[setting]}: A = {name_a}, B = {name_b}")
+    c = st.columns(6)
+    for col, (label, value) in zip(c, [("A succeeds", sa.sum()), ("B succeeds", sb.sum()),
+                                      ("both", (sa & sb).sum()), ("only A", (sa & ~sb).sum()),
+                                      ("only B", (~sa & sb).sum()), ("neither", (~sa & ~sb).sum())]):
+        col.metric(label, f"{int(value)}/{len(t)}")
+    view = t[{"all": sa | ~sa, "only B succeeds": ~sa & sb, "only A succeeds": sa & ~sb,
+              "both fail": ~sa & ~sb, "both succeed": sa & sb}[show]]
+    if view.empty:
+        st.info("No scenes in this view.")
+        st.stop()
+    table = pd.DataFrame({
+        "seed": view.seed,
+        "A": [result_text(s, e) for s, e in zip(view.success_a, view.sim_error_a)],
+        "B": [result_text(s, e) for s, e in zip(view.success_b, view.sim_error_b)],
+        "A steps": view.steps_a, "B steps": view.steps_b, "step limit": view.step_limit_a,
+        "same instruction": (view.instruction_a == view.instruction_b).map({True: "yes", False: "no"}),
+    })
+    event = st.dataframe(table, hide_index=True, height=300, on_select="rerun",
+                         selection_mode="single-row",
+                         key=f"compare|{name_a}|{name_b}|{setting}|{task}|{show}")
+    row = view.iloc[event.selection.rows[0] if event.selection.rows else 0]
+    for col, side, name in zip(st.columns(2), "ab", [name_a, name_b]):
+        with col:
+            st.markdown(f"**{side.upper()}: {name}**: "
+                        f"{result_text(row[f'success_{side}'], row[f'sim_error_{side}'])}, "
+                        f"{row[f'steps_{side}']} / {row[f'step_limit_{side}']} steps")
+            if pd.notna(row[f"video_{side}"]):
+                player(row[f"video_{side}"], int(row[f"video_frames_{side}"]), EVAL_FPS)
+            else:
+                st.warning("No video for this episode.")
+            instr = row[f"instruction_{side}"]
+            st.markdown("- instruction: " + (f"“{instr}”" if pd.notna(instr) else "_not recorded_"))
+    st.caption(f"seed `{row.seed}`. Same seed means the same starting scene. The instruction "
+               "sentence can still differ between the two: RoboTwin picks it from a list as "
+               "long as the eval stream's episode count, so streams of different sizes pick "
+               "different sentences.")
+
+
 st.set_page_config(page_title="Eval explorer", layout="wide")
 if not INDEX.exists():
     st.error("No index yet. Build it: `analysis/.venv/bin/python analysis/build_index.py`")
     st.stop()
 df = load_index(INDEX.stat().st_mtime)
+df = df[~df.model.isin(HIDDEN_MODELS)]
+
+with st.sidebar:
+    mode = st.radio("view", ["one model", "two models, same scenes"], horizontal=True)
+if mode != "one model":
+    compare_view(df)
+    st.stop()
 
 with st.sidebar:
     model = st.selectbox("model", sorted(df.model.unique()))

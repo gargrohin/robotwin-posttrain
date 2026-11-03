@@ -221,6 +221,14 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   not seeds); frames = steps, +1 on success. Every policy failure runs to the step
   limit. The instruction per episode is not logged. Logs are block-buffered, so a
   stopped stream's log can lag its videos by an episode.
+- **Same seed, different instruction sentence:** RoboTwin builds an episode's candidate
+  sentences as a list exactly `test_num` long (`generate_episode_descriptions(...,
+  max_descriptions=test_num)` in `eval_policy_xpolicylab.py`'s `build_instruction`), then picks
+  one with the seed. So two evals of one seed get the same sentence only if their streams
+  have the same episode count; the scene itself is the same (checked 2026-11-03: GR00T 150k
+  vs Cosmos 5,000 first frames differ by 0.5-1.3/255; 18/18 same-count pairs matched, 80/82
+  different-count pairs didn't). Paired evals that should share sentences need the same
+  episodes per stream.
 - SAPIEN 2 (SimplerEnv) doesn't render on these H100s. SAPIEN 3 (RoboTwin) renders
   with the `rt` shader only (see Status, step 0).
 - Robots: `aloha_agilex` is RoboTwin's default and the leaderboard's robot; its URDF is
