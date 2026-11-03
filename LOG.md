@@ -1572,3 +1572,11 @@ for it.** 10 tasks, randomized, 100 scenes both ran (`analysis/cache/episodes.pa
   pairs because RoboTwin's sentence pick depends on the stream's episode count (AGENTS.md
   gotcha).
 - Viewer: new "two models, same scenes" view; the local Cosmos run is hidden (your call).
+- 14:55 EST: **randomized 50-task eval extended to GR00T's full protocol** (~20 scenes per task;
+  your call).
+  - I had cut it to 10 per task in the subagent's brief to halve the cost, without asking you.
+    That was my mistake.
+  - The subagent adds the remaining GR00T randomized scenes (~500 episodes, ~5 h on extra
+    borrowed slices).
+  - It also verifies seed by seed, for randomized and clean, that every scene matches what
+    GR00T mix200_150k ran, and fixes any mismatch before it runs.
