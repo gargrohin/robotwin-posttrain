@@ -1292,7 +1292,7 @@ in the queue.**
 - 17:41 EST: the high-priority 16-GPU run started after 13 min in the queue. At ~10.2 s per
   iteration: first checkpoint (500) ~19:15 EST, finish ~Nov 3 08:30 EST.
 
-**19:01 EST (Tue Nov 3)** **Eval viewer: training demo next to the rollout** (your request). Picking a
+**19:01 EST (Mon Nov 2)** **Eval viewer: training demo next to the rollout** (your request). Picking a
 task now also plays one of its training demos from the mix200 dataset (clean demos for
 clean, randomized for randomized; choose demo 0–49 or 0–199). Both players start at 10 steps
 per second; the demo files are 15 frames per second and the rollouts 10, so side by side
@@ -1553,3 +1553,9 @@ checkpoint** (from the Flux subagent).
     the borrowed one is evicted, resubmit to our quota.
   - Eval: split into borrowed 2-GPU-slice jobs, each with a share of the 50 tasks. The
     whole-node job stays as the fallback, with no episodes run twice.
+- 14:40 EST: **clean-scene 50-task eval of Cosmos 5,000 added, all on the cluster** (your call).
+  - The randomized-only scope had been carried over from the first 10-task eval; clean scenes
+    show task skill without clutter, which is the question the GR00T analysis raised.
+  - Same setup as randomized: first 10 GR00T clean scenes per task (~500 episodes), ~4 borrowed
+    2-GPU slice jobs, high priority.
+  - Expected ~5 h after the slices start.
