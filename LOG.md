@@ -1418,3 +1418,14 @@ built or submitted.
   - The subagent resumed: license access check → test job (high priority, measures speed) →
     reduced schedule sized to ~30 h, official hyperparameters otherwise → full run (no
     borrowing, normal priority; high if evicted).
+
+**01:10 EST (Tue Nov 3)** **Sim evals of the 16-GPU Cosmos run's checkpoints, as they land**
+(your request).
+- For each of iterations 2,500, 3,000, 4,000 and 5,000:
+  1. wait for the checkpoint in cloud storage;
+  2. download the model part (~114 GB, ~6 min) to local NVMe;
+  3. run the same 10 tasks × first 10 randomized scenes as the GR00T and Cosmos-1,500 evals,
+     one eval stream per GPU on GPUs 3–7 (each waits for free memory).
+- Results: `python3 gr00t/paired_compare.py --per-task` (labels `cosmos16 <iteration>`).
+- The download-and-queue script is local (it contains the storage path).
+- Expected: 2,500 eval ~01:15–02:30 EST; 5,000 lands ~08:30.
