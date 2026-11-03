@@ -1589,3 +1589,18 @@ view lists them, counts tags per task, and downloads a CSV. Tested headless (sav
 same note in both views, clear); the test file was deleted, so the store starts empty.
 - The Cosmos 50-task eval runs on the cluster, so its results aren't on this machine yet.
   The viewer needs its videos as well as its logs brought back.
+
+**17:30 EST (Tue Nov 3)** **Flux 3 Action full run is training** (Flux subagent's report).
+- 2 nodes on our team's quota, high priority, no borrowing; started 16:43 EST.
+- Batch 512 (16 GPUs × 4 windows × 8 accumulation), 3,000 updates. The official DROID schedule
+  is scaled to 1/10; everything else is the official recipe.
+- 26.8 s per update; peak 65.8 of 80 GB per GPU. Loss 1.78 (update 10) → 0.39 (update 150).
+- First checkpoint (update 150): 129 GB, saved in 58 s, uploaded in 12–13 s per node, marked
+  latest. The run's metrics are logged to wandb.
+- ETA ~15:20 EST Wed Nov 4 (~22.6 h of training, a bit under the 24–36 h budget: 4 windows
+  per GPU fit after the memory fix and run faster than 2).
+- Why the first full run died: the checkpoint writer's small cross-node messages failed over
+  the GPU network. They now go over a CPU connection (2-node save + resume test passed).
+- Open for you: delete two Flux test checkpoints (2 × 129 GB)? The full run will write ~20
+  checkpoints (~2.6 TB); old ones can drop their optimizer state (52 GB each) later and stay
+  usable for evals.

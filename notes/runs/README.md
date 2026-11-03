@@ -24,6 +24,9 @@ nvidia/GR00T-N1.7-3B (NVIDIA base model)
 nvidia/Cosmos3-Nano (16B, separate framework: NVIDIA cosmos-framework)
 ├── cosmos3_nano_mix200      5,000 iterations, full fine-tune on mix200, NVIDIA's LIBERO recipe, 5 local GPUs
 └── cosmos3_nano_mix200_2n   same recipe from scratch on 16 cluster GPUs (NVIDIA's 2-node layout)
+
+black-forest-labs/flux-3-action-base (7B, BFL flux-action trainer)
+└── flux3_mix200_b512   3,000 updates at batch 512 on mix200, the official DROID recipe scaled to 1/10 (budget)
 ```
 
 ## Runs
@@ -39,6 +42,7 @@ nvidia/Cosmos3-Nano (16B, separate framework: NVIDIA cosmos-framework)
 
 | `cosmos3_nano_mix200` | `nvidia/Cosmos3-Nano` (Cosmos framework) | `mix200` | 5,000 iterations; 5e-5, 500 warm-up, linear decay over a 16,000 cycle (ends at 3.55e-5) | 5 (0, 4, 5, 6, 7), ~2,080 | 2026-11-02 03:24 EST; **stopped** 2026-11-02 22:47 EST at iteration ~1,700 (user OK), after the 16-GPU copy passed it | 500, 1000, 1500, ~166 GB each, at `/mnt/efs/rohingarg/cri/cosmos3/runs/...` | open-loop 500/1000/1500 in the run card; sim eval of 1500 running | `notes/runs/cosmos3_nano_mix200.md` |
 | `cosmos3_nano_mix200_2n` | `nvidia/Cosmos3-Nano` (Cosmos framework) | `mix200` | same as `cosmos3_nano_mix200` | 16 H100s on a company cluster (2 nodes × 8; model split across a node's 8 GPUs, one copy per node), 2,048 | first try 16:30 EST, evicted at iteration ~240 (no checkpoint yet); resubmitted 17:28 EST at high priority, started 17:41 EST, **finished 2026-11-03 08:29 EST** (5,000 iterations, ~10.3 s per iteration, no interruptions) | 500–5000 every 500, ~177 GB each, in cloud storage | sim (10 tasks randomized, same scenes as GR00T): 2500 78%, 3000 80%, 4000 86%, **5000 87%** (GR00T mix200 150k: 67%) | `notes/runs/cosmos3_nano_mix200.md` |
+| `flux3_mix200_b512` | `black-forest-labs/flux-3-action-base` (BFL flux-action) | `mix200` | 3,000 updates at batch 512; official DROID full fine-tune recipe (lrs, optimizer, loss weights, EMA unchanged), schedule scaled to 1/10 (trunk frozen 100, warmups 200/100, cooldown 2,500→3,000) | 16 H100s on a company cluster (2 nodes), 512 = 16 GPUs × 4 windows × 8 accumulation | started 2026-11-03 16:43 EST, ~26.8 s per update, ETA ~11-04 15:20 EST | every 150 updates, ~129 GB each, in cloud storage | running; metrics logged to wandb | local notes (not in repo) |
 
 ## Datasets
 
