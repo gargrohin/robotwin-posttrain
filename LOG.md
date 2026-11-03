@@ -1346,3 +1346,32 @@ Cosmos sim eval.**
     `EVAL_SH=cosmos3/eval.sh`).
   - ~1.5–2 h.
   - Compare with GR00T mix200 on the same scenes: 60k, 150k, and decay60k.
+
+**23:55 EST (Mon Nov 2)** **First Cosmos sim eval: iteration 1,500 ties GR00T's best model on
+the same randomized scenes, with a third of the training examples.**
+- 10 tasks, the same randomized scenes for every model (`gr00t/paired_compare.py --per-task`,
+  which now includes Cosmos):
+
+| model | training examples | randomized, same scenes |
+|---|---|---|
+| GR00T 50task_60k (clean demos only) | 3.84M | 17/98 (17%) |
+| GR00T mix200 at 60k | 3.84M | 14/99 (14%) |
+| GR00T mix200 60k + 10k decay | 4.5M | 46/100 (46%) |
+| GR00T mix200 at 150k | 9.6M | 66/99 (67%) |
+| **Cosmos mix200, iteration 1,500** | 3.1M | **66/99 (67%)** |
+
+- Per task, Cosmos vs GR00T 150k:
+  - handover_mic 7 vs 2;
+  - place_object_stand 10 vs 5;
+  - place_empty_cup 9 vs 7;
+  - pick_dual_bottles 3 vs 7;
+  - place_phone_stand 5 vs 7;
+  - grab_roller 6 vs 9;
+  - equal or within 1 on the rest.
+  - With 10 scenes per task, single-task gaps are noisy; the 10-task total is the number to
+    trust.
+- Caveats:
+  - randomized scenes only (clean not run);
+  - the checkpoint is from the local 5-GPU run (batch 2,080), not the 16-GPU run;
+  - 1,500 of 5,000 iterations.
+- ~1 h of wall time on 5 GPUs, ~4.5 min per episode. GPUs 0, 4, 5, 6, 7 are released.
