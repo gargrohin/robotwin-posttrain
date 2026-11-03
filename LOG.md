@@ -1545,3 +1545,11 @@ checkpoint** (from the Flux subagent).
   on our team's quota. If the test fails, v2 gets cancelled before its first save.
 - The 1-node resume test passed: a 129 GB checkpoint saved in 80 s, re-downloaded in 32 s,
   resumed without running out of memory.
+- 13:25 EST: **our team's quota is full (144/144 GPUs), and the Flux and eval jobs are
+  queued.** Your call: also submit copies in the shared borrowing pool, and whichever starts
+  first wins.
+  - Flux: a borrowed copy of the 2-node checkpoint test (own run name), and a borrowed copy
+    of v2 under the same run name (shared checkpoints). Never two copies training at once; if
+    the borrowed one is evicted, resubmit to our quota.
+  - Eval: split into borrowed 2-GPU-slice jobs, each with a share of the 50 tasks. The
+    whole-node job stays as the fallback, with no episodes run twice.
