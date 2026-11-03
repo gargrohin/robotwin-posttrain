@@ -86,3 +86,5 @@ is our own later experiment.
   `outputs/heldout_check/cosmos3_nano_mix200_2n_500_stride5.json`.
 - Iteration 1,500 (local run): open-loop ratio 0.44 / 0.35 / 0.41, between GR00T mix200 60k and
   90k. `outputs/heldout_check/cosmos3_nano_mix200_1500_stride5.json`.
+- **Sim, iteration 1,500, 10 tasks randomized (same scenes as GR00T): 66/99 (67%)**, equal to GR00T
+  mix200 at 150k (66/99) with ~1/3 of the training examples. `python3 gr00t/paired_compare.py --per-task`.
