@@ -1375,3 +1375,16 @@ the same randomized scenes, with a third of the training examples.**
   - the checkpoint is from the local 5-GPU run (batch 2,080), not the 16-GPU run;
   - 1,500 of 5,000 iterations.
 - ~1 h of wall time on 5 GPUs, ~4.5 min per episode. GPUs 0, 4, 5, 6, 7 are released.
+
+**01:00 EST (Tue Nov 3)** **Started a subagent on Flux 3 Action** (your request).
+- Plan:
+  1. find the model and its official training code;
+  2. adapt it to the same mix200 data with the official recipe;
+  3. package it for the cluster, modeled on the Cosmos package;
+  4. run a test job (high priority);
+  5. if the test works, launch the full run (no borrowing, normal priority; high if it gets
+     evicted).
+- Its cluster files stay local and uncommitted.
+- It reports back before any run larger than 2 nodes or ~24 h, and stops at license gates or
+  blocked permissions.
+- The 16-GPU Cosmos run is at iteration ~2,450, healthy.
