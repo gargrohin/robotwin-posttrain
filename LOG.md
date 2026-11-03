@@ -1518,3 +1518,15 @@ high-priority resubmit. Final checkpoint (5,000) is in cloud storage; its sim ev
   - The Flux subagent will cancel its two shared-pool tests, then submit the full run (2 nodes,
     batch 512, 3,000 updates, ~30 h) plus a short 1-node resume test, both at high priority.
   - The 129 GB test checkpoint stays until you decide.
+
+**10:45 EST (Tue Nov 3)** **Started a subagent to run sim evals on the cluster** (your idea: a
+dedicated 8-GPU node, nobody competing).
+- It will:
+  1. build an image with both environments (simulator and Cosmos);
+  2. test rendering and measure time and memory per stream on 1 node (high priority);
+  3. run Cosmos 5,000 on all 50 tasks × the first 10 randomized GR00T scenes, ~500 episodes,
+     ~4–5 h estimated on 1 node;
+  4. bring the logs back so `paired_compare.py` works.
+- The main unknown is whether the simulator's ray-traced rendering works in cluster
+  containers.
+- Its files stay local. It asks before any eval over ~8 h on 1 node.
