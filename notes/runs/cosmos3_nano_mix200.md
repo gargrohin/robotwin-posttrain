@@ -81,3 +81,6 @@ is our own later experiment.
 - Iteration 1,000 (saved 15:11 EST): open-loop (stride 5) 0.030 / 0.029 / 0.028 rad (ratio to holding
   still 0.51 / 0.44 / 0.46): about GR00T mix200 at 60k steps, with ~half the examples.
   `outputs/heldout_check/cosmos3_nano_mix200_1000_stride5.json`.
+- 16-GPU cluster copy (`cosmos3_nano_mix200_2n`, batch 2,048, NVIDIA's 2-node layout), iteration
+  500: open-loop ratio 0.72 / 0.58 / 0.72 vs this run's 0.78 / 0.59 / 0.74, the same within noise.
+  `outputs/heldout_check/cosmos3_nano_mix200_2n_500_stride5.json`.
