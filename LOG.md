@@ -1479,3 +1479,12 @@ full run isn't launched. Needs your decision on how to queue it.**
   priority).
 - **Asked you:** queue option (a–e), and whether to delete the 129 GB test checkpoint.
 - Local notes: `/mnt/efs/rohingarg/cri/flux3/NOTES.md`.
+
+**06:40 EST (Tue Nov 3)** **Cosmos 16-GPU run at iteration 4,000: 85/99 (86%) randomized** on
+the same 10-task scenes.
+- Learning curve: 1,500 → 67%, 2,500 → 78%, 3,000 → 80%, 4,000 → 86%. GR00T's best is 67%.
+- **pick_dual_bottles jumped to 9/10** (from 3–4/10 at 1,500–3,000; GR00T 7/10). Cosmos is now
+  ahead of or equal to GR00T on every task except place_phone_stand (4 vs 7).
+- Single-task changes of ±1–2 are noise at 10 scenes.
+- Local copy of the checkpoint deleted. 5,000 (the last) lands ~08:30 EST and is evaluated
+  automatically.
