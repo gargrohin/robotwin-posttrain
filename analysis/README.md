@@ -18,6 +18,8 @@ Run it in a VS Code terminal (connected with Remote-SSH). VS Code forwards the p
 offers "Open in Browser". If it doesn't, open the **Ports** tab, add `8611`, and click
 the globe icon. Any browser plays the rollout videos. If one won't play, open the same
 URL in VS Code's own browser (command palette: "Simple Browser: Show"). Ctrl+C stops it.
+If the page stops loading with no error (for example after a VS Code reload), the forwarding
+is stuck on your side: remove 8611 in the Ports tab and add it again. The app keeps running.
 
 ## After new evals: refresh the index
 
