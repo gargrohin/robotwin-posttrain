@@ -138,31 +138,33 @@ def compare_view(df):
         per_task = j.groupby("task").agg(a=("success_a", "sum"), b=("success_b", "sum"),
                                          n=("seed", "size"))
         task = st.selectbox(
-            "task (biggest B minus A first)", key="compare task",
+            "task (biggest gap first: B solved minus A solved)", key="compare task",
             options=(per_task.b - per_task.a).sort_values(ascending=False).index,
-            format_func=lambda t: f"{t}  (A {per_task.a[t]}, B {per_task.b[t]} of {per_task.n[t]})")
-        show = st.radio("scenes", ["all", "only B succeeds", "only A succeeds", "both fail",
-                                   "both succeed"], key="compare show")
+            format_func=lambda t: (f"{t}  (A solved {per_task.a[t]}, B solved {per_task.b[t]}, "
+                                   f"of {per_task.n[t]})"))
+        show = st.radio("scenes", ["all", "both succeeded", "A succeeded, B failed",
+                                   "B succeeded, A failed", "both failed"], key="compare show")
         st.caption(f"A = {name_a}\n\nB = {name_b}\n\nOver all {len(j)} shared {SETTINGS[setting]} "
-                   f"scenes: A {int(j.success_a.sum())}, B {int(j.success_b.sum())}.")
+                   f"scenes: A solved {int(j.success_a.sum())}, B solved {int(j.success_b.sum())}.")
 
     t = j[j.task == task].sort_values("seed")
     sa, sb = t.success_a, t.success_b
     st.subheader(f"{task} · {SETTINGS[setting]}: A = {name_a}, B = {name_b}")
     c = st.columns(6)
-    for col, (label, value) in zip(c, [("A succeeds", sa.sum()), ("B succeeds", sb.sum()),
-                                      ("both", (sa & sb).sum()), ("only A", (sa & ~sb).sum()),
-                                      ("only B", (~sa & sb).sum()), ("neither", (~sa & ~sb).sum())]):
+    for col, (label, value) in zip(c, [
+            ("A succeeded, total", sa.sum()), ("B succeeded, total", sb.sum()),
+            ("both succeeded", (sa & sb).sum()), ("A succeeded, B failed", (sa & ~sb).sum()),
+            ("B succeeded, A failed", (~sa & sb).sum()), ("both failed", (~sa & ~sb).sum())]):
         col.metric(label, f"{int(value)}/{len(t)}")
-    view = t[{"all": sa | ~sa, "only B succeeds": ~sa & sb, "only A succeeds": sa & ~sb,
-              "both fail": ~sa & ~sb, "both succeed": sa & sb}[show]]
+    view = t[{"all": sa | ~sa, "B succeeded, A failed": ~sa & sb, "A succeeded, B failed": sa & ~sb,
+              "both failed": ~sa & ~sb, "both succeeded": sa & sb}[show]]
     if view.empty:
         st.info("No scenes in this view.")
         st.stop()
     table = pd.DataFrame({
         "seed": view.seed,
-        "A": [result_text(s, e) for s, e in zip(view.success_a, view.sim_error_a)],
-        "B": [result_text(s, e) for s, e in zip(view.success_b, view.sim_error_b)],
+        "A result": [result_text(s, e) for s, e in zip(view.success_a, view.sim_error_a)],
+        "B result": [result_text(s, e) for s, e in zip(view.success_b, view.sim_error_b)],
         "A steps": view.steps_a, "B steps": view.steps_b, "step limit": view.step_limit_a,
         "same instruction": (view.instruction_a == view.instruction_b).map({True: "yes", False: "no"}),
     })
