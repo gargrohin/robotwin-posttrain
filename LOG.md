@@ -1513,3 +1513,8 @@ high-priority resubmit. Final checkpoint (5,000) is in cloud storage; its sim ev
 - **Not measured yet:** clean scenes, the other 40 tasks, and repeat runs of the same scenes.
 - GPU 3 was taken by another user for this eval, so it ran on 4 streams. Local checkpoint
   copies are deleted. The eval workers are stopped.
+- 10:20 EST: **Flux full run: your call is our team's quota at high priority** (the other
+  team's queue isn't moving).
+  - The Flux subagent will cancel its two shared-pool tests, then submit the full run (2 nodes,
+    batch 512, 3,000 updates, ~30 h) plus a short 1-node resume test, both at high priority.
+  - The 129 GB test checkpoint stays until you decide.
