@@ -21,6 +21,15 @@ URL in VS Code's own browser (command palette: "Simple Browser: Show"). Ctrl+C s
 If the page stops loading with no error (for example after a VS Code reload), the forwarding
 is stuck on your side: remove 8611 in the Ports tab and add it again. The app keeps running.
 
+## Notes and tags
+
+Under every rollout (in both views) there are tags and a notes box. Notes save when you click
+outside the box; tags are your own words (type a new one and press Enter, and it becomes a
+choice everywhere). Each note is stored with its episode's model, checkpoint, task, setting,
+seed, episode, result and video, so nothing needs typing twice. The "notes" view lists them
+all, counts tags per task, and downloads a CSV. File: `analysis/tags/notes.sqlite`
+(git-ignored); read it with e.g. `pd.read_sql("SELECT * FROM notes", sqlite3.connect(path))`.
+
 ## After new evals: refresh the index
 
 ```bash

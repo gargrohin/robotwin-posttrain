@@ -1580,3 +1580,12 @@ for it.** 10 tasks, randomized, 100 scenes both ran (`analysis/cache/episodes.pa
     borrowed slices).
   - It also verifies seed by seed, for randomized and clean, that every scene matches what
     GR00T mix200_150k ran, and fixes any mismatch before it runs.
+
+**17:23 EST (Tue Nov 3)** **Eval viewer: notes and tags per episode** (your request). Under every
+rollout, in both views: tags (your own words, reusable) and a notes box that saves when you
+click outside it. Each note is stored with the episode's model, checkpoint, task, setting,
+seed, episode, result and video in `analysis/tags/notes.sqlite` (git-ignored). A "notes"
+view lists them, counts tags per task, and downloads a CSV. Tested headless (save, reload,
+same note in both views, clear); the test file was deleted, so the store starts empty.
+- The Cosmos 50-task eval runs on the cluster, so its results aren't on this machine yet.
+  The viewer needs its videos as well as its logs brought back.

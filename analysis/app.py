@@ -7,6 +7,8 @@ rebuild it after new evals with: analysis/.venv/bin/python analysis/build_index.
 import base64
 import json
 import math
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 
 import pandas as pd
@@ -22,6 +24,9 @@ ET = "America/New_York"
 # the local Cosmos run (stopped at ~1,700 iterations); only the cluster run
 # cosmos3_nano_mix200_2n is used (user, 2026-11-03)
 HIDDEN_MODELS = {"cosmos3_nano_mix200"}
+NOTES = ROOT / "analysis/tags/notes.sqlite"  # the user's notes and tags per episode (git-ignored)
+NOTE_FIELDS = ["model", "ckpt", "task", "setting", "seed", "shard", "episode", "result", "steps",
+               "step_limit", "video", "log"]
 
 PLAYER = """
 <video id="v" src="data:video/mp4;base64,__B64__" controls muted playsinline
@@ -122,6 +127,74 @@ def result_text(success, sim_error):
     return "⚠️ sim crash" if sim_error else ("✅ success" if success else "❌ fail")
 
 
+def notes_db():
+    NOTES.parent.mkdir(exist_ok=True)
+    con = sqlite3.connect(NOTES)
+    con.execute("CREATE TABLE IF NOT EXISTS notes (key TEXT PRIMARY KEY, "
+                + ", ".join(f"{f} TEXT" for f in NOTE_FIELDS) + ", tags TEXT, note TEXT, updated TEXT)")
+    return con
+
+
+def load_notes():
+    with closing(notes_db()) as con:
+        return pd.read_sql("SELECT * FROM notes ORDER BY updated", con)
+
+
+def episode_key(ep):
+    """One rollout: its video folder and episode number (the log, for the few without a folder)."""
+    return f"{ep.folder if pd.notna(ep.folder) else ep.log}#{ep.episode}"
+
+
+def save_note(key, ep):
+    tags, note = st.session_state[f"tags|{key}"], st.session_state[f"note|{key}"].strip()
+    with closing(notes_db()) as con, con:
+        if not tags and not note:
+            con.execute("DELETE FROM notes WHERE key = ?", (key,))
+            return
+        fields = {f: None if pd.isna(ep.get(f)) else str(ep.get(f)) for f in NOTE_FIELDS}
+        fields["result"] = result_text(ep.success, ep.sim_error).split(" ", 1)[1]
+        row = {"key": key, **fields, "tags": json.dumps(tags), "note": note,
+               "updated": pd.Timestamp.now(tz=ET).strftime("%Y-%m-%d %H:%M ET")}
+        con.execute(f"INSERT OR REPLACE INTO notes ({', '.join(row)}) "
+                    f"VALUES ({', '.join('?' * len(row))})", list(row.values()))
+
+
+def note_box(ep, notes):
+    """Tags and a free-text note for one rollout, saved with its details as you go."""
+    key = episode_key(ep)
+    saved = notes[notes.key == key]
+    if f"note|{key}" not in st.session_state:
+        st.session_state[f"note|{key}"] = saved.note.iloc[0] if len(saved) else ""
+        st.session_state[f"tags|{key}"] = json.loads(saved.tags.iloc[0]) if len(saved) else []
+    used = {t for tags in notes.tags for t in json.loads(tags)}
+    st.multiselect("tags", sorted(used | set(st.session_state[f"tags|{key}"])),
+                   key=f"tags|{key}", accept_new_options=True, on_change=save_note,
+                   args=(key, ep), placeholder="pick a tag, or type a new one and press Enter")
+    st.text_area("notes (saved when you click outside the box)", key=f"note|{key}", height=110,
+                 on_change=save_note, args=(key, ep))
+    if len(saved):
+        st.caption(f"saved {saved.updated.iloc[0]}")
+
+
+def notes_view():
+    notes = load_notes()
+    st.subheader(f"Your notes: {len(notes)} episodes")
+    st.caption(f"Stored in `{NOTES.relative_to(ROOT)}` (one row per episode, with its model, "
+               "checkpoint, task, setting, seed and video).")
+    if notes.empty:
+        st.info("No notes yet. Write one under any rollout in the other views.")
+        return
+    tags = notes.assign(tag=notes.tags.map(json.loads)).explode("tag").dropna(subset=["tag"])
+    if len(tags):
+        st.markdown("**Tag counts per task**")
+        st.dataframe(pd.crosstab([tags.model + " @ " + tags.ckpt, tags.task], tags.tag))
+    shown = notes.assign(tags=notes.tags.map(lambda t: ", ".join(json.loads(t))))
+    st.dataframe(shown[["model", "ckpt", "task", "setting", "seed", "result", "tags", "note",
+                        "updated", "video"]], hide_index=True)
+    st.download_button("download as CSV", shown.drop(columns="key").to_csv(index=False),
+                       "eval_notes.csv", "text/csv")
+
+
 def compare_view(df):
     """Two models on the scenes (task, setting, seed) both ran, rollouts side by side."""
     key = ["task", "setting", "seed"]
@@ -172,6 +245,7 @@ def compare_view(df):
                          selection_mode="single-row",
                          key=f"compare|{name_a}|{name_b}|{setting}|{task}|{show}")
     row = view.iloc[event.selection.rows[0] if event.selection.rows else 0]
+    notes = load_notes()
     for col, side, name in zip(st.columns(2), "ab", [name_a, name_b]):
         with col:
             st.markdown(f"**{side.upper()}: {name}**: "
@@ -183,6 +257,9 @@ def compare_view(df):
                 st.warning("No video for this episode.")
             instr = row[f"instruction_{side}"]
             st.markdown("- instruction: " + (f"“{instr}”" if pd.notna(instr) else "_not recorded_"))
+            ep = pd.Series({k[:-2]: v for k, v in row.items() if k.endswith(f"_{side}")}
+                           | {k: row[k] for k in ("task", "setting", "seed")})
+            note_box(ep, notes)
     st.caption(f"seed `{row.seed}`. Same seed means the same starting scene. The instruction "
                "sentence can still differ between the two: RoboTwin picks it from a list as "
                "long as the eval stream's episode count, so streams of different sizes pick "
@@ -197,9 +274,12 @@ df = load_index(INDEX.stat().st_mtime)
 df = df[~df.model.isin(HIDDEN_MODELS)]
 
 with st.sidebar:
-    mode = st.radio("view", ["one model", "two models, same scenes"], horizontal=True)
-if mode != "one model":
+    mode = st.radio("view", ["one model", "two models, same scenes", "notes"], horizontal=True)
+if mode == "two models, same scenes":
     compare_view(df)
+    st.stop()
+if mode == "notes":
+    notes_view()
     st.stop()
 
 with st.sidebar:
@@ -289,3 +369,4 @@ with left:
         st.markdown(f"- stream started {ep.started.tz_convert(ET):%b %d %H:%M} ET")
     st.markdown(f"- video: `{ep.video}`" if pd.notna(ep.video) else "- video: none")
     st.markdown(f"- log: `{ep.log}`" if pd.notna(ep.log) else "- log: none (indexed from records)")
+    note_box(ep, load_notes())
