@@ -1388,3 +1388,26 @@ the same randomized scenes, with a third of the training examples.**
 - It reports back before any run larger than 2 nodes or ~24 h, and stops at license gates or
   blocked permissions.
 - The 16-GPU Cosmos run is at iteration ~2,450, healthy.
+
+**01:20 EST (Tue Nov 3)** **The Flux 3 Action subagent stopped at step 1: the weights are
+gated behind a non-commercial license that you'd have to accept.** Nothing was installed,
+built or submitted.
+- **The model** (from the subagent's research):
+  - Black Forest Labs, released 2026-09-22.
+  - A 7B "world action model": camera frames + robot state + instruction → the next 32
+    actions plus future video, like Cosmos.
+  - Open training code (Apache-2.0): `github.com/black-forest-labs/flux-action`.
+  - Weights: `huggingface.co/black-forest-labs/flux-3-action-base`.
+- **License:** FLUX Kommunity License v1.0, non-commercial.
+  - A company with ≥ $5M revenue may use it only for testing, evaluation, or non-commercial
+    R&D in a non-production environment.
+  - Whoever accepts it for an employer states they can bind that employer.
+  - Your HF account currently gets 403 on the weight files.
+- **Compute (estimate from Black Forest Labs' published speeds, not measured):**
+  - The official recipe (30k updates at batch 2,048) would be ~1,100 h on 1 node or ~550 h on
+    2 nodes.
+  - Even the short 3k-update schedule is ~55 h on 2 nodes.
+  - 2 nodes × 24 h fits e.g. batch 512 × ~5.4k updates.
+  - We'd need a measured speed, then a reduced schedule.
+- Notes: `/mnt/efs/rohingarg/cri/flux3/NOTES.md`; official repo cloned (read-only) under
+  `/mnt/efs/rohingarg/cri/flux3/flux-action`.
