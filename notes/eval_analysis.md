@@ -104,21 +104,73 @@ We focus on the first two for now.
    evals are expensive, so we can't say how much of the scene-by-scene difference between
    the two models is luck.
 
-### Next: watch clean failures
+## 3. What the clean failures look like (visual review, first pass)
 
-In the eval viewer: `mix200_150k`, checkpoint `150000`, `clean`, episodes "failures". Start
-with 3 tasks that have 20 clean episodes and middling success on both models: move_can_pot
-(6/20 both), place_phone_stand (old 8/20, new 7/20), handover_mic (8/20 both); 5 failures
-each. For each failure, note which happened:
-- **a.** Close but not quite: right object, right motion, but the grasp misses by a little or
-  the object slips (points to cause 1).
-- **b.** Wrong plan: wrong object, wrong arm, wrong place or wrong order.
-- **c.** A small mistake it never fixes: it knocks or drops the object, then hovers or repeats
-  the same move (points to cause 2).
-- **d.** It stops moving before the task is done.
+Watched in the eval viewer (2026-11-02): clean failures of checkpoint 150000 on 3 tasks with
+20 clean episodes each and middling success, next to its successful runs. Randomized
+failures and the training demos haven't been watched yet.
 
-Then open the same seed for `50task_60k`: if the old model fails the same way, it's a limit
-both models share.
+**The gripper can do these tasks.** Before every eval episode, RoboTwin's scripted robot
+runs the same scene with the same gripper, and the scene is used only if it succeeds
+(`RoboTwin/scripts/eval_policy_xpolicylab.py:788`; on in our evals). So every object below
+was picked up and placed successfully by this gripper. The failures come from how the policy
+uses it: how wide it opens, where it grabs, how fast it moves.
+
+### move_can_pot (6/20): put the sauce can next to the pot
+
+7 failures watched:
+1. Grabbed the pot instead of the sauce can. It couldn't hold the pot, pushed it further
+   away and tipped it over.
+2. The gripper wasn't open wide enough for the can, so small pushes tipped it over.
+3. The same as 2.
+4. Opened wide enough and picked the can up, but placed it badly. It tried to fix that but
+   couldn't pick the can up again.
+5. Placed the can not close enough to the pot. The can wobbled; it tried to steady it and
+   couldn't. Placing it too fast also tips it over.
+6. Kept trying to grab the can at a spot where there was no can (seed 300004).
+7. Couldn't lift the slippery can; the gripper wasn't placed well on it.
+
+Most failures are about picking up the can: 5 of 7 are grip or placement problems (2, 3, 4,
+5, 7), 1 grabbed the wrong object (1), and 1 grabbed at an empty spot (6). When it does pick
+the can up properly, the rest is straightforward. It tried to fix a mistake twice (4, 5),
+and both fixes failed.
+
+### place_phone_stand (7/20)
+
+5 to 7 failures watched, all much alike. The phone is thin and slippery, and there are 2
+ways to hold it, both slippery. The policy often can't pick up a thin phone; when it does,
+the phone often slips, and placing it on the stand is hard. No good attempts to recover.
+
+### handover_mic (8/20)
+
+Grabbing the mic with the first hand works. The handover to the second hand fails:
+- The two grippers get in each other's way when they're close.
+- The second hand grabs the mic too low: several times it went for a spot even lower than
+  the first hand, which was already holding the mic low.
+- Or the first hand takes up too much of the mic, leaving no room for the second.
+
+In the successes, the first hand held the mic very low, leaving room at the top for the
+second hand. When that doesn't happen, there's no attempt to recover. It looks as if the
+policy has no good sense of where the other arm and the object are at the same time.
+
+### What this suggests so far
+
+- **Most failures are near misses:** grip width, where it grabs, how it places. That fits
+  cause 1 in section 2 (precision).
+- **Mistakes almost never get fixed.** Usually no fix is tried, and the two that were tried
+  failed. That fits cause 2 (no recoveries in the demos).
+- **handover_mic adds a third kind:** the two arms don't work together on one object.
+- **Not checked yet:** how the scripted demos grab the same objects (how wide the gripper
+  opens, where it grabs, how slowly it approaches). The viewer now plays a training demo next
+  to each rollout.
+
+### Next
+
+1. Randomized failures of the same 3 tasks (move_can_pot 10/20, place_phone_stand 10/20,
+   handover_mic 3/20): are they the same kinds as on clean, or new ones caused by the
+   clutter, like grabbing a clutter object?
+2. The short tasks that score low (section 1), where length can't be the reason: lift_pot,
+   place_fan, place_mouse_pad, place_object_scale, stamp_seal, turn_switch.
 
 ## Appendix A: is the median a fair summary of a task's length?
 
