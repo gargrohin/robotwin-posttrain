@@ -1530,3 +1530,18 @@ dedicated 8-GPU node, nobody competing).
 - The main unknown is whether the simulator's ray-traced rendering works in cluster
   containers.
 - Its files stay local. It asks before any eval over ~8 h on 1 node.
+
+**12:35 EST (Tue Nov 3)** **Flux: the first 2-node full run crashed while saving its first
+checkpoint** (from the Flux subagent).
+- Training itself was fine: 150 updates in ~70 min, loss 1.78 → 0.39, ~26 s per update at
+  batch 512 on 2 nodes (so 3,000 updates ≈ 22–23 h), peak memory 65.4 GB per GPU, wandb
+  metrics showing.
+- At the step-150 save, the checkpoint writer's step where every GPU sends its save plan to
+  GPU 0 failed across the two nodes: "NCCL Error 1: unhandled cuda error". Nothing reached
+  storage.
+- Fix (v2): the writer exchanges those small messages over a CPU connection instead. The
+  checkpoint data is unchanged.
+- A 2-node checkpoint test (6 updates, save, upload, resume, ~25 min) is queued ahead of v2
+  on our team's quota. If the test fails, v2 gets cancelled before its first save.
+- The 1-node resume test passed: a 129 GB checkpoint saved in 80 s, re-downloaded in 32 s,
+  resumed without running out of memory.
