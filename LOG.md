@@ -1709,3 +1709,12 @@ subagent).
   - All 50 tasks: randomized on all of GR00T's seeds plus clean 10 per task. ~90 GPU-hours on
     shared-pool slices, in parallel with training.
   - The 6,000 eval follows when training ends (~12:50).
+- 11:45 EST: **Cosmos decay 5,500 full eval submitted** (decay subagent).
+  - 12 shared-pool 2-GPU slices at high priority: randomized first 10, randomized rest, clean.
+  - The 10-task check (100 episodes) keeps running; its episodes are removed from the full
+    run so none runs twice.
+  - Seeds checked before submitting: 1,017/1,017 GR00T randomized and 500/500 clean. Every job
+    uses exact seed lists, so the skipped-seed problem can't recur.
+  - At 11:43: 3 slices running, 9 queued.
+  - The decay run is healthy: 10.2 s per iteration, learning rate as predicted. 6,000 expected
+    ~12:50.
