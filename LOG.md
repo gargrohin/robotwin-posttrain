@@ -1691,3 +1691,16 @@ subagent).
   task + clean 10) starts automatically when training ends (~15:20 EST); ~65–100 GPU-hours.
 - Flux training: step 1,800 in cloud storage at 06:50, on schedule.
 - Cosmos decay run: still queued (it needs 2 whole nodes on our quota or the shared pool).
+
+**11:20 EST (Wed Nov 4)** Status.
+- **Flux training:** step 2,250 of 3,000 in cloud storage, on schedule (ETA ~15:20 EST).
+  Held-out prediction check at step 1,500: 0.037 / 0.027 / 0.030 rad, improving from 1,050
+  (0.040 / 0.031 / 0.033). The final 50-task eval starts automatically at step 3,000.
+- **Cosmos decay run started** (our quota copy won; the shared-pool copy was cancelled).
+  - Resumed from 5,000 with the full training state: model, optimizer, scheduler, data
+    loader.
+  - 10.2 s per iteration. Checkpoint 5,250 saved at 10:36 EST.
+  - ETA: 5,500 ~11:20, 6,000 ~12:50. Then the same 50-task eval on GR00T's seeds.
+- 08:30–11:15: Claude Code's per-action safety check returned errors (no verdict) three
+  times when I tried to restart my monitor, so I paused it; the subagents' own watchers
+  kept running. The monitor is back on.
