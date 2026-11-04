@@ -1718,3 +1718,11 @@ subagent).
   - At 11:43: 3 slices running, 9 queued.
   - The decay run is healthy: 10.2 s per iteration, learning rate as predicted. 6,000 expected
     ~12:50.
+- 12:30 EST: **storage cleanup started** (your OK; subagent).
+  - Uploading all GR00T checkpoints (897 GB) and the stopped local Cosmos run (496 GB) to
+    cloud storage.
+  - Each folder is checked (file count, total bytes, every path's size, sha256 spot checks)
+    before its local copy is deleted.
+  - Kept on the shared drive: GR00T mix200_150k checkpoint-150000, mix200_decay60k
+    checkpoint-10000, and all small run files (configs, logs, run_info.json).
+  - Expected to leave ~70 GB of checkpoints locally instead of ~1.4 TB.
