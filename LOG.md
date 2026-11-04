@@ -1795,3 +1795,21 @@ every model.
   matches GR00T's seeds exactly.
 - The 6,000 eval (the end of the decay) is still running. Per-task table in
   `notes/results.md`.
+
+**17:45 EST (Wed Nov 4)** **Cosmos decay checkpoint 6,000 (end of the decay): the same as 5,500.**
+
+| | decay 6,000 | decay 5,500 | Cosmos 5,000 | GR00T best |
+|---|---|---|---|---|
+| randomized, all GR00T seeds | 84.5% | 85.0% | 81.9% | 45.3% |
+| clean, 10 per task | 88.2% | 88.6% | 84.4% | 45.5% |
+
+- 6,000 vs 5,500, seed by seed: no measurable difference (randomized p = 0.73, clean p = 0.89).
+- 6,000 vs 5,000: +2.6 points randomized (p = 0.04), +3.8 clean (p = 0.05).
+- **Reading:**
+  - The learning-rate decay is worth ~3–4 points, and it arrives within the first 500
+    iterations of the decay.
+  - Either decaying all the way to 0 adds nothing, or the EMA weights (which still carry
+    pre-decay weights) and the eval's ceiling hide it.
+  - For hill climbing / RL, decay 5,500 or 6,000 are equally good starting points (~85%
+    randomized, ~88% clean on 50 tasks).
+- Per-task table in `notes/results.md`.
