@@ -1726,3 +1726,10 @@ subagent).
   - Kept on the shared drive: GR00T mix200_150k checkpoint-150000, mix200_decay60k
     checkpoint-10000, and all small run files (configs, logs, run_info.json).
   - Expected to leave ~70 GB of checkpoints locally instead of ~1.4 TB.
+- 12:50 EST: **storage cleanup blocked; nothing uploaded, nothing deleted.**
+  - This machine's default storage role can no longer write to the project folder in cloud
+    storage (it could on Nov 2).
+  - Using the other storage role (the one that can delete) was blocked by Claude Code's
+    permission check, so the subagent stopped.
+  - Ready to resume: inventories, an upload script and a tested verification script.
+  - Needs you: approve uploading with that other role, or get write access restored.
