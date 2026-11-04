@@ -1624,3 +1624,27 @@ every view, on identical seeds** (cluster-eval subagent's report).
   in the cluster containers. One stream per GPU, ~40 GB each; two fit with ~1 GB spare.
 - Logs in `logs/` (540 new files, local naming); per-task table in `notes/results.md`.
 - **Cluster evals are now a working tool:** the local-only package can rerun any checkpoint.
+
+**01:45 EST (Wed Nov 4)** **Overnight plan while you sleep** (your instructions: keep Flux
+monitored; launch training and evals that help pick hill-climbing checkpoints and the RL base
+model; build the Flux eval adapter; log everything).
+1. **Flux training:** I keep monitoring. If it gets evicted, I resubmit with the documented
+   command; it resumes from the latest checkpoint.
+2. **Flux eval adapter + evals** (subagent):
+   - build the RoboTwin adapter for Flux, using BFL's official inference settings;
+   - CPU input check, open-loop held-out check and a 3-episode sim test;
+   - quick 10-task randomized eval at step 1500 (~03:15 EST) as a learning-curve point;
+   - then, after training ends (~15:20 EST), the full 50-task protocol on the final
+     checkpoint, with GR00T's exact seeds.
+3. **Cosmos learning-rate decay** (subagent):
+   - Why: Cosmos ended at 71% of its peak learning rate, and the same kind of decay was
+     GR00T's biggest single gain.
+   - What: continue the 16-GPU run from 5,000 with the learning rate going linearly to 0 over
+     1,000 iterations, everything else unchanged; ~3 h on 2 nodes, high priority.
+   - Then the same 50-task eval on the same seeds.
+   - It shows whether Cosmos has headroom from optimization alone, before we pick the
+     hill-climbing or RL base model.
+- **Not launched (proposals for you):**
+  - Cosmos on mix500 (2.5× the randomized data; ~14 h on 2 nodes). A data-scaling test that
+    targets its weak tasks.
+  - A repeat eval of Cosmos 5000, to measure run-to-run noise on the 50-task set.
