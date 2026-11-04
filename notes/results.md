@@ -5,6 +5,79 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
+## Cosmos3-Nano learning-rate decay, iteration 5,500, vs Cosmos 5,000 and GR00T mix200_150k (same seeds)
+
+Continued from 5,000 with the learning rate going linearly 3.55e-5 → 0 over 1,000 iterations (checkpoint
+5,500 = halfway). Evaluated 2026-11-04 on cluster GPUs with exact seed lists, EMA weights as before.
+
+| | decay 5,500 | Cosmos 5,000 | GR00T mix200_150k |
+|---|---|---|---|
+| randomized, first 10 per task | 422/498 = **84.7%** | 410/498 = 82.3% | 234/498 = 47.0% |
+| randomized, all GR00T seeds | 862/1014 = **85.0%** | 830/1014 = 81.9% | 459/1014 = 45.3% |
+| clean, first 10 per task | 442/499 = **88.6%** | 421/499 = 84.4% | 227/499 = 45.5% |
+
+Paired by seed against Cosmos 5,000 (two-sided sign test on seeds where they differ):
+rand first 10: seeds where new and C5000 differ: new-only successes 47, C5000-only 35; two-sided sign test p = 0.224
+rand all: seeds where new and C5000 differ: new-only successes 95, C5000-only 63; two-sided sign test p = 0.013
+clean first 10: seeds where new and C5000 differ: new-only successes 45, C5000-only 24; two-sided sign test p = 0.015
+
+Seeds not run (RoboTwin's expert check raises on the cluster): randomized open_microwave 300004 and
+put_bottles_dustbin 300001; clean place_object_basket 100006.
+
+| task | rand first 10: new | C5000 | GR00T | rand all: new | C5000 | GR00T | clean first 10: new | C5000 | GR00T |
+|---|---|---|---|---|---|---|---|---|---|
+| adjust_bottle | 10/10 | 10/10 | 10/10 | 21/21 | 21/21 | 19/21 | 10/10 | 10/10 | 10/10 |
+| beat_block_hammer | 10/10 | 10/10 | 9/10 | 20/20 | 19/20 | 11/20 | 10/10 | 10/10 | 4/10 |
+| blocks_ranking_rgb | 8/10 | 9/10 | 1/10 | 19/21 | 19/21 | 2/21 | 9/10 | 9/10 | 2/10 |
+| blocks_ranking_size | 7/10 | 8/10 | 0/10 | 17/21 | 17/21 | 2/21 | 4/10 | 7/10 | 1/10 |
+| click_alarmclock | 10/10 | 9/10 | 10/10 | 21/21 | 20/21 | 20/21 | 10/10 | 10/10 | 10/10 |
+| click_bell | 10/10 | 10/10 | 10/10 | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| dump_bin_bigbin | 9/10 | 9/10 | 7/10 | 18/20 | 18/20 | 12/20 | 10/10 | 10/10 | 8/10 |
+| grab_roller | 10/10 | 10/10 | 9/10 | 21/21 | 21/21 | 19/21 | 10/10 | 10/10 | 8/10 |
+| handover_block | 5/10 | 3/10 | 0/10 | 9/20 | 4/20 | 0/20 | 6/10 | 6/10 | 1/10 |
+| handover_mic | 9/10 | 8/10 | 2/10 | 19/20 | 18/20 | 3/20 | 8/10 | 10/10 | 2/10 |
+| hanging_mug | 3/10 | 0/10 | 0/10 | 6/20 | 1/20 | 0/20 | 1/10 | 3/10 | 0/10 |
+| lift_pot | 8/10 | 7/10 | 1/10 | 16/20 | 15/20 | 1/20 | 10/10 | 10/10 | 1/10 |
+| move_can_pot | 8/10 | 7/10 | 6/10 | 15/20 | 15/20 | 10/20 | 10/10 | 8/10 | 3/10 |
+| move_pillbottle_pad | 9/10 | 9/10 | 7/10 | 18/20 | 16/20 | 11/20 | 8/10 | 7/10 | 6/10 |
+| move_playingcard_away | 9/10 | 10/10 | 5/10 | 19/20 | 20/20 | 11/20 | 10/10 | 10/10 | 6/10 |
+| move_stapler_pad | 8/10 | 8/10 | 1/10 | 16/21 | 15/21 | 2/21 | 8/10 | 7/10 | 1/10 |
+| open_laptop | 10/10 | 10/10 | 8/10 | 21/21 | 20/21 | 17/21 | 9/10 | 7/10 | 5/10 |
+| open_microwave | 10/10 | 10/10 | 0/10 | 18/19 | 14/19 | 0/19 | 8/10 | 7/10 | 1/10 |
+| pick_diverse_bottles | 7/10 | 7/10 | 6/10 | 12/21 | 11/21 | 10/21 | 7/10 | 6/10 | 5/10 |
+| pick_dual_bottles | 9/10 | 6/10 | 7/10 | 19/20 | 14/20 | 16/20 | 9/10 | 5/10 | 6/10 |
+| place_a2b_left | 9/10 | 10/10 | 8/10 | 19/20 | 20/20 | 16/20 | 10/10 | 9/10 | 8/10 |
+| place_a2b_right | 9/10 | 8/10 | 8/10 | 19/20 | 18/20 | 15/20 | 10/10 | 9/10 | 7/10 |
+| place_bread_basket | 8/10 | 9/10 | 2/10 | 19/21 | 20/21 | 9/21 | 10/10 | 10/10 | 6/10 |
+| place_bread_skillet | 10/10 | 8/10 | 5/10 | 16/20 | 17/20 | 9/20 | 9/10 | 9/10 | 6/10 |
+| place_burger_fries | 10/10 | 10/10 | 8/10 | 20/20 | 20/20 | 18/20 | 10/10 | 10/10 | 8/10 |
+| place_can_basket | 9/10 | 8/10 | 6/10 | 17/20 | 12/20 | 13/20 | 7/10 | 7/10 | 4/10 |
+| place_cans_plasticbox | 8/10 | 10/10 | 3/10 | 18/20 | 20/20 | 8/20 | 10/10 | 10/10 | 4/10 |
+| place_container_plate | 10/10 | 10/10 | 9/10 | 20/20 | 20/20 | 17/20 | 10/10 | 10/10 | 10/10 |
+| place_dual_shoes | 7/10 | 7/10 | 0/10 | 15/22 | 17/22 | 1/22 | 6/10 | 7/10 | 1/10 |
+| place_empty_cup | 10/10 | 10/10 | 7/10 | 20/20 | 20/20 | 15/20 | 10/10 | 10/10 | 9/10 |
+| place_fan | 7/10 | 7/10 | 2/10 | 14/20 | 14/20 | 3/20 | 9/10 | 10/10 | 1/10 |
+| place_mouse_pad | 6/10 | 5/10 | 2/10 | 12/20 | 12/20 | 3/20 | 8/10 | 7/10 | 3/10 |
+| place_object_basket | 10/10 | 7/10 | 4/10 | 19/21 | 18/21 | 9/21 | 9/9 | 8/9 | 1/9 |
+| place_object_scale | 9/10 | 7/10 | 3/10 | 19/20 | 14/20 | 4/20 | 9/10 | 9/10 | 1/10 |
+| place_object_stand | 8/10 | 7/10 | 5/10 | 17/20 | 16/20 | 11/20 | 10/10 | 8/10 | 8/10 |
+| place_phone_stand | 8/10 | 8/10 | 7/10 | 16/20 | 16/20 | 10/20 | 9/10 | 9/10 | 2/10 |
+| place_shoe | 10/10 | 10/10 | 4/10 | 19/20 | 19/20 | 8/20 | 9/10 | 9/10 | 4/10 |
+| press_stapler | 9/10 | 10/10 | 6/10 | 20/21 | 21/21 | 14/21 | 10/10 | 10/10 | 9/10 |
+| put_bottles_dustbin | 4/8 | 5/8 | 0/8 | 10/19 | 11/19 | 0/19 | 9/10 | 9/10 | 0/10 |
+| put_object_cabinet | 8/10 | 7/10 | 1/10 | 15/20 | 13/20 | 1/20 | 8/10 | 6/10 | 1/10 |
+| rotate_qrcode | 7/10 | 8/10 | 4/10 | 13/20 | 17/20 | 6/20 | 8/10 | 8/10 | 2/10 |
+| scan_object | 7/10 | 10/10 | 3/10 | 13/20 | 17/20 | 4/20 | 9/10 | 7/10 | 3/10 |
+| shake_bottle | 10/10 | 10/10 | 10/10 | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 10/10 | 10/10 | 9/10 | 20/20 | 20/20 | 18/20 | 10/10 | 9/10 | 10/10 |
+| stack_blocks_three | 7/10 | 8/10 | 0/10 | 17/20 | 17/20 | 0/20 | 10/10 | 9/10 | 0/10 |
+| stack_blocks_two | 10/10 | 10/10 | 1/10 | 20/20 | 20/20 | 4/20 | 10/10 | 10/10 | 3/10 |
+| stack_bowls_three | 7/10 | 8/10 | 1/10 | 16/21 | 12/21 | 4/21 | 9/10 | 9/10 | 3/10 |
+| stack_bowls_two | 10/10 | 10/10 | 10/10 | 21/21 | 21/21 | 19/21 | 10/10 | 8/10 | 6/10 |
+| stamp_seal | 10/10 | 9/10 | 5/10 | 20/21 | 18/21 | 7/21 | 8/10 | 6/10 | 3/10 |
+| turn_switch | 6/10 | 4/10 | 2/10 | 13/20 | 12/20 | 7/20 | 9/10 | 7/10 | 4/10 |
+| **total** | **422/498 = 84.7%** | **410/498 = 82.3%** | **234/498 = 47.0%** | **862/1014 = 85.0%** | **830/1014 = 81.9%** | **459/1014 = 45.3%** | **442/499 = 88.6%** | **421/499 = 84.4%** | **227/499 = 45.5%** |
+
 ## Cosmos3-Nano, 16-GPU run, iteration 5,000, vs GR00T mix200_150k checkpoint-150000 (same seeds)
 
 Evaluated 2026-11-03 on cluster GPUs, one eval stream per GPU, seed by seed against GR00T's logs.

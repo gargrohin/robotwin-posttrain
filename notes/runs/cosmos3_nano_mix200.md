@@ -93,3 +93,6 @@ is our own later experiment.
   `python3 gr00t/paired_compare.py --per-task`.
 - **16-GPU copy, iteration 5,000, 50 tasks (same seeds as GR00T mix200_150k):** randomized 830/1015 (81.8%)
   vs GR00T 459/1015 (45.2%); clean 421/500 (84.2%) vs 227/500 (45.4%). Per-task table: `notes/results.md`.
+- **Decay continuation (5,000 → 6,000, learning rate → 0), checkpoint 5,500, 50 tasks, same seeds:** randomized
+  862/1014 (85.0%) vs Cosmos 5,000 830/1014 (81.9%), clean 442/499 (88.6%) vs 421/499 (84.4%); sign test p ≈ 0.01
+  on both. 6,000 eval running. Metrics are logged to wandb.
