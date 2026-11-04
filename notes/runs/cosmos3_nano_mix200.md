@@ -91,3 +91,5 @@ is our own later experiment.
 - **16-GPU copy, sim learning curve (10 tasks randomized, same scenes as GR00T):** 2,500 77/99 (78%),
   3,000 79/99 (80%), 4,000 85/99 (86%), **5,000 86/99 (87%)**; GR00T mix200 150k 66/99 (67%).
   `python3 gr00t/paired_compare.py --per-task`.
+- **16-GPU copy, iteration 5,000, 50 tasks (same seeds as GR00T mix200_150k):** randomized 830/1015 (81.8%)
+  vs GR00T 459/1015 (45.2%); clean 421/500 (84.2%) vs 227/500 (45.4%). Per-task table: `notes/results.md`.
