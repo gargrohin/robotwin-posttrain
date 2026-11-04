@@ -96,3 +96,5 @@ is our own later experiment.
 - **Decay continuation (5,000 → 6,000, learning rate → 0), checkpoint 5,500, 50 tasks, same seeds:** randomized
   862/1014 (85.0%) vs Cosmos 5,000 830/1014 (81.9%), clean 442/499 (88.6%) vs 421/499 (84.4%); sign test p ≈ 0.01
   on both. 6,000 eval running. Metrics are logged to wandb.
+- **Decay checkpoint 6,000 (end):** randomized 857/1014 (84.5%), clean 440/499 (88.2%); vs 5,000 p = 0.04 / 0.05;
+  vs 5,500 no measurable difference (p = 0.73 / 0.89). Most of the decay's gain came by 5,500.
