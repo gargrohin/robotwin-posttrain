@@ -1739,3 +1739,23 @@ subagent).
   - Its full 50-task eval (same protocol and seeds as 5,000 and 5,500) is being submitted by
     the decay subagent.
   - The 5,500 full eval is partly queued (the shared pool is busy).
+
+**13:15 EST (Wed Nov 4)** **Cosmos decay run: training done, evals running** (decay subagent's
+final report; I take over watching the eval jobs).
+- **Schedule:** NVIDIA's own scheduler with a second cycle, so no code change.
+  - Checked on CPU against the real 5,000 checkpoint state before submitting.
+  - In the job, wandb's learning rate matched the prediction exactly at 5,000 / 5,250 / 5,500
+    / 5,750 / 5,990.
+  - Model, EMA and optimizer were restored at 5,000, with no loss spike.
+- **Job:** waited ~8 h in the queue (our quota was full overnight); ran 09:43–12:51 at 10.2–10.4
+  s per iteration, ~50 GPU-hours. Metrics are logged to wandb.
+  - Training loss 0.668 (mean, 4,500–5,000) → 0.603 (5,750–6,000); action loss 0.0016 →
+    0.0009. These are on training batches, so only a hint.
+- **Evals:** full protocol on 5,500 (13 jobs) and 6,000 (12 jobs).
+  - Exact seed lists: all 1,017 GR00T randomized + 500 clean, verified seed by seed.
+  - At 13:06: 5,500 has 12 of 13 running; 6,000 is all queued.
+  - Expected: 5,500 done ~17:00–18:00 EST, 6,000 later.
+- **Caveat:** the evals use the EMA weights, a running average of recent weights. By the EMA
+  formula, ~24% of the 6,000 EMA (and ~47% at 5,500) still comes from before the decay
+  started. So the decay's effect on what we evaluate may be smaller than on the raw weights.
+  Computed, not measured.
