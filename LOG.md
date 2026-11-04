@@ -1733,3 +1733,9 @@ subagent).
     permission check, so the subagent stopped.
   - Ready to resume: inventories, an upload script and a tested verification script.
   - Needs you: approve uploading with that other role, or get write access restored.
+- 12:57 EST: **Cosmos decay run finished**: iteration 6,000 in cloud storage at 12:52, job
+  completed.
+  - 1,000 iterations in ~3 h at 10.2 s per iteration, learning rate 3.55e-5 → 0 as planned.
+  - Its full 50-task eval (same protocol and seeds as 5,000 and 5,500) is being submitted by
+    the decay subagent.
+  - The 5,500 full eval is partly queued (the shared pool is busy).
