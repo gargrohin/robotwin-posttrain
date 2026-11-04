@@ -1704,3 +1704,8 @@ subagent).
 - 08:30–11:15: Claude Code's per-action safety check returned errors (no verdict) three
   times when I tried to restart my monitor, so I paused it; the subagents' own watchers
   kept running. The monitor is back on.
+- 11:30 EST: **Cosmos decay checkpoint 5,500 gets the full 50-task protocol too** (your call),
+  instead of only the 10-task check.
+  - All 50 tasks: randomized on all of GR00T's seeds plus clean 10 per task. ~90 GPU-hours on
+    shared-pool slices, in parallel with training.
+  - The 6,000 eval follows when training ends (~12:50).
