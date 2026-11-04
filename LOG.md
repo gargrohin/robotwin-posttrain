@@ -1813,3 +1813,6 @@ every model.
   - For hill climbing / RL, decay 5,500 or 6,000 are equally good starting points (~85%
     randomized, ~88% clean on 50 tasks).
 - Per-task table in `notes/results.md`.
+- 18:00 EST: **storage cleanup resumed**. You approved using the other storage role for the
+  uploads. Same plan: upload, verify, then delete the local copies except the two kept GR00T
+  checkpoints and all small run files.
