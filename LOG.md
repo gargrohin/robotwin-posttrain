@@ -1759,3 +1759,11 @@ final report; I take over watching the eval jobs).
   formula, ~24% of the 6,000 EMA (and ~47% at 5,500) still comes from before the decay
   started. So the decay's effect on what we evaluate may be smaller than on the raw weights.
   Computed, not measured.
+
+**16:20 EST (Wed Nov 4)** **Flux 3 Action training finished**: final checkpoint (step 3,000)
+in cloud storage at 16:15 EST.
+- 3,000 updates at batch 512 on 2 nodes, ~23.5 h after starting at 16:43 EST yesterday. No
+  evictions after the high-priority resubmit.
+- The Flux eval subagent's watcher picks it up for the full 50-task eval, using GR00T's exact
+  seeds (randomized 20–22 per task, clean 10).
+- Cosmos decay evals: 5,500 has 7/13 jobs done; 6,000 has 12/12 running.
