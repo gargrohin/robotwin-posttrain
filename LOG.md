@@ -1665,3 +1665,29 @@ model; build the Flux eval adapter; log everything).
     without restarting warmup.
   - Data order reshuffled (seed 42 + 5,000), so it doesn't replay the run's first 1,000
     iterations.
+
+**07:05 EST (Wed Nov 4)** **First Flux sim result: step 1,500 (halfway through training) gets
+74/100 on the 10-task randomized scenes**, the same seeds as GR00T and Cosmos (Flux eval
+subagent).
+
+| model | 10 tasks, GR00T's first 10 randomized seeds |
+|---|---|
+| GR00T mix200 150k (best GR00T) | 67/100 |
+| **Flux, step 1,500** | **74/100** |
+| Cosmos 1,500 / 2,500 / 5,000 | 66 / 77 / 87 (of 99–100) |
+
+- Per task (Flux / GR00T / Cosmos 5000):
+  - handover_mic 8/2/9
+  - place_phone_stand 9/7/8
+  - move_can_pot 3/6/7
+  - pick_dual_bottles 3/7/6
+  - the rest within 2 of GR00T
+- **Held-out prediction check at step 1,050:** arm error 0.040 / 0.031 / 0.033 rad (train
+  randomized / train clean / unseen). That's about GR00T at 30k–60k steps. No memorization.
+- **Adapter:** XPolicyLab policy `Flux3_Action` (local branch commit 2b435d8, not pushed).
+  - Model load ~30 s, 0.8–0.9 s per call.
+  - 0.51 s per sim step all-in, slightly cheaper to evaluate than Cosmos.
+- **Final eval:** the full 50-task eval of step 3,000 (GR00T's exact seeds, randomized ~20 per
+  task + clean 10) starts automatically when training ends (~15:20 EST); ~65–100 GPU-hours.
+- Flux training: step 1,800 in cloud storage at 06:50, on schedule.
+- Cosmos decay run: still queued (it needs 2 whole nodes on our quota or the shared pool).
