@@ -1767,3 +1767,31 @@ in cloud storage at 16:15 EST.
 - The Flux eval subagent's watcher picks it up for the full 50-task eval, using GR00T's exact
   seeds (randomized 20–22 per task, clean 10).
 - Cosmos decay evals: 5,500 has 7/13 jobs done; 6,000 has 12/12 running.
+
+**17:00 EST (Wed Nov 4)** **Learning-rate decay helps Cosmos: checkpoint 5,500 (halfway
+through the decay) beats Cosmos 5,000 by 3–4 points on all 50 tasks**, the same seeds for
+every model.
+
+| | decay 5,500 | Cosmos 5,000 | GR00T best |
+|---|---|---|---|
+| randomized, all GR00T seeds (1,014) | **85.0%** | 81.9% | 45.3% |
+| clean, first 10 per task (499) | **88.6%** | 84.4% | 45.5% |
+
+- Paired by seed against Cosmos 5,000:
+  - randomized: 95 seeds only the decayed model solves vs 63 only 5,000 solves, sign test
+    p = 0.013;
+  - clean: 45 vs 24, p = 0.015.
+  - Unlikely to be noise. The measured run-to-run noise is ~7% of episodes flipping, which
+    would split evenly both ways.
+- **Biggest gains:**
+  - open_microwave 18/19 (was 14);
+  - handover_block 9/20 (4);
+  - hanging_mug 6/20 (1);
+  - pick_dual_bottles 19/20 (14);
+  - place_can_basket 17/20 (12);
+  - place_object_scale 19/20 (14).
+- **Some drops:** rotate_qrcode 13/20 (17), scan_object 13/20 (17).
+- **Seeds:** 3 couldn't run (RoboTwin's expert check raises on the cluster); everything else
+  matches GR00T's seeds exactly.
+- The 6,000 eval (the end of the decay) is still running. Per-task table in
+  `notes/results.md`.
