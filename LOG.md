@@ -1648,3 +1648,20 @@ model; build the Flux eval adapter; log everything).
   - Cosmos on mix500 (2.5× the randomized data; ~14 h on 2 nodes). A data-scaling test that
     targets its weak tasks.
   - A repeat eval of Cosmos 5000, to measure run-to-run noise on the 50-task set.
+
+**03:35 EST (Wed Nov 4)** Overnight progress.
+- **Flux training:** step 1,350 in cloud storage at 03:18 EST, on schedule (ETA ~15:20).
+- **Flux eval adapter:** works on a cluster slice.
+  - The renderer works and the policy loads in 25–32 s.
+  - 0.8–0.9 s per call with one stream per GPU. Two streams fit in memory (68 GB) but halve
+    the speed, so it keeps one per GPU.
+  - First smoke-test episodes: place_empty_cup 3/3, stamp_seal 0/1, turn_switch 1/2.
+  - The 10-task eval on step 1,500 comes next.
+- **Cosmos decay run:** queued since 01:50 EST.
+  - Two copies under one run name (our quota, and the shared pool); whichever starts first
+    runs.
+  - Schedule verified before submitting: the learning rate goes 3.55e-5 (iteration 5,000) →
+    2.66e-5 (5,250) → 1.77e-5 (5,500) → 3.5e-7 (5,990), linear to 0. It resumes the optimizer
+    without restarting warmup.
+  - Data order reshuffled (seed 42 + 5,000), so it doesn't replay the run's first 1,000
+    iterations.
