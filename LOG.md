@@ -1604,3 +1604,23 @@ same note in both views, clear); the test file was deleted, so the store starts 
 - Open for you: delete two Flux test checkpoints (2 × 129 GB)? The full run will write ~20
   checkpoints (~2.6 TB); old ones can drop their optimizer state (52 GB each) later and stay
   usable for evals.
+
+**23:15 EST (Tue Nov 3)** **50-task eval of Cosmos 5,000 done: about 82–84% vs GR00T's 45%, in
+every view, on identical seeds** (cluster-eval subagent's report).
+
+| | Cosmos 5,000 | GR00T mix200_150k |
+|---|---|---|
+| randomized, first 10 seeds per task | 410/499 (82.2%) | 234/499 (46.9%) |
+| randomized, all GR00T seeds (20–22 per task) | 830/1015 (81.8%) | 459/1015 (45.2%) |
+| clean, first 10 per task | 421/500 (84.2%) | 227/500 (45.4%) |
+
+- **Clean and randomized are both far ahead.** Cosmos's gain is in task skill, not only in
+  robustness to clutter.
+- **Run-to-run noise:** the same 10 tasks × 10 seeds on the devbox and on the cluster gave
+  87/100 vs 84/100, with the same outcome on 93 of 100 seeds.
+- **Seeds:** checked one by one. 2 of GR00T's 1,017 randomized seeds can't run on the cluster
+  (the expert check crashes there). 22 extra Cosmos episodes on non-GR00T seeds are excluded.
+- **How it ran:** all on cluster GPU slices, borrowing allowed; ~95 GPU-hours. Rendering works
+  in the cluster containers. One stream per GPU, ~40 GB each; two fit with ~1 GB spare.
+- Logs in `logs/` (540 new files, local naming); per-task table in `notes/results.md`.
+- **Cluster evals are now a working tool:** the local-only package can rerun any checkpoint.

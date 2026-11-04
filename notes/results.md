@@ -5,6 +5,79 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
+## Cosmos3-Nano, 16-GPU run, iteration 5,000, vs GR00T mix200_150k checkpoint-150000 (same seeds)
+
+Evaluated 2026-11-03 on cluster GPUs, one eval stream per GPU, seed by seed against GR00T's logs.
+
+| | Cosmos 5,000 | GR00T mix200_150k |
+|---|---|---|
+| randomized, GR00T's first 10 seeds per task | 410/499 = **82.2%** | 234/499 = 46.9% |
+| randomized, all of GR00T's seeds (20–22 per task) | 830/1015 = **81.8%** | 459/1015 = 45.2% |
+| clean, GR00T's first 10 seeds per task | 421/500 = **84.2%** | 227/500 = 45.4% |
+
+- 1015 of GR00T's 1017 randomized seeds were run. RoboTwin's scripted expert check crashes on
+  put_bottles_dustbin 100017 and open_microwave 300004 on the cluster, so those two are unpaired.
+- 22 Cosmos episodes landed on seeds GR00T never ran and are excluded from the comparison. The
+  expert check that decides whether a seed is usable isn't deterministic, so "start + count"
+  queues can skip a different seed than GR00T's did. Missed GR00T seeds were rerun from exact
+  seed lists.
+- Run-to-run check: the same 10 tasks × 10 seeds, run on the devbox and on the cluster: 87/100 vs
+  84/100, same outcome on 93 of 100 seeds.
+
+| task | rand 10 Cosmos | rand 10 GR00T | rand all Cosmos | rand all GR00T | clean 10 Cosmos | clean 10 GR00T |
+|---|---|---|---|---|---|---|
+| adjust_bottle | 10/10 | 10/10 | 21/21 | 19/21 | 10/10 | 10/10 |
+| beat_block_hammer | 10/10 | 9/10 | 19/20 | 11/20 | 10/10 | 4/10 |
+| blocks_ranking_rgb | 9/10 | 1/10 | 19/21 | 2/21 | 9/10 | 2/10 |
+| blocks_ranking_size | 8/10 | 0/10 | 17/21 | 2/21 | 7/10 | 1/10 |
+| click_alarmclock | 9/10 | 10/10 | 20/21 | 20/21 | 10/10 | 10/10 |
+| click_bell | 10/10 | 10/10 | 20/20 | 20/20 | 10/10 | 10/10 |
+| dump_bin_bigbin | 9/10 | 7/10 | 18/20 | 12/20 | 10/10 | 8/10 |
+| grab_roller | 10/10 | 9/10 | 21/21 | 19/21 | 10/10 | 8/10 |
+| handover_block | 3/10 | 0/10 | 4/20 | 0/20 | 6/10 | 1/10 |
+| handover_mic | 8/10 | 2/10 | 18/20 | 3/20 | 10/10 | 2/10 |
+| hanging_mug | 0/10 | 0/10 | 1/20 | 0/20 | 3/10 | 0/10 |
+| lift_pot | 7/10 | 1/10 | 15/20 | 1/20 | 10/10 | 1/10 |
+| move_can_pot | 7/10 | 6/10 | 15/20 | 10/20 | 8/10 | 3/10 |
+| move_pillbottle_pad | 9/10 | 7/10 | 16/20 | 11/20 | 7/10 | 6/10 |
+| move_playingcard_away | 10/10 | 5/10 | 20/20 | 11/20 | 10/10 | 6/10 |
+| move_stapler_pad | 8/10 | 1/10 | 15/21 | 2/21 | 7/10 | 1/10 |
+| open_laptop | 10/10 | 8/10 | 20/21 | 17/21 | 7/10 | 5/10 |
+| open_microwave | 10/10 | 0/10 | 14/19 | 0/19 | 7/10 | 1/10 |
+| pick_diverse_bottles | 7/10 | 6/10 | 11/21 | 10/21 | 6/10 | 5/10 |
+| pick_dual_bottles | 6/10 | 7/10 | 14/20 | 16/20 | 5/10 | 6/10 |
+| place_a2b_left | 10/10 | 8/10 | 20/20 | 16/20 | 9/10 | 8/10 |
+| place_a2b_right | 8/10 | 8/10 | 18/20 | 15/20 | 9/10 | 7/10 |
+| place_bread_basket | 9/10 | 2/10 | 20/21 | 9/21 | 10/10 | 6/10 |
+| place_bread_skillet | 8/10 | 5/10 | 17/20 | 9/20 | 9/10 | 6/10 |
+| place_burger_fries | 10/10 | 8/10 | 20/20 | 18/20 | 10/10 | 8/10 |
+| place_can_basket | 8/10 | 6/10 | 12/20 | 13/20 | 7/10 | 4/10 |
+| place_cans_plasticbox | 10/10 | 3/10 | 20/20 | 8/20 | 10/10 | 4/10 |
+| place_container_plate | 10/10 | 9/10 | 20/20 | 17/20 | 10/10 | 10/10 |
+| place_dual_shoes | 7/10 | 0/10 | 17/22 | 1/22 | 7/10 | 1/10 |
+| place_empty_cup | 10/10 | 7/10 | 20/20 | 15/20 | 10/10 | 9/10 |
+| place_fan | 7/10 | 2/10 | 14/20 | 3/20 | 10/10 | 1/10 |
+| place_mouse_pad | 5/10 | 2/10 | 12/20 | 3/20 | 7/10 | 3/10 |
+| place_object_basket | 7/10 | 4/10 | 18/21 | 9/21 | 8/10 | 1/10 |
+| place_object_scale | 7/10 | 3/10 | 14/20 | 4/20 | 9/10 | 1/10 |
+| place_object_stand | 7/10 | 5/10 | 16/20 | 11/20 | 8/10 | 8/10 |
+| place_phone_stand | 8/10 | 7/10 | 16/20 | 10/20 | 9/10 | 2/10 |
+| place_shoe | 10/10 | 4/10 | 19/20 | 8/20 | 9/10 | 4/10 |
+| press_stapler | 10/10 | 6/10 | 21/21 | 14/21 | 10/10 | 9/10 |
+| put_bottles_dustbin | 5/9 | 0/9 | 11/20 | 0/20 | 9/10 | 0/10 |
+| put_object_cabinet | 7/10 | 1/10 | 13/20 | 1/20 | 6/10 | 1/10 |
+| rotate_qrcode | 8/10 | 4/10 | 17/20 | 6/20 | 8/10 | 2/10 |
+| scan_object | 10/10 | 3/10 | 17/20 | 4/20 | 7/10 | 3/10 |
+| shake_bottle | 10/10 | 10/10 | 20/20 | 20/20 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 10/10 | 9/10 | 20/20 | 18/20 | 9/10 | 10/10 |
+| stack_blocks_three | 8/10 | 0/10 | 17/20 | 0/20 | 9/10 | 0/10 |
+| stack_blocks_two | 10/10 | 1/10 | 20/20 | 4/20 | 10/10 | 3/10 |
+| stack_bowls_three | 8/10 | 1/10 | 12/21 | 4/21 | 9/10 | 3/10 |
+| stack_bowls_two | 10/10 | 10/10 | 21/21 | 19/21 | 8/10 | 6/10 |
+| stamp_seal | 9/10 | 5/10 | 18/21 | 7/21 | 6/10 | 3/10 |
+| turn_switch | 4/10 | 2/10 | 12/20 | 7/20 | 7/10 | 4/10 |
+| **total** | **410/499 = 82.2%** | **234/499 = 46.9%** | **830/1015 = 81.8%** | **459/1015 = 45.2%** | **421/500 = 84.2%** | **227/500 = 45.4%** |
+
 ## Model mix200_150k (one model, all 50 tasks × (50 clean + 200 randomized demos), 150k steps), checkpoint-150000
 
 **Mean: clean 46.0%, randomized 45.2%** (50 / 50 tasks). The old model (50task_60k, below)
