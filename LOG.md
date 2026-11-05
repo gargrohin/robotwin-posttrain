@@ -1836,3 +1836,18 @@ seeds: 71.0% randomized, 71.1% clean.** The eval finished at 20:32 EST on Nov 4.
   DROID schedule, so it may be undertrained, but its sim score was flat from 1,500 to 3,000.
 - The eval's local copies of the exported weights were deleted after the eval; the exports stay
   in cloud storage. Per-task table in `notes/results.md`.
+
+**01:30 EST (Thu Nov 5)** **Storage: switched to keeping weights only (your call: no full training
+states needed).**
+- GR00T upload: the full upload (960 GB) ran at ~15–20 MB/s, ~14–18 h. Stopped it and started a
+  weights-only upload: model weights + configs of every GR00T checkpoint, 214 GB. It skips the
+  DeepSpeed optimizer folders (748 GB), which are only needed to resume a run exactly.
+- Cloud storage plan (you run the deletes; my permissions block them): delete Cosmos 500–4,500 and
+  decay 5,250/5,750, all Flux full states except step 3,000, and the two Flux test checkpoints
+  (4.9 TB). Keep Cosmos 5,000 / 5,500 / 6,000, Flux step 3,000 (in case Flux trains further) and
+  the Flux exported weights.
+- Local deletes (you run them): the old local Cosmos run's checkpoints (532 GB) and the optimizer
+  folders of the two GR00T checkpoints kept on disk (58 GB). The 24 old GR00T checkpoint folders
+  come after the upload is checked.
+- Future runs: weights only at every save, plus one full state, overwritten each save, for
+  recovery after a cluster preemption.
