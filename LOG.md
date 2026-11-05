@@ -1977,3 +1977,11 @@ the saving scheme changed.**
 - A small sim test on that export (9 episodes) ran end to end with the changed eval setup: the
   devbox can no longer write to cloud storage, so the eval job now uploads its own inputs. This
   is the path the 10-task check at 6,000 will use (~05:00 EST Friday).
+
+**17:05 EST (Thu Nov 5)** **Flux continuation moved to the shared queue at update 4,375.**
+- Stopped at 16:50 right after the 4,375 save was complete (your call: another team needed our
+  GPUs). Nothing was lost; the next job continues from that save with the same schedule.
+- Resubmitted to the shared queue, which can pre-empt jobs, so a save now happens every 50
+  updates (~22 min on 2 nodes) instead of 125. Two copies wait in the queue (2 nodes, or 1 node at
+  half the speed); the first one to start is kept and the other is cancelled. The two never write
+  to the same saves.
