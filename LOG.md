@@ -1969,3 +1969,11 @@ the saving scheme changed.**
   (857 GB) and the optimizer folders of the two kept GR00T checkpoints (58 GB). Kept on disk:
   GR00T mix200_150k 150000 and decay60k 10000 (weights and configs).
 - Also cancelled 64 empty leftover upload records from the stopped upload attempts.
+
+**15:00 EST (Thu Nov 5)** **Flux continuation: first export, and the eval path checked.**
+- Training is at ~4,100 of 9,000 updates (~27 s per update), loss ~0.072 after the warm-up.
+- The weights-only export at 4,000 was written by the training job itself (14 GB, ~5 min after
+  the save) while training continued.
+- A small sim test on that export (9 episodes) ran end to end with the changed eval setup: the
+  devbox can no longer write to cloud storage, so the eval job now uploads its own inputs. This
+  is the path the 10-task check at 6,000 will use (~05:00 EST Friday).
