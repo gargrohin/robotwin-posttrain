@@ -1879,3 +1879,21 @@ states needed).**
   it up again; 4 placed the object close to the target but not accepted, with repeated
   adjusting; 1 kept pressing a switch without triggering it; 2 wrong order or wrong target (the
   wrong target maybe a red clutter object); 1 never did the second arm's part.
+
+**02:05 EST (Thu Nov 5)** **Flux continuation: design fixed, short test job submitted.**
+- **Start point:** the full training state of step 3,000 (weights, optimizer state and both
+  EMAs), continued with BFL's own resume path. Their trainer rebuilds the learning-rate
+  schedule from the new settings on resume, so this needs no new training code. The EMAs
+  carry on from step 3,000 as the trainer does on any resume.
+- **Schedule (updates 3,000 → 9,000, batch 512 as before):** official peak learning rates
+  (trunk 1.92e-4, heads 9.6e-4); re-warm-up from zero over 200 updates (trunk) and 100
+  (heads), with no frozen phase; constant; linear cool-down to zero over the last 1,000. One
+  small addition to the trainer: a setting for the step where the heads' warm-up starts
+  (default 0 keeps the original behavior); BFL's tests still pass (47/47).
+- **Data check:** the dataset index is byte-identical to the one the 3,000 run used, and its
+  fingerprint matches the one stored in the step-3,000 checkpoint.
+- **Saves:** a full state every 125 updates (~56 min), so the exports below land on a save;
+  older full states are deleted once a newer one is uploaded. Weights-only export (EMA 0.10,
+  bf16, ~14 GB) every 1,000 updates and at the end.
+- **Test job (16 GPUs, ~30 min):** 6 updates from step 3,000, two saves (checks that the older
+  one gets deleted), an export, then a resume from the newest save.
