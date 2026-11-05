@@ -1860,3 +1860,22 @@ states needed).**
   (~710 GPU-hours). 10-task check at +3,000 (~4 GPU-hours); if nothing has moved by then, you
   decide whether to stop. Full 50-task eval at the end (~77 GPU-hours).
 - Saves: weights every 1,000 updates, plus one full state for recovery after a preemption.
+
+**01:36 EST (Thu Nov 5)** **Cosmos decay 5,500: per task, and a first look at how it fails** (CPU only).
+- **Index now includes the cluster evals** (`analysis/build_index.py` reads
+  `../cluster_eval*/results/*/eval_result`): 12,181 episodes; every cluster episode of Cosmos
+  5,000, decay 5,500/6,000 and Flux 3,000 has its video, passes the frame check and its record
+  matches the log. Totals match the log-based numbers (decay 5,500: 863/1,015 randomized,
+  442/499 clean).
+- **Per task (clean + randomized together):** 37 tasks at 80% or more, 12 at 41–79%, 1 below 40%
+  (hanging_mug 23%), none at 0%. Length matters much less than for GR00T (≤150-step tasks 89%,
+  >350-step 81%; GR00T 56% vs 6%). Two-arm tasks 81% vs one-arm 91%, lower in every length
+  group; 8 of the 13 tasks under 80% use both arms.
+- **Motion check** (`analysis/motion.py`): in 90% of the 209 failures the robot is still moving
+  in the last 5% of the episode, like in successes. It doesn't freeze; it keeps going until
+  time runs out.
+- **13 failures watched** (one randomized failure per task under 80%, 10 still frames each; my
+  reading, to be checked in the viewer): 5 dropped or knocked over an object and never picked
+  it up again; 4 placed the object close to the target but not accepted, with repeated
+  adjusting; 1 kept pressing a switch without triggering it; 2 wrong order or wrong target (the
+  wrong target maybe a red clutter object); 1 never did the second arm's part.
