@@ -19,7 +19,7 @@ MODELS = (("old", OLD, 60000), ("new 60k", NEW, 60000), ("decayed 60k", DEC, 100
           ("cosmos 1500", "cosmos3_nano_mix200", 1500)) + tuple(
     (f"cosmos16 {n}", "cosmos3_nano_mix200_2n", n) for n in (2500, 3000, 4000, 5000)
     if glob.glob(f"logs/eval_cosmos3_nano_mix200_2n_ckpt-{n}_*.client.log")) + tuple(  # 16-GPU run, once evaluated
-    (f"flux {n}", "flux3_mix200_b512", n) for n in (1500, 3000)
+    (f"flux {n}", "flux3_mix200_b512", n) for n in (1500, 3000, 6000, 9000)  # 6000/9000: the continuation run
     if glob.glob(f"logs/eval_flux3_mix200_b512_ckpt-{n}_*.client.log"))  # FLUX 3 Action, once evaluated
 TEN = ["pick_dual_bottles", "place_object_stand", "move_pillbottle_pad", "place_empty_cup", "place_phone_stand",
        "move_can_pot", "dump_bin_bigbin", "handover_mic", "grab_roller", "click_bell"]
