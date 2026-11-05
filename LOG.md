@@ -2000,3 +2000,11 @@ requests).
 - Checked RoboTwin's success rules: place_mouse_pad allows 1.5 × 1.2 cm and one direction; 30 of
   50 tasks require both grippers open at the end. stack_bowls_three seed 100007 looks like a
   physics glitch (all three bowls leave view within 20 steps).
+
+**17:35 EST (Thu Nov 5)** **Flux continuation: running as one 1-node job on the shared queue.**
+- The 1-node copy started first (17:12), was pre-empted 6 minutes later before its first save,
+  and was re-admitted at 17:23; the 2-node copy was cancelled both times before it started.
+- It continues from the 4,375 save on 8 GPUs at about half the 2-node speed (~54 s per update):
+  update 6,000 around Friday evening, 9,000 around Sunday afternoon, if it is not pre-empted.
+- Your new rule: no borrowed GPUs for training runs. This job keeps running; if it is pre-empted
+  again, it is cancelled, not resubmitted, and I report where its last complete save is.
