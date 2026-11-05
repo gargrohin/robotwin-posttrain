@@ -49,7 +49,8 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
   GR00T data-loading speedups, RoboTwin episode records, the cuRobo fix.
 - Local notes outside this repo. They hold internal cluster names, storage paths and job IDs, so
   never commit them or copy their details into this repo:
-  - `/mnt/efs/rohingarg/cri/cosmos3/`: cluster launcher for Cosmos training, notes.
+  - `/mnt/efs/rohingarg/cri/cosmos3/` (next to the cosmos-framework clone): the cluster launcher
+    for Cosmos training and its notes.
   - `/mnt/efs/rohingarg/cri/flux3/`: BFL flux-action trainer clone (branch `robotwin`), cluster
     launcher, `NOTES.md` (recipe, every test and run).
   - `/mnt/efs/rohingarg/cri/cluster_eval/` and `cluster_eval_flux/`: cluster eval packages
