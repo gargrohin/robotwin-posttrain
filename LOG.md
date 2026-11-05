@@ -1905,5 +1905,6 @@ file.**
 - Why it took 1.5 h: the uploader read 32 files × 10 parts at once, and every one of its 320 read
   threads sat waiting on the network disk (~20 MB/s). Restarted with 16 × 2 at 01:24; 35–100 MB/s.
 - Ready for you to delete (commands in the local delete file; my permissions block deletes): the 24
-  old GR00T checkpoint folders (857 GB), plus the partial uploads left by the two stopped attempts.
+  old GR00T checkpoint folders (857 GB). The two stopped attempts left 64 unfinished upload records
+  with no stored parts (optional tidying).
   Kept on disk: mix200_150k 150000 and decay60k 10000.
