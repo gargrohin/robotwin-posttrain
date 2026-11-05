@@ -1,9 +1,167 @@
-# Eval analysis: GR00T mix200_150k, checkpoint 150000
+# Eval analysis
 
-Started 2026-11-02. What goes well and what goes badly for our best model so far, to decide
-what to improve next.
+Started 2026-11-02; kept up to date as the analysis goes. What goes well and what goes badly for
+our models, to decide what to improve next. Part 1 is the current best model, Cosmos3-Nano;
+part 2 is the earlier GR00T analysis.
 
-## The eval in brief
+## Conclusions so far (updated 2026-11-05)
+
+- **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
+  randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
+  the same data (`mix200`).
+- **No Cosmos task is at 0%.** 14 tasks are under 80% on randomized; the lowest is hanging_mug
+  (30%).
+- **For Cosmos, task length matters little; using both arms is the weak spot** (80% vs 89%
+  randomized). For GR00T, long tasks failed most (part 2).
+- **Within a task, Cosmos fails the same way each time.** The most common failure: the first
+  grasp knocks the object over (gripper not open enough, or off center). Then placement near
+  misses, then no recovery after a mistake.
+- **About half of Cosmos's failed scenes succeed with a nearly identical checkpoint**
+  (6,000 solves 93 of the 209 scenes 5,500 failed). A rerun of 5,500 itself on those scenes is
+  pending.
+- **Some failures come from the success check or the simulator,** not the policy's attempt:
+  place_mouse_pad's check allows 1.5 × 1.2 cm and one direction; 30 of the 50 tasks require
+  both grippers open at the end; stack_bowls_three seed 100007 looks like a physics glitch.
+- **Open question:** in two tasks without a handover, one arm tries to take the object from
+  the other. Guess (untested): behavior from the handover tasks leaks into other two-arm tasks.
+
+## Part 1: Cosmos3-Nano, decay checkpoint 5,500 (current best)
+
+### 1.1 The eval
+
+- **Model:** Cosmos3-Nano (16B), trained on `mix200` (50 clean + 200 randomized demos per task)
+  for 5,000 iterations on 16 cluster GPUs, then 1,000 more iterations with the learning rate
+  falling to 0 (run `cosmos3_nano_mix200_2n_decay1k` in `notes/runs/README.md`; logs use the
+  label `cosmos3_nano_mix200_2n_decay`). Iteration 5,500 is halfway through that decay; 6,000
+  scores the same.
+- **Scenes:** the same as GR00T 150k's. Randomized: all of GR00T's seeds, ~20 per task (1,015
+  episodes). Clean: GR00T's first 10 per task (499).
+- **Result:** randomized 863/1,015 = 85.0%, clean 442/499 = 88.6%.
+- **Same tasks as in training, new scenes.** Test seeds start at 100,000; the clean training
+  demos used seeds 0 to about 200. Randomized tests use instruction sentences that never
+  appeared in training ("unseen").
+
+### 1.2 Per task
+
+- **Randomized:** 36 tasks at 80% or more, 13 at 41–79%, 1 at 30% (hanging_mug), none at 10% or
+  less. 13 tasks are at 100%: adjust_bottle, beat_block_hammer, click_alarmclock, click_bell,
+  grab_roller, open_laptop, place_burger_fries, place_container_plate, place_empty_cup,
+  shake_bottle, shake_bottle_horizontally, stack_blocks_two, stack_bowls_two.
+- **The 14 tasks under 80% on randomized** (successes / episodes, iterations 5,500 and 6,000):
+
+  | task | randomized 5,500 | randomized 6,000 | clean 5,500 | clean 6,000 | arms | demo steps |
+  |---|---|---|---|---|---|---|
+  | hanging_mug | 6/20 | 8/20 | 1/10 | 2/10 | both | 335 |
+  | handover_block | 9/20 | 9/20 | 6/10 | 3/10 | both | 279 |
+  | put_bottles_dustbin | 11/20 | 11/20 | 9/10 | 9/10 | both | 656 |
+  | pick_diverse_bottles | 12/21 | 14/21 | 7/10 | 6/10 | both | 121 |
+  | place_mouse_pad | 12/20 | 14/20 | 8/10 | 7/10 | one | 148 |
+  | scan_object | 13/20 | 17/20 | 9/10 | 8/10 | both | 169 |
+  | turn_switch | 13/20 | 15/20 | 9/10 | 8/10 | one | 96 |
+  | rotate_qrcode | 13/20 | 13/20 | 8/10 | 9/10 | one | 153 |
+  | place_dual_shoes | 15/22 | 15/22 | 6/10 | 10/10 | both | 222 |
+  | place_fan | 14/20 | 15/20 | 9/10 | 8/10 | one | 145 |
+  | move_can_pot | 15/20 | 14/20 | 10/10 | 10/10 | one | 151 |
+  | put_object_cabinet | 15/20 | 14/20 | 8/10 | 8/10 | both | 269 |
+  | move_stapler_pad | 16/21 | 14/21 | 8/10 | 8/10 | one | 156 |
+  | stack_bowls_three | 16/21 | 18/21 | 9/10 | 9/10 | both | 471 |
+
+- **Single tasks are noisy:** 5,500 and 6,000 score the same overall, yet some tasks differ a lot
+  between them, e.g. place_can_basket randomized 17/20 vs 8/20.
+
+### 1.3 What it's good at and bad at
+
+- **Length matters little.** Randomized success by the task's demo length (median steps): 88%
+  (150 or fewer), 87% (151–250), 77% (251–350), 80% (over 350). Rank correlation with length:
+  −0.18 (GR00T: −0.44). Long tasks GR00T couldn't do: stack_blocks_three 0/20 → 17/20,
+  open_microwave 0/20 → 18/19, blocks_ranking_rgb 2/21 → 19/21. Both trained on the same data, so
+  GR00T's trouble with long tasks came from the model or its training setup.
+- **Two-arm tasks are weaker:** randomized 80% vs 89% for one-arm tasks, clean 83% vs 93%, and
+  lower in every length group (83 vs 89%, 84 vs 89%, 73 vs 100%, 78 vs 95%). 8 of the 14 tasks
+  under 80% use both arms.
+- **Scene by scene against GR00T 150k** (1,514 scenes both ran): Cosmos solves 654 scenes GR00T
+  failed; GR00T solves 35 scenes Cosmos failed.
+
+### 1.4 Do failures repeat?
+
+Checkpoints 5,500 and 6,000 on the 1,514 scenes both ran:
+
+| | 6,000 succeeded | 6,000 failed |
+|---|---|---|
+| **5,500 succeeded** (1,305) | 1,205 | 100 |
+| **5,500 failed** (209) | 93 | 116 |
+
+- A success usually stays a success (100 of 1,305 flip, 7.7%). A failure often doesn't (93 of
+  209 flip, 44%). So about half of the failures are scenes Cosmos can do, but not every time.
+- Scenes both failed, most per task: hanging_mug 17 of 30, handover_block 11, pick_diverse_bottles
+  9, rotate_qrcode 7, turn_switch 6.
+- **Pending:** checkpoint 5,500 itself rerun on its 209 failed scenes, with the original
+  instruction sentences (request: `/mnt/efs/rohingarg/cri/tmp/cosmos_rerun_evals.md`). It
+  measures the retry rate without the small difference between the two checkpoints.
+
+### 1.5 What the failures look like
+
+Two reviews: 13 failures I looked at frame by frame (one randomized failure per weak task,
+2026-11-05), and your 27 notes in the viewer (22 on 5,500, 5 on Cosmos 5,000; viewer
+"notes" view, file `analysis/tags/notes.sqlite`).
+
+- **The first grasp knocks the object over** (12 of your notes): the gripper isn't open wide
+  enough, or not centered, so it hits the object and flips or pushes it. handover_block,
+  pick_diverse_bottles, pick_dual_bottles.
+- **Placement near misses:** the handover block lands half on the pad and falls; the mug misses
+  the hook by a bit; the mouse is off center or not turned; a bowl is dropped from too high.
+- **No recovery after a mistake,** often with the gripper opening and closing over and over.
+  When an object falls over, Cosmos never picks it up again (5 of my 13).
+- **One arm takes the object from the other arm,** in tasks without a handover
+  (pick_diverse_bottles seed 100024, pick_dual_bottles seed 100003).
+- **Wrong order or target, rarely:** blocks_ranking_size (order), place_fan (went toward a red
+  clutter object; a guess), stack_bowls_three seed 100012 (couldn't pick the base bowl).
+- **Cosmos doesn't freeze:** in 90% of the 209 failures the robot still moves in the last 5% of
+  the episode, like in successes (`analysis/motion.py`).
+- Within a task, the same mistake recurs.
+
+### 1.6 Success checks and the simulator
+
+- **place_mouse_pad** (`RoboTwin/envs/place_mouse_pad.py:118`): the mouse must end within
+  1.5 × 1.2 cm of the pad's center, turned to one particular direction, with both grippers open.
+  "Not perfectly centered" and "not turned another 90 degrees" fail under it.
+- **30 of the 50 tasks require both grippers open at the end,** so "placed but never let go"
+  fails (move_stapler_pad seed 100005).
+- **stack_bowls_three seed 100007:** at step 340 a bowl is set down tilted on the edge of the
+  stack; by step 360 all three bowls are gone from view, faster than any arm moves. Most likely
+  the physics engine threw the overlapping bowls.
+
+### 1.7 Open questions
+
+- Does handover behavior leak into other two-arm tasks? Count how often one arm takes the
+  object from the other.
+- Do the scripted demos open the gripper wider, or approach more centered, than Cosmos? Compare
+  with the training-demo panel in the viewer.
+- How wide does Cosmos actually open the gripper? Videos can't measure it; the eval records only
+  the head-camera video. Recording full rollouts (all cameras, joint positions, actions) would,
+  and every hill-climbing method needs that data anyway.
+
+### 1.8 What this points to for hill climbing
+
+- **Failures that succeed on a retry, and near misses:** methods that sharpen what Cosmos already
+  does: training on its own successful attempts ("Advantage-weighted & filtered BC" on Climbing
+  the Nines), RL in simulation ("On-policy policy gradients", with its notes on flow and
+  diffusion policies), or trying several candidates and keeping the best ("Test-time search &
+  verifiers").
+- **No recovery after a drop:** data with corrections at the policy's own mistakes ("Human
+  corrections & DAgger"), or RL.
+- **The same mistake every time on a few tasks** (hanging_mug, handover_block,
+  pick_diverse_bottles): possibly a missing skill there, which may need targeted demos.
+
+**Reproduce part 1** (after `analysis/.venv/bin/python analysis/build_index.py`):
+- `analysis/.venv/bin/python analysis/task_report.py cosmos3_nano_mix200_2n_decay 5500`
+- `analysis/.venv/bin/python analysis/length_spread.py cosmos3_nano_mix200_2n_decay 5500`
+- `analysis/.venv/bin/python analysis/repeat_check.py cosmos3_nano_mix200_2n_decay:5500 cosmos3_nano_mix200_2n_decay:6000`
+- `analysis/.venv/bin/python analysis/repeat_check.py mix200_150k:150000 cosmos3_nano_mix200_2n_decay:5500`
+
+## Part 2: GR00T mix200_150k, checkpoint 150000 (earlier analysis)
+
+### 2.0 The eval in brief
 
 - **Model:** GR00T N1.7 trained for 150k steps on 50 tasks, with 50 clean + 200 randomized
   demos per task (`mix200_150k`), checkpoint 150000.
@@ -18,7 +176,7 @@ what to improve next.
 - **Data:** `analysis/cache/episodes.parquet`, rebuilt with
   `analysis/.venv/bin/python analysis/build_index.py`.
 
-## 1. Longer tasks succeed less
+### 2.1 Longer tasks succeed less
 
 **Task length** here means how many steps the task's training demos take. One step is one
 action; the demos record 15 steps per second. Each task's length is the median over its 50
@@ -35,7 +193,7 @@ Success is the average of the tasks' rates in each group. Randomized success fal
 to 50%, 35% and 6% as tasks get longer. A task's demos barely vary in length, so its median
 is a fair summary (checked in appendix A).
 
-### What this doesn't show
+#### What this doesn't show
 
 - **Length is not the only reason.** Short tasks fail too: of the 20 tasks of 150 steps or
   fewer, 6 score 35% or less on randomized: lift_pot 5%, place_fan 15%, place_mouse_pad 15%,
@@ -48,7 +206,7 @@ is a fair summary (checked in appendix A).
 **Reproduce:** `analysis/.venv/bin/python analysis/length_spread.py` prints these tables
 (and the ones in the appendix).
 
-## 2. Clean success didn't improve with 200 more demos per task
+### 2.2 Clean success didn't improve with 200 more demos per task
 
 - **Clean:** 42.6% (`50task_60k`) → 46.0% (150k). On the 10 tasks with 20 clean episodes:
   62% → 65%. Over the 581 clean scenes both models ran, 93 are solved only by the new model
@@ -70,7 +228,7 @@ is a fair summary (checked in appendix A).
 **Reading:** the extra demos taught the model to handle clutter, but not to do the tasks
 better. Seeing the scene no longer looks like the main problem; doing the task does.
 
-### Possible causes
+#### Possible causes
 
 We focus on the first two for now.
 
@@ -94,7 +252,7 @@ We focus on the first two for now.
    `seed.txt` skips numbers (5, 12, 17, …), which fits failed runs being thrown away. So the
    model has never seen a failed attempt, and as far as we know none where a mistake gets
    fixed. Once it drifts a little from the demos, it may not know how to get back. This
-   would also fit section 1: longer tasks give more chances to slip.
+   would also fit section 2.1: longer tasks give more chances to slip.
    - Check: in the videos, look for failures where a small mistake (a bump, a drop, a grasp
      slightly off) is never corrected.
    - Possible fixes, later: demos that include recoveries, or RL (training from the robot's
@@ -104,7 +262,7 @@ We focus on the first two for now.
    evals are expensive, so we can't say how much of the scene-by-scene difference between
    the two models is luck.
 
-## 3. What the clean failures look like (visual review, first pass)
+### 2.3 What the clean failures look like (visual review, first pass)
 
 Watched in the eval viewer (2026-11-02): clean failures of checkpoint 150000 on 3 tasks with
 20 clean episodes each and middling success, next to its successful runs. Randomized
@@ -116,7 +274,7 @@ runs the same scene with the same gripper, and the scene is used only if it succ
 was picked up and placed successfully by this gripper. The failures come from how the policy
 uses it: how wide it opens, where it grabs, how fast it moves.
 
-### move_can_pot (6/20): put the sauce can next to the pot
+#### move_can_pot (6/20): put the sauce can next to the pot
 
 7 failures watched:
 1. Grabbed the pot instead of the sauce can. It couldn't hold the pot, pushed it further
@@ -135,13 +293,13 @@ Most failures are about picking up the can: 5 of 7 are grip or placement problem
 the can up properly, the rest is straightforward. It tried to fix a mistake twice (4, 5),
 and both fixes failed.
 
-### place_phone_stand (7/20)
+#### place_phone_stand (7/20)
 
 5 to 7 failures watched, all much alike. The phone is thin and slippery, and there are 2
 ways to hold it, both slippery. The policy often can't pick up a thin phone; when it does,
 the phone often slips, and placing it on the stand is hard. No good attempts to recover.
 
-### handover_mic (8/20)
+#### handover_mic (8/20)
 
 Grabbing the mic with the first hand works. The handover to the second hand fails:
 - The two grippers get in each other's way when they're close.
@@ -153,10 +311,10 @@ In the successes, the first hand held the mic very low, leaving room at the top 
 second hand. When that doesn't happen, there's no attempt to recover. It looks as if the
 policy has no good sense of where the other arm and the object are at the same time.
 
-### What this suggests so far
+#### What this suggests so far
 
 - **Most failures are near misses:** grip width, where it grabs, how it places. That fits
-  cause 1 in section 2 (precision).
+  cause 1 in section 2.2 (precision).
 - **Mistakes almost never get fixed.** Usually no fix is tried, and the two that were tried
   failed. That fits cause 2 (no recoveries in the demos).
 - **handover_mic adds a third kind:** the two arms don't work together on one object.
@@ -164,12 +322,12 @@ policy has no good sense of where the other arm and the object are at the same t
   opens, where it grabs, how slowly it approaches). The viewer now plays a training demo next
   to each rollout.
 
-### Next
+#### Next
 
 1. Randomized failures of the same 3 tasks (move_can_pot 10/20, place_phone_stand 10/20,
    handover_mic 3/20): are they the same kinds as on clean, or new ones caused by the
    clutter, like grabbing a clutter object?
-2. The short tasks that score low (section 1), where length can't be the reason: lift_pot,
+2. The short tasks that score low (section 2.1), where length can't be the reason: lift_pot,
    place_fan, place_mouse_pad, place_object_scale, stamp_seal, turn_switch.
 
 ## Appendix A: is the median a fair summary of a task's length?
@@ -197,7 +355,7 @@ Yes, for 45 of the 50 tasks: their demos barely vary in length.
     rank correlation of −0.44, whether length is the median of the clean demos, the median
     of the randomized demos, or the mean of the clean demos.
 
-## Appendix B: every task
+## Appendix B: every task (GR00T 150k)
 
 Demo length in steps, over each task's 50 clean demos. Spread is the standard deviation
 divided by the mean. Success is checkpoint 150000's.

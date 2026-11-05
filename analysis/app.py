@@ -27,6 +27,14 @@ HIDDEN_MODELS = {"cosmos3_nano_mix200"}
 NOTES = ROOT / "analysis/tags/notes.sqlite"  # the user's notes and tags per episode (git-ignored)
 NOTE_FIELDS = ["model", "ckpt", "task", "setting", "seed", "shard", "episode", "result", "steps",
                "step_limit", "video", "log"]
+# offered in every tags box, before any tags typed so far (failure kinds seen 2026-11-05)
+DEFAULT_TAGS = [
+    "grasp knocks the object over", "gripper not open enough", "grasp off-center",
+    "dropped the object", "placement slightly off", "wrong orientation", "never lets go",
+    "no recovery after a mistake", "gripper keeps opening and closing",
+    "takes the object from the other arm", "arms get in each other's way", "wrong object",
+    "wrong order", "looks done but counted as failure", "sim glitch",
+]
 
 PLAYER = """
 <video id="v" src="data:video/mp4;base64,__B64__" controls muted playsinline
@@ -166,8 +174,8 @@ def note_box(ep, notes):
     if f"note|{key}" not in st.session_state:
         st.session_state[f"note|{key}"] = saved.note.iloc[0] if len(saved) else ""
         st.session_state[f"tags|{key}"] = json.loads(saved.tags.iloc[0]) if len(saved) else []
-    used = {t for tags in notes.tags for t in json.loads(tags)}
-    st.multiselect("tags", sorted(used | set(st.session_state[f"tags|{key}"])),
+    used = {t for tags in notes.tags for t in json.loads(tags)} | set(st.session_state[f"tags|{key}"])
+    st.multiselect("tags", DEFAULT_TAGS + sorted(used - set(DEFAULT_TAGS)),
                    key=f"tags|{key}", accept_new_options=True, on_change=save_note,
                    args=(key, ep), placeholder="pick a tag, or type a new one and press Enter")
     st.text_area("notes (saved when you click outside the box)", key=f"note|{key}", height=110,

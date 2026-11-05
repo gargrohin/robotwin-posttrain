@@ -1985,3 +1985,18 @@ the saving scheme changed.**
   updates (~22 min on 2 nodes) instead of 125. Two copies wait in the queue (2 nodes, or 1 node at
   half the speed); the first one to start is kept and the other is cancelled. The two never write
   to the same saves.
+
+**17:15 EST (Thu Nov 5)** **Eval doc updated with the Cosmos findings; ready-made tags in the viewer** (your
+requests).
+- `notes/eval_analysis.md` now starts with "Conclusions so far", then Part 1 (Cosmos decay 5,500:
+  per task, good/bad, do failures repeat, what failures look like from my frame review and your 27
+  notes, success checks and a sim glitch, open questions, what it points to), then Part 2 (the
+  earlier GR00T analysis, unchanged apart from renumbered headings).
+- New `analysis/repeat_check.py`: two checkpoints on the scenes both ran (5,500 vs 6,000: of 209
+  failures, 93 succeed at 6,000; of 1,305 successes, 100 fail).
+- Viewer: 15 ready-made tags in every tags box (grasp knocks the object over, gripper not open
+  enough, placement slightly off, no recovery after a mistake, takes the object from the other
+  arm, sim glitch, ...). Your typed tags still work. Your notes file was not changed.
+- Checked RoboTwin's success rules: place_mouse_pad allows 1.5 × 1.2 cm and one direction; 30 of
+  50 tasks require both grippers open at the end. stack_bowls_three seed 100007 looks like a
+  physics glitch (all three bowls leave view within 20 steps).
