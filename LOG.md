@@ -1897,3 +1897,13 @@ states needed).**
   bf16, ~14 GB) every 1,000 updates and at the end.
 - **Test job (16 GPUs, ~30 min):** 6 updates from step 3,000, two saves (checks that the older
   one gets deleted), an export, then a resume from the newest save.
+
+**02:50 EST (Thu Nov 5)** **GR00T checkpoints backed up to cloud storage (weights only), checked file by
+file.**
+- 635 files, 214 GB: model weights and configs of all 26 GR00T checkpoints plus each run's final
+  model. 0 upload errors; every local file is in cloud storage with the same size.
+- Why it took 1.5 h: the uploader read 32 files × 10 parts at once, and every one of its 320 read
+  threads sat waiting on the network disk (~20 MB/s). Restarted with 16 × 2 at 01:24; 35–100 MB/s.
+- Ready for you to delete (commands in the local delete file; my permissions block deletes): the 24
+  old GR00T checkpoint folders (857 GB), plus the partial uploads left by the two stopped attempts.
+  Kept on disk: mix200_150k 150000 and decay60k 10000.
