@@ -1951,3 +1951,11 @@ the saving scheme changed.**
   uninterrupted run at that step. Exports read from a slot also work.
 - Training so far: ~27 s per update, loss rose from 0.067 to ~0.075 during the warm-up back to the
   full learning rate (expected after restarting from a cooled-down point).
+
+**10:45 EST (Thu Nov 5)** **Flux continuation: the resume-after-a-kill test passed.**
+- A 1-node test on the cluster saved three times (slots A, B, A), was killed in the middle of its
+  fourth save, and resumed from the last complete slot at the right update, with the same learning
+  rates and EMA as before the kill. An export read from a slot worked too.
+- So if the full run is pre-empted, it resumes from its last complete save. No change was needed to
+  the running job.
+- The test's leftover files in cloud storage (581 GB) are on your delete list, ready to run.
