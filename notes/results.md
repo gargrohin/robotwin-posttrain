@@ -5,6 +5,92 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
+## FLUX 3 Action (flux3_mix200_b512), step 3,000, vs Cosmos 5,000 and GR00T mix200_150k (same seeds)
+
+BFL's `flux-3-action-base` (7B), fine-tuned with BFL's flux-action trainer on mix200 (same data as
+GR00T mix200_150k and Cosmos): 3,000 updates at batch 512, the official DROID recipe with its schedule
+scaled to 1/10. Evaluated 2026-11-04 on cluster GPUs, one stream per GPU, exact GR00T seed lists. EMA
+weights (0.10) exported in bf16; sampling uses BFL's reference DROID inference settings, 32 actions
+per call.
+
+| | Flux 3,000 | Cosmos 5,000 | GR00T mix200_150k |
+|---|---|---|---|
+| randomized, GR00T's first 10 seeds per task | 344/498 = **69.1%** | 410/498 = 82.3% | 234/498 = 47.0% |
+| randomized, all GR00T seeds | 720/1014 = **71.0%** | 830/1014 = 81.9% | 459/1014 = 45.3% |
+| clean, GR00T's first 10 seeds per task | 355/499 = **71.1%** | 421/499 = 84.4% | 227/499 = 45.5% |
+
+(Seeds all three models ran. Cosmos decay 5,500, on the same seeds: randomized 85.0%, clean 88.6%.)
+
+- Seed by seed (sign test on seeds where exactly one model succeeds):
+  - vs GR00T: randomized 335 Flux-only vs 73 GR00T-only (p ≈ 3e-41); clean 163 vs 35 (p ≈ 6e-21).
+  - vs Cosmos 5,000: randomized 79 Flux-only vs 192 Cosmos-only (p ≈ 5e-12); clean 37 vs 103 (p ≈ 2e-8).
+  - vs Cosmos decay 5,500: randomized 64 vs 206 (p ≈ 1e-18); clean 24 vs 111 (p ≈ 1e-14).
+- Learning curve, 10 tasks × GR00T's first 10 randomized seeds (`gr00t/paired_compare.py`, 99 paired):
+  step 1,500 73/99, step 3,000 72/99. The second half of training added nothing measurable there.
+- Held-out open-loop arm error (`flux3/heldout_check.py`, 1,200 moments; train_randomized / train_clean
+  / unseen_randomized, rad): step 1,500 0.037 / 0.027 / 0.030; step 3,000 0.029 / 0.021 / 0.023.
+  GR00T 150k 0.018 / 0.016 / 0.016; hold still ~0.064.
+- Lost seeds: RoboTwin's expert check raised on the cluster for open_microwave 300004,
+  put_bottles_dustbin 300001 (randomized) and place_object_basket 100006 (clean), so those are unpaired.
+- Largest gaps to Cosmos 5,000 (randomized, all seeds): place_cans_plasticbox 9 vs 20,
+  move_stapler_pad 6 vs 15, move_can_pot 7 vs 15, place_mouse_pad 5 vs 12, place_object_basket
+  11 vs 18. Flux is ahead on stack_bowls_three (18 vs 12) and place_object_stand (18 vs 16).
+- Eval cost: ~77 GPU-hours (516k sim steps, 0.48 s per step including rendering).
+
+| task | rand 10 Flux | rand 10 Cosmos | rand 10 GR00T | rand all Flux | rand all Cosmos | rand all GR00T | clean 10 Flux | clean 10 Cosmos | clean 10 GR00T |
+|---|---|---|---|---|---|---|---|---|---|
+| adjust_bottle | 10/10 | 10/10 | 10/10 | 21/21 | 21/21 | 19/21 | 10/10 | 10/10 | 10/10 |
+| beat_block_hammer | 10/10 | 10/10 | 9/10 | 20/20 | 19/20 | 11/20 | 10/10 | 10/10 | 4/10 |
+| blocks_ranking_rgb | 9/10 | 9/10 | 1/10 | 20/21 | 19/21 | 2/21 | 9/10 | 9/10 | 2/10 |
+| blocks_ranking_size | 6/10 | 8/10 | 0/10 | 14/21 | 17/21 | 2/21 | 7/10 | 7/10 | 1/10 |
+| click_alarmclock | 10/10 | 9/10 | 10/10 | 21/21 | 20/21 | 20/21 | 10/10 | 10/10 | 10/10 |
+| click_bell | 10/10 | 10/10 | 10/10 | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| dump_bin_bigbin | 7/10 | 9/10 | 7/10 | 14/20 | 18/20 | 12/20 | 8/10 | 10/10 | 8/10 |
+| grab_roller | 10/10 | 10/10 | 9/10 | 21/21 | 21/21 | 19/21 | 10/10 | 10/10 | 8/10 |
+| handover_block | 4/10 | 3/10 | 0/10 | 5/20 | 4/20 | 0/20 | 3/10 | 6/10 | 1/10 |
+| handover_mic | 9/10 | 8/10 | 2/10 | 18/20 | 18/20 | 3/20 | 9/10 | 10/10 | 2/10 |
+| hanging_mug | 0/10 | 0/10 | 0/10 | 2/20 | 1/20 | 0/20 | 1/10 | 3/10 | 0/10 |
+| lift_pot | 8/10 | 7/10 | 1/10 | 14/20 | 15/20 | 1/20 | 7/10 | 10/10 | 1/10 |
+| move_can_pot | 3/10 | 7/10 | 6/10 | 7/20 | 15/20 | 10/20 | 5/10 | 8/10 | 3/10 |
+| move_pillbottle_pad | 8/10 | 9/10 | 7/10 | 16/20 | 16/20 | 11/20 | 7/10 | 7/10 | 6/10 |
+| move_playingcard_away | 9/10 | 10/10 | 5/10 | 16/20 | 20/20 | 11/20 | 7/10 | 10/10 | 6/10 |
+| move_stapler_pad | 2/10 | 8/10 | 1/10 | 6/21 | 15/21 | 2/21 | 2/10 | 7/10 | 1/10 |
+| open_laptop | 9/10 | 10/10 | 8/10 | 19/21 | 20/21 | 17/21 | 9/10 | 7/10 | 5/10 |
+| open_microwave | 7/10 | 10/10 | 0/10 | 14/19 | 14/19 | 0/19 | 10/10 | 7/10 | 1/10 |
+| pick_diverse_bottles | 2/10 | 7/10 | 6/10 | 9/21 | 11/21 | 10/21 | 2/10 | 6/10 | 5/10 |
+| pick_dual_bottles | 2/10 | 6/10 | 7/10 | 11/20 | 14/20 | 16/20 | 7/10 | 5/10 | 6/10 |
+| place_a2b_left | 9/10 | 10/10 | 8/10 | 18/20 | 20/20 | 16/20 | 8/10 | 9/10 | 8/10 |
+| place_a2b_right | 10/10 | 8/10 | 8/10 | 19/20 | 18/20 | 15/20 | 8/10 | 9/10 | 7/10 |
+| place_bread_basket | 6/10 | 9/10 | 2/10 | 15/21 | 20/21 | 9/21 | 7/10 | 10/10 | 6/10 |
+| place_bread_skillet | 9/10 | 8/10 | 5/10 | 16/20 | 17/20 | 9/20 | 6/10 | 9/10 | 6/10 |
+| place_burger_fries | 8/10 | 10/10 | 8/10 | 17/20 | 20/20 | 18/20 | 9/10 | 10/10 | 8/10 |
+| place_can_basket | 3/10 | 8/10 | 6/10 | 7/20 | 12/20 | 13/20 | 4/10 | 7/10 | 4/10 |
+| place_cans_plasticbox | 5/10 | 10/10 | 3/10 | 9/20 | 20/20 | 8/20 | 4/10 | 10/10 | 4/10 |
+| place_container_plate | 9/10 | 10/10 | 9/10 | 17/20 | 20/20 | 17/20 | 9/10 | 10/10 | 10/10 |
+| place_dual_shoes | 5/10 | 7/10 | 0/10 | 15/22 | 17/22 | 1/22 | 7/10 | 7/10 | 1/10 |
+| place_empty_cup | 9/10 | 10/10 | 7/10 | 18/20 | 20/20 | 15/20 | 10/10 | 10/10 | 9/10 |
+| place_fan | 4/10 | 7/10 | 2/10 | 10/20 | 14/20 | 3/20 | 8/10 | 10/10 | 1/10 |
+| place_mouse_pad | 2/10 | 5/10 | 2/10 | 5/20 | 12/20 | 3/20 | 3/10 | 7/10 | 3/10 |
+| place_object_basket | 4/10 | 7/10 | 4/10 | 11/21 | 18/21 | 9/21 | 6/9 | 8/9 | 1/9 |
+| place_object_scale | 6/10 | 7/10 | 3/10 | 10/20 | 14/20 | 4/20 | 5/10 | 9/10 | 1/10 |
+| place_object_stand | 9/10 | 7/10 | 5/10 | 18/20 | 16/20 | 11/20 | 10/10 | 8/10 | 8/10 |
+| place_phone_stand | 6/10 | 8/10 | 7/10 | 13/20 | 16/20 | 10/20 | 8/10 | 9/10 | 2/10 |
+| place_shoe | 9/10 | 10/10 | 4/10 | 16/20 | 19/20 | 8/20 | 9/10 | 9/10 | 4/10 |
+| press_stapler | 10/10 | 10/10 | 6/10 | 20/21 | 21/21 | 14/21 | 9/10 | 10/10 | 9/10 |
+| put_bottles_dustbin | 2/8 | 5/8 | 0/8 | 6/19 | 11/19 | 0/19 | 3/10 | 9/10 | 0/10 |
+| put_object_cabinet | 5/10 | 7/10 | 1/10 | 11/20 | 13/20 | 1/20 | 7/10 | 6/10 | 1/10 |
+| rotate_qrcode | 6/10 | 8/10 | 4/10 | 15/20 | 17/20 | 6/20 | 6/10 | 8/10 | 2/10 |
+| scan_object | 8/10 | 10/10 | 3/10 | 13/20 | 17/20 | 4/20 | 8/10 | 7/10 | 3/10 |
+| shake_bottle | 10/10 | 10/10 | 10/10 | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 10/10 | 10/10 | 9/10 | 20/20 | 20/20 | 18/20 | 10/10 | 9/10 | 10/10 |
+| stack_blocks_three | 5/10 | 8/10 | 0/10 | 11/20 | 17/20 | 0/20 | 7/10 | 9/10 | 0/10 |
+| stack_blocks_two | 9/10 | 10/10 | 1/10 | 18/20 | 20/20 | 4/20 | 9/10 | 10/10 | 3/10 |
+| stack_bowls_three | 8/10 | 8/10 | 1/10 | 18/21 | 12/21 | 4/21 | 6/10 | 9/10 | 3/10 |
+| stack_bowls_two | 9/10 | 10/10 | 10/10 | 19/21 | 21/21 | 19/21 | 10/10 | 8/10 | 6/10 |
+| stamp_seal | 8/10 | 9/10 | 5/10 | 14/21 | 18/21 | 7/21 | 2/10 | 6/10 | 3/10 |
+| turn_switch | 6/10 | 4/10 | 2/10 | 13/20 | 12/20 | 7/20 | 4/10 | 7/10 | 4/10 |
+| **total** | **344/498 = 69.1%** | **410/498 = 82.3%** | **234/498 = 47.0%** | **720/1014 = 71.0%** | **830/1014 = 81.9%** | **459/1014 = 45.3%** | **355/499 = 71.1%** | **421/499 = 84.4%** | **227/499 = 45.5%** |
+
 ## Cosmos3-Nano learning-rate decay, iteration 6,000 (end of decay), vs Cosmos 5,000 and GR00T (same seeds)
 
 | | decay 6,000 | decay 5,500 | Cosmos 5,000 | GR00T mix200_150k |

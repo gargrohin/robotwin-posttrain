@@ -1816,3 +1816,23 @@ every model.
 - 18:00 EST: **storage cleanup resumed**. You approved using the other storage role for the
   uploads. Same plan: upload, verify, then delete the local copies except the two kept GR00T
   checkpoints and all small run files.
+
+**00:50 EST (Thu Nov 5)** **FLUX 3 Action, step 3,000 (end of training), 50 tasks on GR00T's exact
+seeds: 71.0% randomized, 71.1% clean.** The eval finished at 20:32 EST on Nov 4.
+
+| | Flux 3,000 | Cosmos 5,000 | Cosmos decay 5,500 | GR00T best |
+|---|---|---|---|---|
+| randomized, all GR00T seeds | 71.0% | 81.9% | 85.0% | 45.3% |
+| clean, 10 per task | 71.1% | 84.4% | 88.6% | 45.5% |
+
+- Seed by seed, Flux beats GR00T clearly (randomized: 335 seeds only Flux solves vs 73 only GR00T
+  solves) and loses clearly to Cosmos 5,000 (79 vs 192).
+- Step 1,500 and step 3,000 score the same on the 10-task check (73/99 vs 72/99). Open-loop error
+  kept falling (0.030 → 0.023 rad on unseen randomized demos) but the sim score didn't follow.
+- Flux's largest losses to Cosmos: place_cans_plasticbox, move_stapler_pad, move_can_pot,
+  place_mouse_pad, place_object_basket.
+- Cost: training ~26.8 s per update × 3,000 on 16 GPUs; final eval ~77 GPU-hours.
+- **Reading:** on this data and budget, Cosmos is the stronger model. Flux got 1/10 of BFL's
+  DROID schedule, so it may be undertrained, but its sim score was flat from 1,500 to 3,000.
+- The eval's local copies of the exported weights were deleted after the eval; the exports stay
+  in cloud storage. Per-task table in `notes/results.md`.

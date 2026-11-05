@@ -1,0 +1,471 @@
+From 2b435d8ab5ad05d34b79ed0db7e46e6ff5a700c8 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Wed, 4 Nov 2026 06:59:28 +0000
+Subject: [PATCH] Flux3_Action: eval adapter for a FLUX 3 Action RoboTwin
+ policy
+
+Serves a flux-action inference export (EMA 0.10, bf16) through the XPolicyLab
+policy server. Per query it hands FluxActionPolicy.predict_action_chunk the
+observation in the training batch format (head and wrist cameras resized to the
+trainer's 360x640 with the policy's own resize, 14-D state, instruction) and
+returns the 32 absolute joint targets as GR00T_N17-style per-step dicts.
+Sampling: flux-action's DROID reference inference settings, one noise seed per
+query as its RoboLab server.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ policy/Flux3_Action/README.md   |  93 ++++++++++
+ policy/Flux3_Action/__init__.py |   0
+ policy/Flux3_Action/deploy.yml  |  34 ++++
+ policy/Flux3_Action/model.py    | 294 ++++++++++++++++++++++++++++++++
+ 4 files changed, 421 insertions(+)
+ create mode 100644 policy/Flux3_Action/README.md
+ create mode 100644 policy/Flux3_Action/__init__.py
+ create mode 100644 policy/Flux3_Action/deploy.yml
+ create mode 100644 policy/Flux3_Action/model.py
+
+diff --git a/policy/Flux3_Action/README.md b/policy/Flux3_Action/README.md
+new file mode 100644
+index 00000000..75ca69b4
+--- /dev/null
++++ b/policy/Flux3_Action/README.md
+@@ -0,0 +1,93 @@
++# Flux3_Action
++
++**Original code:** https://github.com/black-forest-labs/flux-action | **Base model:** `black-forest-labs/flux-3-action-base`
++
++`Flux3_Action` serves a FLUX 3 Action policy, fully fine-tuned with flux-action's standalone trainer
++(the DROID recipe) on RoboTwin 2.0 `aloha_agilex` demos, through the XPolicyLab policy server. This is
++an **eval-only, local adapter**: training happens in flux-action, and there are no `install.sh` /
++`process_data.sh` / `train.sh` / `eval.sh` scripts here. The server is launched by the parent
++workspace's eval script, which runs this `model.py` in the flux-action environment.
++
++## Installation
++
++Use the flux-action environment (`uv sync --locked --extra encoders --extra data` from its `uv.lock`,
++plus the NATTEN wheel for its torch/CUDA, as its docs/setup.md says). Add XPolicyLab's protocol code
++and the server's packages, without changing any flux-action pin:
++
++```bash
++uv pip install --python <flux-action venv>/bin/python websockets==15.0.1 msgpack==1.2.2 \
++    msgpack-numpy==0.4.8 opencv-python-headless==4.13.0.92 h5py==3.15.1
++uv pip install --python <flux-action venv>/bin/python --no-deps -e XPolicyLab
++```
++
++(`websockets` and `msgpack` at the versions flux-action's `serve` extra locks.)
++
++## Checkpoints
++
++flux-action training checkpoints (`step-<N>/` with `model/`, EMA folders and optimizer state) are
++converted once into inference exports, with the EMA profile and dtype of the official recipe:
++
++```bash
++flux-action export-checkpoint --checkpoint <run>/step-<N> --output <export_root>/step-<N> \
++    --profile ema_0p10 --dtype bfloat16
++```
++
++Only `model/`, `ema_0p10/`, `state.json`, `config.json` and `COMPLETE` of the checkpoint are needed.
++`export_root` resolves through the shared checkpoint resolver: the `export_root` key, else
++`ckpt_name` as a path, else `checkpoints/<ckpt_name>` under this directory. `checkpoint_num` is a
++training step or `last` (the highest `step-<N>` with a `manifest.json`). Loading verifies the
++export's sha256 manifest. The export's `config.json` is the run's `PolicyConfig` (cameras, chunk,
++normalization); it records the training job's encoder paths, so `video_vae_path` and
++`text_encoder_path` (the `flux-3-action-base` files) are required here.
++
++## Inputs and outputs
++
++Supported: `env_cfg_type: aloha_agilex`, `action_type: joint` (absolute joint positions). The arm and
++gripper split comes from `get_robot_action_dim_info(env_cfg_type)` and must total the export's
++`action_dim` (14). The adapter refuses an export whose camera layout, camera keys, action
++parameterization or normalization differ from the RoboTwin recipe.
++
++Per query, the adapter calls flux-action's `FluxActionPolicy.predict_action_chunk` with the
++observation in the training batch format:
++
++- **Images:** `cam_head`, `cam_left_wrist`, `cam_right_wrist` (RGB uint8 240x320, as delivered by the
++  server; no decoding or channel conversion here) as `images.high`, `images.left_wrist`,
++  `images.right_wrist`. Training decoded the 240x320 videos at 360x640, so the adapter resizes each
++  camera to 360x640 with the policy's own camera resize (bilinear, rounded to uint8). The policy then
++  builds the `droid` canvas (head camera on top, wrists at half size below, reflect-padded to
++  544x736) and encodes the single conditioning frame, as flux-action inference does.
++- **State:** `{left,right}_arm_joint_state` (6) and `{left,right}_ee_joint_state` (1), in the training
++  data's `observation.state` order, in dataset units; the policy normalizes it (q01/q99).
++- **Prompt:** the observation's `instruction`.
++- **Output:** 32 absolute joint targets, denormalized by the policy, returned as `actions_per_call`
++  (default 32) per-step dicts `{left_arm_joint_state, left_ee_joint_state, right_arm_joint_state,
++  right_ee_joint_state}`, in the same format as `GR00T_N17`.
++
++## Inference settings
++
++flux-action's reference DROID inference settings (`flux_action.config.DROID_INFERENCE_SETTINGS`, the
++settings its DROID checkpoint was selected and benchmarked with; docs/setup.md, "Reference DROID
++inference settings"), loaded the way `flux-action serve-robolab` prepares a policy
++(`prepare_serving_policy`: bf16, one warm-up request):
++
++| key | default | meaning |
++|---|---|---|
++| `sampler` | `cosmos_unipc` | order-2 UniPC |
++| `num_inference_steps` | `4` | denoising steps |
++| `sampler_shift` | `5.0` | inference timestep shift |
++| `guidance_scale` | `4.0` | classifier-free guidance on the video tokens (two passes per step) |
++| `guidance_scale_action` | `1.0` | guidance on the action tokens (1.0 = none) |
++| `actions_per_call` | `32` | actions returned and executed per query (`n_action_steps` 32: the full chunk, open loop) |
++| `warmup_calls` | `1` | requests answered before the port opens (`serve-robolab --warmup 1`) |
++| `default_prompt` | `null` | used only if an observation carries no instruction; falls back to `task_name` |
++
++`null` in `deploy.yml` means the default above. Query `n` of a server uses noise seed
++`seed * 1e6 + n`, as flux-action's RoboLab server uses its seed base plus the query count.
++
++## Known limitations
++
++- Prepared (compiled) inference exists only for the released DROID geometry (8-D `action_prediction_droid`
++  heads), so this 14-D policy runs flux-action's reference inference path, eagerly, in bf16.
++- One policy server needs about 25-30 GB of GPU memory (the 7B DiT in bf16, the Qwen3-VL-4B text
++  encoder and the video VAE). With a RoboTwin sim client (~7 GB), that is one eval stream per 80 GB GPU.
++- `update_obs_batch` / `get_action_batch` run one observation at a time.
+diff --git a/policy/Flux3_Action/__init__.py b/policy/Flux3_Action/__init__.py
+new file mode 100644
+index 00000000..e69de29b
+diff --git a/policy/Flux3_Action/deploy.yml b/policy/Flux3_Action/deploy.yml
+new file mode 100644
+index 00000000..4cb39e4e
+--- /dev/null
++++ b/policy/Flux3_Action/deploy.yml
+@@ -0,0 +1,34 @@
++# Basic experiment configuration (per-run fields are overridden at launch)
++policy_name: Flux3_Action
++protocol: ws
++host: localhost
++port: null
++bench_name: null
++task_name: null
++ckpt_name: null
++env_cfg_type: null
++seed: null            # also sets the per-query noise seeds (seed * 1e6 + query number)
++action_type: joint    # absolute joint positions (the only supported value)
++gpu_id: null
++eval_batch: false
++
++# Checkpoint: a folder of inference exports step-<N>/{config.json, model.safetensors, manifest.json}
++# (flux-action export-checkpoint --profile ema_0p10 --dtype bfloat16).
++# null = resolve from ckpt_name (a path, or checkpoints/<ckpt_name> under this policy dir).
++export_root: null
++checkpoint_num: last  # training step (e.g. 1500), or last = the highest step-<N> in export_root
++video_vae_path: null  # video_vae.safetensors of flux-3-action-base (required)
++text_encoder_path: null  # text_encoder/ (Qwen3-VL-4B) of flux-3-action-base (required)
++
++# Sampling: null = flux-action's DROID reference inference settings (DROID_INFERENCE_SETTINGS):
++# cosmos_unipc, 4 steps, shift 5.0, guidance 4.0 on video tokens and 1.0 (none) on action tokens.
++sampler: null
++num_inference_steps: null
++sampler_shift: null
++guidance_scale: null
++guidance_scale_action: null
++actions_per_call: null  # actions returned (and executed) per query; null = n_action_steps (32)
++
++# Runtime
++warmup_calls: 1       # requests answered before the port opens (flux-action serve-robolab --warmup 1)
++default_prompt: null  # used only if an observation has no instruction (falls back to task_name)
+diff --git a/policy/Flux3_Action/model.py b/policy/Flux3_Action/model.py
+new file mode 100644
+index 00000000..3a229b77
+--- /dev/null
++++ b/policy/Flux3_Action/model.py
+@@ -0,0 +1,294 @@
++"""XPolicyLab adapter for a FLUX 3 Action policy fine-tuned on RoboTwin (aloha_agilex).
++
++The model is Black Forest Labs' FLUX 3 Action (flux-action), fully fine-tuned with the DROID
++recipe on RoboTwin demos: 14-D absolute joint targets, three cameras in the ``droid`` layout
++(head camera on top, both wrist cameras at half size below), chunks of 32 actions at 15 Hz.
++
++Weights come from an inference export of a training checkpoint
++(``flux-action export-checkpoint --profile ema_0p10 --dtype bfloat16``): ``<export_root>/step-<N>/``
++holds ``config.json`` (the run's ``PolicyConfig``, including the index's q01/q99 normalization),
++``model.safetensors`` and ``manifest.json`` (sha256 of both, verified on load). The frozen video
++VAE and Qwen3-VL text encoder are loaded from local paths given here (the export records the
++training job's paths).
++
++Per query the adapter hands flux-action's own inference API (``predict_action_chunk``) the
++observation in the training batch format:
++
++* ``images.high``, ``images.left_wrist``, ``images.right_wrist``: the RoboTwin head, left wrist and
++  right wrist cameras, RGB uint8 as the server delivers them (240x320, the training videos' size),
++  resized to the 360x640 the trainer decoded them at, with the policy's own camera resize
++  (bilinear, rounded back to uint8). The policy composes the canvas, encodes it and denoises.
++* ``state``: ``[left arm (6), left gripper, right arm (6), right gripper]`` in dataset units
++  (the training data's ``observation.state`` order); the policy normalizes it.
++* ``task``: the observation's instruction.
++
++The policy returns 32 absolute joint targets (denormalized), sent back in the per-step dict format
++of the GR00T_N17 adapter. Sampling uses the DROID reference inference settings from flux-action
++(``DROID_INFERENCE_SETTINGS``), and each query gets its own noise seed, as flux-action's RoboLab
++server does. Runs in the flux-action environment.
++"""
++
++from __future__ import annotations
++
++import json
++import statistics
++import time
++from pathlib import Path
++from typing import Any
++
++import numpy as np
++import torch
++
++from flux_action.config import DROID_INFERENCE_SETTINGS
++from flux_action.policy import FluxActionPolicy
++from XPolicyLab.model_template import ModelTemplate
++from XPolicyLab.utils.checkpoint_resolver import resolve_checkpoint_root
++from XPolicyLab.utils.process_data import get_robot_action_dim_info
++
++_POLICY_DIR = Path(__file__).resolve().parent
++_CHECKPOINTS_DIR = _POLICY_DIR / "checkpoints"
++
++# Observation cameras -> the policy's camera streams, in its layout order (head on top, then the
++# left and right wrist; index manifest: high = cam_high, left_wrist, right_wrist).
++CAMERAS = (
++    ("images.high", ("cam_head", "cam_high", "head_camera")),
++    ("images.left_wrist", ("cam_left_wrist", "left_camera")),
++    ("images.right_wrist", ("cam_right_wrist", "right_camera")),
++)
++TRAIN_CAMERA_HW = (240, 320)  # every camera of the training videos (index manifest camera_hw)
++MODEL_CAMERA_HW = (360, 640)  # the trainer's frame_hw: frames were rescaled to this when decoded
++STATE_KEYS = ("left_arm_joint_state", "left_ee_joint_state", "right_arm_joint_state", "right_ee_joint_state")
++# deploy.yml keys that map to PolicyConfig sampling fields (defaults: DROID_INFERENCE_SETTINGS).
++SAMPLING_KEYS = ("sampler", "num_inference_steps", "sampler_shift", "guidance_scale", "guidance_scale_action")
++
++
++def action_layout(env_cfg_type: str, action_dim: int) -> tuple[tuple[str, int, int], ...]:
++    """(state/action key, start, end) per part of the flat vector, from the robot's registered dims."""
++    dims = get_robot_action_dim_info(env_cfg_type)
++    sizes = (dims["arm_dim"][0], dims["ee_dim"][0], dims["arm_dim"][1], dims["ee_dim"][1])
++    if len(dims["arm_dim"]) != 2 or sum(sizes) != action_dim:
++        raise ValueError(f"{env_cfg_type}: dims {dims} do not match the model's {action_dim}-D action")
++    starts = np.cumsum((0,) + sizes[:-1])
++    return tuple((key, int(start), int(start + size)) for key, start, size in zip(STATE_KEYS, starts, sizes))
++
++
++# ---- export --------------------------------------------------------------------------------
++
++
++def resolve_export_root(model_cfg: dict[str, Any]) -> Path:
++    """The folder of ``step-<N>`` exports: export_root, else ckpt_name as a path, else
++    checkpoints/<ckpt_name> under this policy (e.g. a symlink), per the shared resolver."""
++    return resolve_checkpoint_root(model_cfg, _CHECKPOINTS_DIR, policy_dir=_POLICY_DIR, explicit_keys=("export_root",))
++
++
++def resolve_export(export_root: str | Path, checkpoint_num: Any) -> Path:
++    """``<export_root>/step-<N>`` for N = checkpoint_num (a training step), or the highest step for "last"."""
++    root = Path(export_root)
++    if checkpoint_num in (None, "last", "latest"):
++        steps = sorted(int(p.name.removeprefix("step-")) for p in root.glob("step-*") if (p / "manifest.json").is_file())
++        if not steps:
++            raise FileNotFoundError(f"no step-<N>/manifest.json under {root}")
++        checkpoint_num = steps[-1]
++    path = root / f"step-{int(str(checkpoint_num).removeprefix('step-'))}"
++    if not (path / "manifest.json").is_file():
++        raise FileNotFoundError(f"{path}/manifest.json not found (export the checkpoint with flux-action export-checkpoint)")
++    return path
++
++
++def export_step(export: Path) -> int:
++    return int(export.name.removeprefix("step-"))
++
++
++def sampling_settings(model_cfg: dict[str, Any]) -> dict[str, Any]:
++    """DROID_INFERENCE_SETTINGS, with deploy.yml values where they are set (n_action_steps stays 32)."""
++    settings = dict(DROID_INFERENCE_SETTINGS)
++    for key in SAMPLING_KEYS:
++        if model_cfg.get(key) is not None:
++            settings[key] = type(DROID_INFERENCE_SETTINGS[key])(model_cfg[key])
++    return settings
++
++
++def load_policy(
++    export: Path,
++    *,
++    video_vae_path: str,
++    text_encoder_path: str,
++    settings: dict[str, Any],
++    device: str = "cuda",
++    warmup: int = 1,
++) -> FluxActionPolicy:
++    """Restore the export on the CPU with the given encoders, then prepare it for serving on ``device``
++    the way flux-action's RoboLab server does (sampling settings applied, bf16, one warm-up request).
++
++    Prepared (compiled) inference exists only for the released DROID geometry; this 14-D policy runs
++    flux-action's reference inference path, eagerly."""
++    from flux_action.models.text_encoder import load_text_encoder
++    from flux_action.models.video_vae import load_video_vae
++    from flux_action.serving.robolab import prepare_serving_policy
++
++    policy = FluxActionPolicy.from_pretrained(
++        export, video_vae=load_video_vae(video_vae_path), text_encoder=load_text_encoder(text_encoder_path), device="cpu"
++    )
++    settings = {**settings, "video_vae_id": video_vae_path, "text_encoder_id": text_encoder_path}
++    return prepare_serving_policy(policy, device=device, dtype="bfloat16", settings=settings, compile_dit=False, warmup=warmup)
++
++
++def check_policy_config(config) -> None:
++    """The training contract this adapter serves."""
++    expected = {
++        "camera_layout": "droid",
++        "camera_keys": tuple(key for key, _ in CAMERAS),
++        "action_parameterization": "absolute",
++        "inference_profile": "default",
++        "gripper_flip_dims": (),
++        "rtc_max_prefix": 0,
++    }
++    got = {key: getattr(config, key) for key in expected}
++    if got != expected:
++        raise ValueError(f"export does not match the RoboTwin recipe: {got} != {expected}")
++    if config.action_normalization is None or config.state_normalization is None:
++        raise ValueError("export has no q01/q99 normalization (expected the LeRobot index statistics)")
++
++
++# ---- observation -> policy batch (CPU) --------------------------------------------------------
++
++
++def parse_observation(
++    obs: dict[str, Any], layout: tuple[tuple[str, int, int], ...], default_prompt: str
++) -> tuple[list[np.ndarray], np.ndarray, str]:
++    """XPolicyLab observation -> ([head, left wrist, right wrist] uint8 HxWx3 RGB, state [14], prompt)."""
++    vision = obs.get("vision", {})
++    images = []
++    for _, candidates in CAMERAS:
++        name = next((c for c in candidates if c in vision), None)
++        if name is None:
++            raise KeyError(f"observation has none of the cameras {candidates}; got {list(vision)}")
++        image = vision[name]["color"] if isinstance(vision[name], dict) else vision[name]
++        image = np.asarray(image)
++        if image.dtype != np.uint8 or image.shape != (*TRAIN_CAMERA_HW, 3):
++            raise ValueError(
++                f"{name}: expected uint8 {TRAIN_CAMERA_HW + (3,)} RGB as in training, got {image.dtype} {image.shape}"
++            )
++        images.append(image)
++
++    state = obs["state"]
++    parts = []
++    for key, start, end in layout:
++        value = np.asarray(state[key], dtype=np.float32).reshape(-1)
++        if value.shape[0] != end - start:
++            raise ValueError(f"state {key}: expected {end - start} values, got {value.shape[0]}")
++        parts.append(value)
++
++    prompt = obs.get("instruction") or (obs.get("instructions") or [None])[0] or default_prompt
++    return images, np.concatenate(parts), str(prompt).strip()
++
++
++def camera_tensor(image: np.ndarray) -> torch.Tensor:
++    """uint8 HxWx3 RGB -> uint8 (1, 3, 360, 640), resized with the policy's own camera resize."""
++    pixels = torch.from_numpy(np.array(image, dtype=np.uint8)).permute(2, 0, 1)[None]  # copy: decoded arrays are read-only
++    if tuple(pixels.shape[-2:]) != MODEL_CAMERA_HW:
++        pixels = FluxActionPolicy._resize_camera(pixels[:, None], MODEL_CAMERA_HW)[:, 0]
++    return pixels.contiguous()
++
++
++def build_batch(images: list[np.ndarray], state: np.ndarray, prompt: str, device: str | torch.device) -> dict[str, Any]:
++    """One observation in the training batch format (batch of one) on ``device``."""
++    batch: dict[str, Any] = {key: camera_tensor(image).to(device) for (key, _), image in zip(CAMERAS, images)}
++    batch["state"] = torch.from_numpy(np.asarray(state, dtype=np.float32).copy())[None].to(device)
++    batch["task"] = [prompt]
++    return batch
++
++
++def to_env_actions(chunk: np.ndarray, layout: tuple[tuple[str, int, int], ...]) -> list[dict[str, np.ndarray]]:
++    """[T, 14] -> one dict per step, the format the GR00T_N17 adapter returns."""
++    return [{key: step[start:end].copy() for key, start, end in layout} for step in np.asarray(chunk, dtype=np.float32)]
++
++
++# ---- XPolicyLab Model ------------------------------------------------------------------------
++
++
++class Model(ModelTemplate):
++    def __init__(self, model_cfg: dict[str, Any]):
++        if model_cfg.get("action_type", "joint") != "joint":
++            raise ValueError(f"Flux3_Action predicts absolute joint positions; got action_type={model_cfg['action_type']!r}")
++        export = resolve_export(resolve_export_root(model_cfg), model_cfg.get("checkpoint_num", "last"))
++        for key in ("video_vae_path", "text_encoder_path"):
++            if not model_cfg.get(key):
++                raise ValueError(f"deploy.yml {key} is required (the export records the training job's paths)")
++        manifest = json.loads((export / "manifest.json").read_text())
++        print(f"[Flux3_Action] loading {export} (weights: {manifest.get('weight_profile')})", flush=True)
++        start = time.monotonic()
++        policy = load_policy(
++            export,
++            video_vae_path=str(model_cfg["video_vae_path"]),
++            text_encoder_path=str(model_cfg["text_encoder_path"]),
++            settings=sampling_settings(model_cfg),
++            warmup=int(model_cfg.get("warmup_calls", 1)),
++        )
++        print(f"[Flux3_Action] loaded in {time.monotonic() - start:.0f} s; serving setup {policy.serving_setup}", flush=True)
++        self._setup(model_cfg, policy, device=policy.device)
++        self.export = export
++        self.weight_profile = manifest.get("weight_profile")
++        c = policy.config
++        print(
++            f"[Flux3_Action] ready: step {export_step(export)} ({self.weight_profile}), dtype {c.torch_dtype}, "
++            f"sampler={c.sampler} steps={c.num_inference_steps} shift={c.sampler_shift} "
++            f"guidance={c.guidance_scale}/{c.guidance_scale_action} actions_per_call={self.actions_per_call}",
++            flush=True,
++        )
++
++    def _setup(self, model_cfg: dict[str, Any], policy: FluxActionPolicy, *, device: str | torch.device) -> None:
++        """Everything but loading (tests call this with a policy whose sampler is a stand-in)."""
++        check_policy_config(policy.config)
++        self.model_cfg = model_cfg
++        self.model = policy
++        self.device = torch.device(device)
++        self.chunk_size = policy.config.chunk_size
++        self.action_dim = policy.config.action_dim
++        self.layout = action_layout(model_cfg["env_cfg_type"], self.action_dim)
++        self.default_prompt = model_cfg.get("default_prompt") or model_cfg.get("task_name") or ""
++        self.actions_per_call = int(model_cfg.get("actions_per_call") or policy.config.n_action_steps)
++        if not 1 <= self.actions_per_call <= self.chunk_size:
++            raise ValueError(f"actions_per_call must be in 1..{self.chunk_size}")
++        # Query n of this server gets noise seed seed_base + n, as flux-action's RoboLab server
++        # (RoboLabPolicy: seed_base + query count); seed_base separates the shards' streams.
++        self.seed_base = int(model_cfg.get("seed") or 0) * 1_000_000
++        self.queries = 0
++        self._obs_list: list[dict[str, Any]] = []
++        self._call_ms: list[float] = []
++
++    def _predict(self, obs: dict[str, Any]) -> np.ndarray:
++        """Observation -> [chunk_size, 14] absolute joint targets."""
++        images, state, prompt = parse_observation(obs, self.layout, self.default_prompt)
++        batch = build_batch(images, state, prompt, self.device)
++        self.queries += 1
++        self.model.config.inference_seed = self.seed_base + self.queries  # predict_action_chunk's noise seed
++        start = time.monotonic()
++        with torch.inference_mode():
++            chunk = self.model.predict_action_chunk(batch)[0].float().cpu().numpy()
++        self._call_ms.append((time.monotonic() - start) * 1000.0)
++        n = len(self._call_ms)
++        if n <= 3 or n % 100 == 0:
++            print(f"[Flux3_Action] call {n}: {self._call_ms[-1]:.0f} ms (median {statistics.median(self._call_ms):.0f} ms)", flush=True)
++        if chunk.shape != (self.chunk_size, self.action_dim) or not np.isfinite(chunk).all():
++            raise RuntimeError(f"expected a finite {self.chunk_size}x{self.action_dim} action chunk, got {chunk.shape}")
++        return chunk
++
++    def update_obs(self, obs):
++        self.update_obs_batch([obs])
++
++    def update_obs_batch(self, obs_list):
++        self._obs_list = list(obs_list)
++
++    def get_action(self, **kwargs):
++        if not self._obs_list:
++            raise AssertionError("update_obs or update_obs_batch first!")
++        return self.get_action_batch()[0]
++
++    def get_action_batch(self, env_idx_list=None, **kwargs):
++        if not self._obs_list:
++            raise AssertionError("update_obs or update_obs_batch first!")
++        return [to_env_actions(self._predict(obs)[: self.actions_per_call], self.layout) for obs in self._obs_list]
++
++    def reset(self):
++        self._obs_list = []
+-- 
+2.34.1
+
