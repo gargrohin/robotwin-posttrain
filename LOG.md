@@ -1851,3 +1851,12 @@ states needed).**
   come after the upload is checked.
 - Future runs: weights only at every save, plus one full state, overwritten each save, for
   recovery after a cluster preemption.
+
+**01:40 EST (Thu Nov 5)** **Flux: training 6,000 more updates from step 3,000 (your choice, option A).**
+- Why: our run used 2.5% of BFL's recipe (3,000 updates at batch 512 vs their 30,000 at 2,048) and
+  the training loss was still falling at the end. The sim score didn't move from 1,500 to 3,000 on
+  the 10-task check, so this run tests whether the gap to Cosmos comes from the short budget.
+- Plan: batch 512 as before, new warm-up, cool-down over the last 1,000 updates, ~45 h on 16 GPUs
+  (~710 GPU-hours). 10-task check at +3,000 (~4 GPU-hours); if nothing has moved by then, you
+  decide whether to stop. Full 50-task eval at the end (~77 GPU-hours).
+- Saves: weights every 1,000 updates, plus one full state for recovery after a preemption.
