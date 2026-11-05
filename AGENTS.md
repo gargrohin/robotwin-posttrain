@@ -1,13 +1,101 @@
 # robotwin-posttrain: notes for coding agents
 
-Assignment: post-train a VLA (GR00T N1.7 first) on RoboTwin 2.0, benchmark it, then
-hill-climb. The user is learning as we go: explain in plain language. Since
-2026-10-26 the user wants the agent to drive the pipeline (don't wait for approval
-of routine next steps), but to ask before cancelling/restarting running GPU jobs or
-doing anything outward-facing or destructive.
+Assignment: post-train FLUX 3 Action, Cosmos3-Nano and/or GR00T N1.7 on RoboTwin 2.0
+(`aloha_agilex`, all 50 tasks), benchmark them, then hill-climb. The user is learning as
+we go: explain in plain language. Since 2026-10-26 the user wants the agent to drive the
+pipeline (don't wait for approval of routine next steps), but to ask before
+cancelling/restarting running GPU jobs or doing anything outward-facing or destructive.
+The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
+not in this repo.
+
+## Start here: current state (2026-11-05)
+
+**Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
+GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
+`notes/results.md`.
+
+| model | run, checkpoint | randomized | clean |
+|---|---|---|---|
+| Cosmos3-Nano (16B) | `cosmos3_nano_mix200_2n_decay1k` iteration 5,500 (6,000 is the same within noise) | 85.0% | 88.6% |
+| FLUX 3 Action (7B) | `flux3_mix200_b512` step 3,000 | 71.0% | 71.1% |
+| GR00T N1.7 (3B) | `mix200_150k` checkpoint-150000 | 45.3% | 45.5% |
+
+- All three trained on `mix200`: 50 clean + 200 randomized demos per task.
+- GR00T trained on the 50 clean demos per task only (`50task_60k`): 42.6% clean, 9.7% randomized.
+
+**Running now:** `flux3_mix200_b512_cont6k`, 6,000 more updates from Flux step 3,000.
+- 16 cluster GPUs; started 2026-11-05 06:06 ET, ETA ~03:25 ET Sat Nov 7.
+- It tests whether Flux's gap to Cosmos comes from its short first schedule (2.5% of BFL's DROID
+  recipe).
+- 10-task check at update 6,000 (~05:00 ET Fri). The user decides then whether it continues.
+- Full 50-task eval at 9,000.
+
+**Next: hill climbing.** Not started; the user picks.
+- Failure analysis so far is in `notes/eval_analysis.md` (the user's, in progress): failing to
+  grasp, objects slipping, two-arm coordination, no recovery. Long tasks fail most.
+- Candidates discussed:
+  - start from Cosmos decay 5,500 (RL, or recovery data);
+  - more randomized data (`mix500` is built for GR00T);
+  - test GR00T with its vision-language backbone unfrozen;
+  - repeat an eval to measure noise.
+
+**Where things are**
+- `LOG.md`: plain-language worklog with ET times, newest at the bottom. Read its last entries
+  first.
+- `notes/results.md`: every benchmark table, newest first.
+- `notes/runs/README.md`: registry and lineage of every training run. Run cards are in `notes/runs/`.
+- `notes/eval_analysis.md`: the user's failure analysis. Don't edit it without asking.
+- `patches/`: our upstream edits, one patch per commit: XPolicyLab adapters for Cosmos and Flux,
+  GR00T data-loading speedups, RoboTwin episode records, the cuRobo fix.
+- Local notes outside this repo. They hold internal cluster names, storage paths and job IDs, so
+  never commit them or copy their details into this repo:
+  - `/mnt/efs/rohingarg/cri/cosmos3/`: cluster launcher for Cosmos training, notes.
+  - `/mnt/efs/rohingarg/cri/flux3/`: BFL flux-action trainer clone (branch `robotwin`), cluster
+    launcher, `NOTES.md` (recipe, every test and run).
+  - `/mnt/efs/rohingarg/cri/cluster_eval/` and `cluster_eval_flux/`: cluster eval packages
+    (exact seed lists, collect and seed-check tools) with `NOTES.md`.
+  - `/mnt/efs/rohingarg/cri/storage_migration/`: checkpoint upload, verify and delete records.
+- Training of Cosmos and Flux, and the 50-task evals, run on a company GPU cluster (8×H100
+  nodes, also partial-node slices). Cluster evals run one sim stream per GPU from exact seed lists,
+  then the client logs are collected into `logs/` here, where `gr00t/paired_compare.py` and the
+  results tables read them.
+
+**Checkpoints.** Weights only, since 2026-11-05, by the user's decision.
+- On disk: GR00T `mix200_150k` checkpoint-150000 and `mix200_decay60k` checkpoint-10000
+  (weights and configs, no optimizer state).
+- In cloud storage:
+  - the weights of every GR00T checkpoint;
+  - Cosmos iterations 5,000 / 5,500 / 6,000 (full states);
+  - Flux step 3,000 (full state, the continuation's start);
+  - Flux weight exports (steps 1,050 / 1,500 / 3,000, then every 1,000 of the continuation).
+- New runs: weights-only saves at every interval, plus one full state for recovery after a
+  preemption, overwritten in turn. Cluster jobs can't delete in cloud storage.
+
+**Working rules from the user**
+- Before big train or eval runs, write out the protocol, GPU-hours and cheaper options. The user
+  decides.
+- Comparison evals use GR00T's protocol exactly: all 50 tasks, clean and randomized, the same
+  number of scenes per task and the exact seeds (replay them from the logs, check seed by seed).
+  Never shrink the scope without asking.
+- Every training run logs to wandb (project `robotwin-posttrain`) from step 1.
+- Commit as you go; push only when asked. This repo is public: no company team names, storage
+  paths, internal URLs or job IDs in anything committed. Upstream commits use the
+  `gargrohin` noreply identity.
+- Times in New York time (ET). State facts plainly: no "a real X, not a Y" phrasing, no invented
+  labels.
+- Shared GPU box: never touch other users' processes. Launch long jobs detached
+  (`setsid -f nohup`). Ask before deleting anything.
 
 ## Layout
 - `setup/`: our install scripts and renderer checks.
+- `cosmos3/`: Cosmos3-Nano scripts. `run_robotwin_nano.sh` is the local training supervisor
+  (resumes after crashes, wandb online); `eval.sh`, `check_adapter.py` and `heldout_check.py`
+  are described in "Cosmos3-Nano eval" below.
+- `flux3/`: FLUX 3 Action eval scripts (see "FLUX 3 Action eval" below). Training runs in BFL's
+  flux-action trainer (local clone, see "Start here").
+- `gr00t/paired_queue.py`: builds eval queues that replay a reference eval's exact seeds.
+  `gr00t/paired_compare.py [--per-task]` compares models seed by seed on the 10-task set.
+- `patches/`: one file per upstream commit of ours; `patches/README.md` says what each does.
 - `gr00t/prepare_data.sh`: demos → LeRobot v3.0 → v2.1 → GR00T dataset
   `data/lerobot/RoboTwin-5task-aloha_agilex-joint`.
 - `gr00t/eval.sh`: evaluate a checkpoint on one task (`CKPT=<run dir name> TASK=..
@@ -142,15 +230,43 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   `ROBOTWIN_INDEX_CACHE` (the experiment config fails without them). It refuses a checkpoint newer
   than `checkpoints/latest_checkpoint.txt` (the trainer writes it after a save completes).
 
+## FLUX 3 Action eval (2026-11-04)
+- Adapter `RoboTwin/XPolicyLab/policy/Flux3_Action/` (commit `2b435d8` on XPolicyLab's
+  `local/aloha-gr00t`, `patches/xpolicylab/0012`; see its README). It runs in the flux-action venv
+  (`/opt/dlami/nvme/rohingarg/flux3-venv`), with XPolicyLab added `--no-deps -e` plus the
+  server's packages. No flux-action pin is changed.
+- It loads inference exports, which hold the averaged weights in bf16 (~14 GB). It doesn't load
+  training checkpoints. Make an export with `flux-action export-checkpoint --checkpoint <run>/step-<N>
+  --output <root>/step-<N> --profile ema_0p10 --dtype bfloat16`. The exports live in cloud storage
+  (local notes say where); copy one to `EXPORT_ROOT/step-<N>/` before a local eval.
+- One stream: `CHECKPOINT_NUM=3000 TASK=.. TASK_CONFIG=.. TEST_NUM=.. POLICY_GPU=.. ENV_GPU=..
+  flux3/eval.sh`.
+  - Log names are the same as `gr00t/eval.sh`'s, with `CKPT=flux3_mix200_b512`.
+  - It works with `gr00t/benchmark_worker.sh` (`EVAL_SH=flux3/eval.sh`).
+  - Sampling uses BFL's reference DROID inference settings, 32 actions per call.
+  - A policy server needs ~26–30 GB, so run one stream per GPU.
+- Cameras go into the DROID layout the checkpoints were trained on: head camera on top, wrists
+  below. 240×320 frames are resized to 360×640, as in training.
+- Checks:
+  - `flux3/check_adapter.py` (CPU): the adapter's model input matches the training window's
+    bit for bit (canvas, state token, caption, position ids).
+  - `flux3/heldout_check.py` (GPU): open-loop arm error on GR00T's held-out moments, same
+    metric as GR00T's and Cosmos's.
+
 ## Decisions
-- Model: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`). It's the only assigned model with an
-  XPolicyLab adapter.
+- Models: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`) first, as the only assigned model with an
+  XPolicyLab adapter. Since 2026-11-02, also Cosmos3-Nano and FLUX 3 Action, through our own
+  adapters (patches 0011, 0012). All three train on `mix200` and are compared on GR00T's eval
+  seeds. Training of Cosmos and Flux follows each maker's own recipe (NVIDIA's LIBERO recipe;
+  BFL's DROID recipe, scaled to the budget).
 - Robot `aloha_agilex`; 50 clean demos per task (leaderboard protocol). Eval budget is
   the user's call: before queueing evals, give tasks × episodes × settings, the
   GPU-hour estimate and cheaper options. The 5-task baseline started at 100 eps/task
   (chosen without consulting the user; trimmed to ~20 for randomized on
   2026-10-27); the 50-task screening is 20 eps/task, clean + randomized.
-- Scope (2026-10-26): `beat_block_hammer`, `lift_pot`, `handover_block`,
+- Scope since 2026-10-27: all 50 tasks. The 5-task model's per-task scores ranged from ~1% to
+  72%, so a 5-task average mostly reflected which tasks were picked.
+- First scope (2026-10-26): `beat_block_hammer`, `lift_pot`, `handover_block`,
   `stack_blocks_two`, `open_laptop`. Skipped `place_empty_cup` (RoboTwin issue #83:
   very slow rendering on H-series GPUs). Chosen for skill coverage; difficulty
   headroom not yet verified against per-task scores.
@@ -236,7 +352,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   separate RoboTwin robot (`X5A.urdf`) and the one RoboDojo uses, which is why the GR00T
   adapter ships `arx_x5` templates. Both are 6 joints + gripper per arm.
 
-## Status (2026-10-26)
+## History: GR00T steps 0–6 (from 2026-10-26; the current state is in "Start here")
 - [x] Envs installed; RoboTwin assets downloaded (~15 GB).
 - [x] Step 0 (2026-10-26, GPU 6): **rendering works** with RoboTwin's default `rt`
   (ray-tracing) shader. First frame ~1s, then ~0.01s; 4 task cameras in ~0.2s. **Raster
@@ -366,7 +482,7 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     0.0043. Kept checkpoints: 20000, 22500, 25000, 27500, 30000 (~35 GB each).
   - Each checkpoint is ~35 GB (full model plus optimizer state). Trainer keeps the
     last 5 (`save_total_limit 5`), so up to ~175 GB per run on EFS.
-- [ ] Step 5: benchmark. Eval pipeline smoke test passed (2026-10-26): the smoke
+- [x] Step 5: benchmark (done; all results in `notes/results.md`). Eval pipeline smoke test passed (2026-10-26): the smoke
   checkpoint on `beat_block_hammer`, demo_clean, 2 episodes, on GPU 6 shared with
   training. Server loads, client connects, episodes run, the arm moves (frames in
   `outputs/eval_smoke/`), 0/2 success (expected for 200 steps on flawed data). Results
@@ -480,4 +596,4 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
   `gr00t/paired_queue.py`, which replays the 50task_60k eval's seed layout (one line per
   old shard) so every model is scored on the same scenes. Don't run these queues with
   `MAX_SHARDS` > 1: a multi-shard job re-splits its episodes onto different seeds.
-- [ ] Step 6: hill-climb.
+- [ ] Step 6: hill-climb (not started; candidates in "Start here").
