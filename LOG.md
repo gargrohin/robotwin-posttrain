@@ -1941,3 +1941,13 @@ the saving scheme changed.**
   learning rate warmed back up to its peak; a rise after leaving a cooled-down point is expected.
   ETA ~03:25 EST Saturday; the 10-task check at 6,000 around 05:00 EST Friday.
 - The slot test of resuming after a kill is still waiting for cluster space.
+
+**10:40 EST (Thu Nov 5)** **Flux continuation: saves and recovery checked.**
+- The run's first three saves went where planned: two slots in cloud storage, overwritten in
+  turn, each holding a complete training state (same 87 files as the step-3,000 state). Storage
+  stays at two states (~277 GB).
+- A separate one-node test killed the trainer in the middle of a save. The restart picked up the
+  last complete save (step 3,009) and continued with exactly the same learning rate as the
+  uninterrupted run at that step. Exports read from a slot also work.
+- Training so far: ~27 s per update, loss rose from 0.067 to ~0.075 during the warm-up back to the
+  full learning rate (expected after restarting from a cooled-down point).
