@@ -89,6 +89,8 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
   labels.
 - Shared GPU box: never touch other users' processes. Launch long jobs detached
   (`setsid -f nohup`). Ask before deleting anything.
+- Cluster: training runs only on our own quota, never on borrowed GPUs (they get pre-empted).
+  Short tests and sim evals may borrow. Keep each training run to one job and one checkpoint set.
 
 ## Layout
 - `setup/`: our install scripts and renderer checks.
