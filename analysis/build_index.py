@@ -5,7 +5,9 @@ and writes analysis/cache/episodes.parquet (one row per episode) and
 analysis/cache/streams.parquet (one row per eval stream, i.e. one client process).
 
 How the pairing works (verified against the RoboTwin eval client):
-- A finished stream's log ends with "Data has been saved to <folder>/_result.txt".
+- A finished stream's log ends with "Data has been saved to <folder>/_result.txt". The
+  folder is under RoboTwin/eval_result, or, for evals run on the cluster, under
+  ../cluster_eval*/results/<job>/eval_result (logs copied into logs/, videos left there).
 - A stream that was stopped early has no such line. Its folder is found among the
   unclaimed folders by the episode fingerprint below plus modification times (the
   newest video and the log are both last written when the stream stops).
@@ -35,7 +37,10 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
 LOGS = ROOT / "logs"
-VIDEO_ROOTS = [ROOT / "RoboTwin/eval_result", ROOT / "outputs/preempted_eval"]
+LOCAL_RESULTS = ROOT / "RoboTwin/eval_result"
+# evals run on the cluster, copied back one folder per job (their logs are copied into logs/)
+CLUSTER_RESULTS = sorted(ROOT.parent.glob("cluster_eval*/results/*/eval_result"))
+VIDEO_ROOTS = [LOCAL_RESULTS, ROOT / "outputs/preempted_eval", *CLUSTER_RESULTS]
 CACHE = ROOT / "analysis/cache"
 MAX_MTIME_GAP_S = 15 * 60  # stopped stream: newest video vs log last write
 
@@ -123,8 +128,8 @@ def scan_folders():
             d = Path(dirpath)
             if not FOLDER_TS.search(d.name):
                 continue
-            rel = d.relative_to(ROOT)
-            parts = d.relative_to(root).parts  # <task>/GR00T_N17/<setting>/<model>/<ts>
+            rel = Path(os.path.relpath(d, ROOT))  # ../cluster_eval/... for cluster copies
+            parts = d.relative_to(root).parts  # <task>/<policy>/<setting>/<model>/<ts>
             known = root.name == "eval_result" and len(parts) == 5
             videos, records = {}, {}
             for f in filenames:
@@ -143,6 +148,9 @@ def scan_folders():
                 "has_result": "_result.txt" in filenames,
                 "videos": videos,
                 "records": records,
+                # how the eval client's log names this folder ("Data has been saved to ...")
+                "saved_as": str(Path("eval_result") / d.relative_to(root)) if known else None,
+                "local": root == LOCAL_RESULTS,
             }
     return folders
 
@@ -215,13 +223,19 @@ def main():
     read_records(folders)
     frames = probe_frames(folders)
 
+    by_saved = {}  # log's name for a folder -> folders with that name, this machine's first
+    for f in folders.values():
+        if f["saved_as"]:
+            by_saved.setdefault(f["saved_as"], []).append(f["folder"])
     claimed = {}  # folder -> log
     for stream, _ in parsed:
-        if stream["saved"]:
-            folder = str(Path("RoboTwin") / stream["saved"])
-            if folder in folders:
-                stream["folder"], stream["match"] = folder, "saved_path"
-                claimed[folder] = stream["log"]
+        if stream["saved"] and by_saved.get(stream["saved"]):
+            folder = by_saved[stream["saved"]][0]
+            stream["folder"], stream["match"] = folder, "saved_path"
+            claimed[folder] = stream["log"]
+    same_name = sum(len(v) > 1 for v in by_saved.values())
+    if same_name:
+        print(f"{same_name} folder names exist in more than one place; used the first")
     for stream, episodes in parsed:
         if stream.get("folder"):
             continue
@@ -242,7 +256,9 @@ def main():
             stream["match"] = f"none ({len(scored)} candidates)" if scored else "none"
 
     for f in folders.values():  # no log, but episode records: index from those
-        if f["folder"] in claimed or not f["records"] or not f["model_full"]:
+        # this machine's results only: the cluster job folders include test and retry jobs,
+        # so there only folders a copied log names are used
+        if f["folder"] in claimed or not f["records"] or not f["model_full"] or not f["local"]:
             continue
         recs = [f["records"][n] for n in sorted(f["records"])]
         ckpt = recs[0].get("checkpoint_num")
