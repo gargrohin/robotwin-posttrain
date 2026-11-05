@@ -1932,3 +1932,12 @@ the saving scheme changed.**
 - **Run:** 2 nodes (16 GPUs), 25.1 s per update, 65 GB GPU memory peak, loss 0.067 at update
   3,010. ETA ~03:00 EST Saturday (Nov 7). Weights-only exports at 4,000 … 9,000; the 10-task check
   runs on 6,000 (expected ~04:30 EST Friday).
+
+**09:10 EST (Thu Nov 5)** **Flux continuation: the two-slot saving works in the real run.**
+- Saves at 3,125 (slot A), 3,250 (slot B) and 3,375 (slot A again, overwritten). Each slot holds a
+  complete training state (the same 87 files as step 3,000), and the pointer names the newest.
+  Cloud storage for the run: 277 GB in total, as designed.
+- Training: 27.2 s per update including saves. The loss went from 0.067 to ~0.075 while the
+  learning rate warmed back up to its peak; a rise after leaving a cooled-down point is expected.
+  ETA ~03:25 EST Saturday; the 10-task check at 6,000 around 05:00 EST Friday.
+- The slot test of resuming after a kill is still waiting for cluster space.
