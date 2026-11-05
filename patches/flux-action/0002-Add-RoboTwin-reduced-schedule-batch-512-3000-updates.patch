@@ -1,0 +1,80 @@
+From 61f2fab60624929cca2aa0515ba7f30769e852a9 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 15:21:23 +0000
+Subject: [PATCH 2/4] Add RoboTwin reduced schedule: batch 512, 3000 updates
+
+The DROID schedule scaled to 1/10 (trunk frozen 100, warmup 200, heads warmup
+100, cooldown 2500->3000) for a ~24-30 h run on 2x8 H100. Memory/loader knobs
+only: vae_batch_windows 1, 4 windows per rank (x8 accumulation on 16 ranks),
+prefetch_factor 4. Optimizer, learning rates and losses as in the DROID recipe.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ configs/robotwin/train_b512_s3000.json | 55 ++++++++++++++++++++++++++
+ 1 file changed, 55 insertions(+)
+ create mode 100644 configs/robotwin/train_b512_s3000.json
+
+diff --git a/configs/robotwin/train_b512_s3000.json b/configs/robotwin/train_b512_s3000.json
+new file mode 100644
+index 0000000..5e2bbaa
+--- /dev/null
++++ b/configs/robotwin/train_b512_s3000.json
+@@ -0,0 +1,55 @@
++{
++  "source_root": "outputs/robotwin/source",
++  "index_dir": "outputs/robotwin/index",
++  "output_dir": "outputs/robotwin/run-b512-s3000",
++  "policy": {
++    "action_modality": "action_prediction_aloha",
++    "action_dim": 14,
++    "camera_layout": "droid",
++    "camera_keys": [
++      "images.high",
++      "images.left_wrist",
++      "images.right_wrist"
++    ],
++    "gripper_flip_dims": [],
++    "trunk_weights": "outputs/weights/flux-3-action-base.safetensors",
++    "video_vae_id": "outputs/weights/video_vae.safetensors",
++    "text_encoder_id": "outputs/weights/text_encoder",
++    "attn_mode": "torch",
++    "vae_batch_windows": 1
++  },
++  "steps": 3000,
++  "cooldown_start": 2500,
++  "cooldown_steps": 500,
++  "frozen_steps": 100,
++  "trunk_warmup_steps": 200,
++  "heads_warmup_steps": 100,
++  "seed": 42,
++  "reseed_on_resume": true,
++  "windows_per_rank": 4,
++  "grad_accumulation": 8,
++  "num_workers": 8,
++  "prefetch_factor": 4,
++  "decoder": "ffmpeg",
++  "shard_size": 8,
++  "param_dtype": "float32",
++  "compute_dtype": "bfloat16",
++  "reduce_dtype": "float32",
++  "activation_checkpointing": true,
++  "reshard_after_forward": true,
++  "betas": [
++    0.9,
++    0.99
++  ],
++  "eps": 1e-08,
++  "weight_decay": 0.05,
++  "fused_optimizer": true,
++  "max_grad_norm": null,
++  "ema_sigma_rels": [
++    0.1,
++    0.05
++  ],
++  "checkpoint_every": 150,
++  "log_every": 10,
++  "resume": "auto"
++}
+-- 
+2.34.1
+

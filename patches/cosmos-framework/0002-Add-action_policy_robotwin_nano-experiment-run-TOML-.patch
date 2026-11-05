@@ -1,0 +1,402 @@
+From 010a64af01f87a8a8616cd20001f69e627cbbfeb Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:31:13 +0000
+Subject: [PATCH 2/8] Add action_policy_robotwin_nano experiment, run TOML and
+ launcher
+
+The experiment copies action_policy_libero_nano (model, optimizer, action-head
+skip-on-load, LR multipliers) and swaps in the RoboTwin dataset (domain
+robotwin, id 17, untrained in the public base). Defaults are sized for one
+node of H100-80GB: FSDP over all ranks, 32 samples per rank, 8 dataloader
+workers. The launcher derives grad_accum_iter from GLOBAL_BATCH (default 2048,
+the LIBERO recipe), the per-rank batch and the number of CUDA_VISIBLE_DEVICES.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ cosmos_framework/configs/base/config.py       |   1 +
+ .../action_policy_robotwin_nano.py            | 234 ++++++++++++++++++
+ .../launch_sft_action_policy_robotwin_nano.sh |  58 +++++
+ .../action_policy_robotwin_nano.toml          |  53 ++++
+ 4 files changed, 346 insertions(+)
+ create mode 100644 cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_robotwin_nano.py
+ create mode 100755 examples/launch_sft_action_policy_robotwin_nano.sh
+ create mode 100644 examples/toml/sft_config/action_policy_robotwin_nano.toml
+
+diff --git a/cosmos_framework/configs/base/config.py b/cosmos_framework/configs/base/config.py
+index 1014d98..fd4a958 100644
+--- a/cosmos_framework/configs/base/config.py
++++ b/cosmos_framework/configs/base/config.py
+@@ -98,6 +98,7 @@ def make_config() -> Config:
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_libero_all_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_libero_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_robocasa_nano  # noqa: F401
++    import cosmos_framework.configs.base.experiment.action.posttrain_config.action_policy_robotwin_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.action.posttrain_config.action_fd_droid_posttrain  # noqa: F401
+     import cosmos_framework.configs.base.experiment.sft.vision_sft_nano  # noqa: F401
+     import cosmos_framework.configs.base.experiment.sft.vision_sft_super  # noqa: F401
+diff --git a/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_robotwin_nano.py b/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_robotwin_nano.py
+new file mode 100644
+index 0000000..9b593b1
+--- /dev/null
++++ b/cosmos_framework/configs/base/experiment/action/posttrain_config/action_policy_robotwin_nano.py
+@@ -0,0 +1,234 @@
++# SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
++# SPDX-License-Identifier: OpenMDW-1.1
++
++"""``action_policy_robotwin_nano`` — Cosmos3-Nano RoboTwin 2.0 (aloha_agilex) action-policy SFT recipe.
++
++Same model/optimizer/checkpoint recipe as ``action_policy_libero_nano``; only the data
++differs. Feeds ``RoboTwinLeRobotDataset``: 14-D absolute joint positions with the current
++state as a clean conditioning row (DROID ``joint_pos`` + ``use_state`` contract),
++``quantile`` normalization against stats from ``tools/compute_robotwin_action_stats.py``,
++and the head + two wrist cameras composed into one ``concat_view`` (AgiBot layout) snapped
++to the 256 tier. Domain ``robotwin`` (id 17), whose action heads are untrained in the public
++base, so they start fresh like LIBERO's.
++
++Env: ``ROBOTWIN_ROOT`` (LeRobot v2.1 dir) and ``ROBOTWIN_INDEX_CACHE`` (index ``.npz``).
++"""
++
++import copy
++
++from hydra.core.config_store import ConfigStore
++
++from cosmos_framework.configs.base.experiment.sft.models.nano_model_config import NANO_MODEL_CONFIG
++from cosmos_framework.data.generator.action.datasets.action_sft_dataset import get_action_robotwin_sft_dataset
++from cosmos_framework.data.generator.action.datasets.robotwin_lerobot_dataset import ROBOTWIN_DEFAULT_STATS_PATH
++from cosmos_framework.data.generator.joint_dataloader import (
++    PackingDataLoader,
++    RankPartitionedDataLoader,
++)
++from cosmos_framework.utils.lazy_config import LazyCall as L
++from cosmos_framework.utils.lazy_config import LazyDict
++
++cs = ConfigStore.instance()
++
++
++def _action_policy_robotwin_nano_model_config() -> dict:
++    """Same as the LIBERO model config: capped packed tokens, selective activation
++    checkpointing, fresh diffusion-expert init, 10x vision flow-matching loss.
++    Keep ``encode_exact_durations=[17, 61, 73]`` to match the Cosmos3-Nano base."""
++    cfg = copy.deepcopy(NANO_MODEL_CONFIG)  # action_gen=True, max_action_dim=64
++    # Cap the packed sequence. Uncapped (-1) + a large max_samples_per_batch packs
++    # one very long sequence and OOMs even on H200; 74000 keeps the release-validated bound.
++    cfg["max_num_tokens_after_packing"] = 74000
++    cfg["activation_checkpointing"]["mode"] = "selective"
++    cfg["diffusion_expert_config"]["load_weights_from_pretrained"] = False
++    cfg["rectified_flow_training_config"]["loss_scale"] = 10.0
++    cfg["rectified_flow_training_config"]["image_loss_scale"] = None
++    cfg["tokenizer"]["encode_exact_durations"] = [17, 61, 73]  # match Cosmos3 base + reference SFT (do NOT reduce)
++    return cfg
++
++
++action_policy_robotwin_nano = LazyDict(
++    dict(
++        defaults=[
++            {"override /model": "mot_fsdp"},
++            {"override /data_train": None},
++            {"override /data_val": None},
++            # FusedAdam with fp32 master_weights + eps 1e-8 (bf16 params + eps 1e-6
++            # diverged on the action loss).
++            {"override /optimizer": "fusedadamw"},
++            {"override /scheduler": "lambdalinear"},  # linear LR decay
++            {"override /checkpoint": "s3"},
++            {
++                "override /callbacks": [
++                    "basic",
++                    "optimization",
++                    "job_monitor",
++                ]
++            },
++            {"override /ema": "power"},
++            {"override /tokenizer": "wan2pt2_tokenizer"},
++            {"override /sound_tokenizer": None},
++            {"override /vlm_config": None},
++            {"override /ckpt_type": "dcp"},
++            "_self_",
++        ],
++        job=dict(
++            project="cosmos3",
++            group="action_sft",
++            name="action_policy_robotwin_nano",
++            wandb_mode="disabled",
++        ),
++        model=dict(
++            config=_action_policy_robotwin_nano_model_config(),
++        ),
++        optimizer=dict(
++            betas=[0.9, 0.99],
++            eps=1.0e-08,
++            fused=True,  # popped by build_optimizer for FusedAdam (fused by construction)
++            # Train the generation + action heads.
++            keys_to_select=[
++                "moe_gen",
++                "time_embedder",
++                "vae2llm",
++                "llm2vae",
++                "action2llm",
++                "llm2action",
++                "action_modality_embed",
++            ],
++            lr=5.0e-05,
++            lr_multipliers={
++                "action2llm": 5.0,
++                "llm2action": 5.0,
++                "action_modality_embed": 5.0,
++            },
++            optimizer_type="FusedAdam",
++            weight_decay=0.05,
++        ),
++        scheduler=dict(
++            lr_scheduler_type="LambdaLinear",
++            cycle_lengths=[100],  # smoke: 100 iters (real run sets via TOML, release recipe=10000)
++            f_max=[1.0],
++            f_min=[0.0],
++            f_start=[1.0e-06],
++            verbosity_interval=0,
++            warm_up_steps=[0],  # smoke (real run sets via TOML, release recipe=2000)
++        ),
++        trainer=dict(
++            distributed_parallelism="fsdp",
++            grad_accum_iter=1,  # real run sets via TOML (release recipe=2)
++            logging_iter=1,
++            max_iter=100,  # smoke
++            max_val_iter=None,
++            run_validation=False,
++            run_validation_on_start=False,
++            save_zero_checkpoint=False,
++            seed=42,
++            timeout_period=999999999,
++            validation_iter=100,
++            compile_config=dict(recompile_limit=8, use_duck_shape=False),
++            cudnn=dict(benchmark=True, deterministic=False),
++            ddp=dict(broadcast_buffers=True, find_unused_parameters=False, static_graph=True),
++            grad_scaler_args=dict(enabled=False),
++            callbacks=dict(
++                dataloader_speed=dict(every_n=100, save_s3=False, step_size=1),
++                device_monitor=dict(
++                    every_n=200, log_memory_detail=True, save_s3=False, step_size=1, upload_every_n_mul=5
++                ),
++                grad_clip=dict(clip_norm=1.0, force_finite=True),
++                heart_beat=dict(every_n=200, save_s3=False, step_size=1, update_interval_in_minute=20),
++                iter_speed=dict(every_n=1, hit_thres=50, save_s3=False, save_s3_every_log_n=500),
++                low_precision=dict(update_iter=1),
++                manual_gc=dict(every_n=5, gc_level=1, warm_up=1),
++                param_count=dict(save_s3=False),
++                skip_nan_step=dict(max_consecutive_nan=100),
++                training_stats=dict(log_freq=100),
++            ),
++        ),
++        checkpoint=dict(
++            broadcast_via_filesystem=False,
++            dcp_async_mode_enabled=False,
++            enable_gcs_patch_in_boto3=True,
++            keys_not_to_resume=[],
++            # Skip net_ema (EMA warm-starts from net, see dcp.py) and the action
++            # heads, so they init fresh from the base (the public Cosmos3-Nano base
++            # has untrained heads for the robotwin domain, id 17).
++            keys_to_skip_loading=[
++                "net_ema.",
++                "action2llm",
++                "llm2action",
++                "action_modality_embed",
++                "action_pos_embed",
++            ],
++            load_ema_to_reg=False,
++            load_path="???",  # Cosmos3-Nano DCP dir; supply via TOML/env
++            load_training_state=False,
++            only_load_scheduler_state=False,
++            save_iter=100,
++            strict_resume=False,  # base init: tolerate key set differences
++            verbose=True,
++            hf_export=dict(
++                enabled=False,
++                export_every_n=1,
++                hf_repo_id=None,
++                upload_to_object_store=dict(bucket="", credentials="", enabled=False),
++            ),
++            jit=dict(device="cuda", dtype="bfloat16", enabled=False, input_shape=None, strict=True),
++            load_from_object_store=dict(bucket="", credentials="", enabled=False),
++            save_to_object_store=dict(bucket="", credentials="", enabled=False),
++        ),
++        dataloader_train=L(PackingDataLoader)(
++            audio_sample_rate=48000,
++            dataset_name="action_robotwin",
++            max_samples_per_batch=32,  # H100-80GB starting point (LIBERO's 128 is an H200 bound); the TOML sets it
++            max_sequence_length=None,  # None disables token packing (TOML can't express null)
++            patch_spatial=2,
++            sound_latent_fps=0,
++            tokenizer_spatial_compression_factor=16,
++            tokenizer_temporal_compression_factor=4,
++            dataloader=L(RankPartitionedDataLoader)(
++                batch_size=1,
++                in_order=False,
++                # 8 (LIBERO: 4): with fewer ranks, more workers keep more episodes per batch.
++                num_workers=8,
++                persistent_workers=True,
++                pin_memory=True,
++                prefetch_factor=4,
++                sampler=None,
++                # Shuffling is handled by the dataset (iterable_shuffle=True below):
++                # ActionIterableShuffleDataset streams rank x worker-sharded, episode-order-
++                # shuffled, sequential-within-episode.
++                datasets=dict(
++                    robotwin=dict(
++                        ratio=1,
++                        dataset=L(get_action_robotwin_sft_dataset)(
++                            # Local LeRobot v2.1 dir, e.g. RoboTwin-mix200-aloha_agilex-joint.
++                            root="${oc.env:ROBOTWIN_ROOT}",
++                            index_cache_path="${oc.env:ROBOTWIN_INDEX_CACHE}",
++                            action_stats_path=str(ROBOTWIN_DEFAULT_STATS_PATH),
++                            fps=15,
++                            chunk_length=16,  # 17 video frames, matches encode_exact_durations[0]
++                            mode="wam",
++                            use_state=True,
++                            action_normalization="quantile",
++                            iterable_shuffle=True,
++                            episode_shuffle_seed=42,
++                            resolution="256",  # pinned: auto-detect would pick 480 for the 360x320 canvas
++                            max_action_dim="${model.config.max_action_dim}",
++                            cfg_dropout_rate=0.1,
++                            format_prompt_as_json=True,
++                            tokenizer_config="${model.config.vlm_config.tokenizer}",
++                        ),
++                    ),
++                ),
++            ),
++        ),
++        dataloader_val=None,
++        upload_reproducible_setup=False,
++    ),
++    flags={"allow_objects": True},
++)
++
++
++for _item in [action_policy_robotwin_nano]:
++    _name = [k for k, v in globals().items() if v is _item][0]
++    cs.store(group="experiment", package="_global_", name=_name, node=_item)
+diff --git a/examples/launch_sft_action_policy_robotwin_nano.sh b/examples/launch_sft_action_policy_robotwin_nano.sh
+new file mode 100755
+index 0000000..d02f5ca
+--- /dev/null
++++ b/examples/launch_sft_action_policy_robotwin_nano.sh
+@@ -0,0 +1,58 @@
++#!/usr/bin/env bash
++# Structured-TOML launch for action_policy_robotwin_nano: Cosmos3-Nano RoboTwin 2.0
++# (aloha_agilex) action-policy SFT (full SFT of the generation expert + action heads)
++# on the GPUs of one node. Drives cosmos_framework.scripts.train against
++# examples/toml/sft_config/action_policy_robotwin_nano.toml.
++#
++# Required env vars:
++#   CUDA_VISIBLE_DEVICES  GPUs to train on (PCI bus order); one rank per GPU
++#   ROBOTWIN_ROOT         RoboTwin LeRobot v2.1 dir, e.g. .../RoboTwin-mix200-aloha_agilex-joint
++#   ROBOTWIN_INDEX_CACHE  index .npz written by tools/compute_robotwin_action_stats.py
++# Optional env vars:
++#   BASE_CHECKPOINT_PATH  default: examples/checkpoints/Cosmos3-Nano (convert_model_to_dcp output)
++#   WAN_VAE_PATH          default: examples/checkpoints/wan22_vae/Wan2.2_VAE.pth
++#   OUTPUT_ROOT           default: outputs/train (checkpoints under $OUTPUT_ROOT/<project>/<group>/<name>)
++#   MAX_SAMPLES_PER_RANK  samples per rank per micro-batch (default 32)
++#   GLOBAL_BATCH          samples per optimizer step (default 2048, the LIBERO recipe); the
++#                         launcher sets grad_accum_iter = GLOBAL_BATCH / (MAX_SAMPLES_PER_RANK x GPUs)
++#   EXTRA_TAIL_OVERRIDES  extra Hydra overrides, e.g. "trainer.max_iter=20 checkpoint.save_iter=10"
++#   MASTER_PORT           torchrun port (default 50012); change it to run two jobs on one node
++#
++# Usage (4 GPUs):
++#   CUDA_VISIBLE_DEVICES=0,1,2,3 \
++#   ROBOTWIN_ROOT=<...>/RoboTwin-mix200-aloha_agilex-joint \
++#   ROBOTWIN_INDEX_CACHE=<...>/RoboTwin-mix200-aloha_agilex-joint.index.npz \
++#     bash examples/launch_sft_action_policy_robotwin_nano.sh
++
++TOML_FILE="examples/toml/sft_config/action_policy_robotwin_nano.toml"
++: "${BASE_CHECKPOINT_PATH:=examples/checkpoints/Cosmos3-Nano}"
++: "${CUDA_VISIBLE_DEVICES:?set CUDA_VISIBLE_DEVICES to the GPUs to train on}"
++export CUDA_DEVICE_ORDER=PCI_BUS_ID
++
++# RoboTwinLeRobotDataset reads ${oc.env:ROBOTWIN_ROOT} / ${oc.env:ROBOTWIN_INDEX_CACHE};
++# export them so torchrun (launched in this shell) inherits them.
++export ROBOTWIN_ROOT="${ROBOTWIN_ROOT:-}"
++export ROBOTWIN_INDEX_CACHE="${ROBOTWIN_INDEX_CACHE:-}"
++
++IFS=, read -ra _GPUS <<< "$CUDA_VISIBLE_DEVICES"
++NPROC_PER_NODE="${#_GPUS[@]}"
++MAX_SAMPLES_PER_RANK="${MAX_SAMPLES_PER_RANK:-32}"
++GLOBAL_BATCH="${GLOBAL_BATCH:-2048}"
++_PER_MICRO_STEP=$(( MAX_SAMPLES_PER_RANK * NPROC_PER_NODE ))
++if (( GLOBAL_BATCH % _PER_MICRO_STEP != 0 )); then
++    echo "ERROR: GLOBAL_BATCH=$GLOBAL_BATCH is not a multiple of MAX_SAMPLES_PER_RANK x GPUs = $_PER_MICRO_STEP" >&2
++    exit 1
++fi
++GRAD_ACCUM=$(( GLOBAL_BATCH / _PER_MICRO_STEP ))
++echo ">>> GPUs=$CUDA_VISIBLE_DEVICES ranks=$NPROC_PER_NODE samples/rank=$MAX_SAMPLES_PER_RANK grad_accum=$GRAD_ACCUM global_batch=$GLOBAL_BATCH"
++
++EXTRA_DATASET_CHECK='[[ -f "$ROBOTWIN_ROOT/meta/info.json" ]] || { echo "ERROR: ROBOTWIN_ROOT must be a LeRobot v2.1 dir containing meta/info.json (got: '\''$ROBOTWIN_ROOT'\'')" >&2; exit 1; }
++[[ -f "$ROBOTWIN_INDEX_CACHE" ]] || { echo "ERROR: ROBOTWIN_INDEX_CACHE not found (got: '\''$ROBOTWIN_INDEX_CACHE'\''); run tools/compute_robotwin_action_stats.py first" >&2; exit 1; }'
++
++TAIL_OVERRIDES=(
++    "dataloader_train.max_samples_per_batch=$MAX_SAMPLES_PER_RANK"
++    "trainer.grad_accum_iter=$GRAD_ACCUM"
++    ${EXTRA_TAIL_OVERRIDES:-}
++)
++
++source "$(dirname "${BASH_SOURCE[0]}")/_sft_launcher_common.sh"
+diff --git a/examples/toml/sft_config/action_policy_robotwin_nano.toml b/examples/toml/sft_config/action_policy_robotwin_nano.toml
+new file mode 100644
+index 0000000..fecc13b
+--- /dev/null
++++ b/examples/toml/sft_config/action_policy_robotwin_nano.toml
+@@ -0,0 +1,53 @@
++# RoboTwin 2.0 (aloha_agilex) action-policy SFT run config for the
++# `action_policy_robotwin_nano` experiment. Same recipe scalars as the LIBERO run
++# (lr 5e-5, warmup 500, cycle 16000, global batch 2048), sized for one node of
++# H100-80GB instead of 2 nodes of H200:
++#   - FSDP over every rank (shard degree -1 = WORLD_SIZE, no HSDP replicate);
++#   - 32 samples per rank per micro-batch (LIBERO's 128 is an H200 bound; 32 is an
++#     unmeasured starting point, so probe memory first);
++#   - grad_accum_iter 16 = 2048 / (32 x 4 GPUs). The launcher recomputes it for
++#     other GPU counts.
++# Env: ROBOTWIN_ROOT, ROBOTWIN_INDEX_CACHE, BASE_CHECKPOINT_PATH, WAN_VAE_PATH,
++# IMAGINAIRE_OUTPUT_ROOT. Launch with examples/launch_sft_action_policy_robotwin_nano.sh.
++
++[job]
++task         = "vfm"
++experiment   = "action_policy_robotwin_nano"
++project      = "cosmos3_action_robotwin"
++group        = "action_sft"
++name         = "action_policy_robotwin_nano"
++wandb_mode   = "disabled"
++
++[model]
++precision = "bfloat16"
++max_num_tokens_after_packing = 74000
++
++[model.parallelism]
++data_parallel_shard_degree     = -1   # FSDP across all ranks on the node
++data_parallel_replicate_degree = 1
++
++[model.activation_checkpointing]
++mode           = "selective"
++save_ops_regex = ["fmha"]
++
++[model.tokenizer]
++vae_path = "${oc.env:WAN_VAE_PATH}"
++
++[optimizer]
++lr = 5.0e-05
++
++[scheduler]
++cycle_lengths = [16000]
++warm_up_steps = [500]
++
++[dataloader_train]
++max_samples_per_batch = 32
++
++[trainer]
++max_iter        = 5000    # 5000 x 2048 = 10.2M samples, about GR00T mix200_150k's 9.6M (150k x 64)
++logging_iter    = 10
++grad_accum_iter = 16      # global batch = 32 samples x 4 ranks x 16 = 2048
++
++[checkpoint]
++load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
++save_iter = 500
+-- 
+2.34.1
+

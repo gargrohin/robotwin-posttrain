@@ -1,0 +1,306 @@
+From 40d6a061d8b02975285786958555d162c808ffd3 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:31:19 +0000
+Subject: [PATCH 3/8] Add RoboTwin stats tool and CPU dataloader smoke test
+
+compute_robotwin_action_stats.py builds the dataset index cache and writes
+exact per-dim q01/q99/mean/std/min/max of the action column (the keys
+load_action_stats and the policy servers read). robotwin_dataset_smoke_test.py
+loads the run TOML like training does, instantiates the configured dataset on
+CPU and checks image layout, action window and conditioning row, padding,
+sequence plan, prompt and normalization ranges.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/compute_robotwin_action_stats.py |  93 +++++++++++++
+ tools/robotwin_dataset_smoke_test.py   | 178 +++++++++++++++++++++++++
+ 2 files changed, 271 insertions(+)
+ create mode 100644 tools/compute_robotwin_action_stats.py
+ create mode 100644 tools/robotwin_dataset_smoke_test.py
+
+diff --git a/tools/compute_robotwin_action_stats.py b/tools/compute_robotwin_action_stats.py
+new file mode 100644
+index 0000000..2051ebf
+--- /dev/null
++++ b/tools/compute_robotwin_action_stats.py
+@@ -0,0 +1,93 @@
++"""Compute RoboTwin action normalization stats and build the dataset index cache.
++
++Reads a RoboTwin LeRobot v2.1 root once (or its index cache, if it already exists),
++computes exact per-dimension stats over every frame's ``action`` row, and writes the flat
++stats JSON that ``load_action_stats`` and the policy servers read (``q01``, ``q99``,
++``mean``, ``std``, ``min``, ``max``; same keys as ``tools/compute_action_stats.py``, which
++instead iterates ``LeRobotDataset`` sample by sample and uses a 50k-row reservoir for the
++quantiles), plus a ``metadata`` block that loaders ignore.
++
++The dataset normalizes the conditioning state row with these same stats; since
++``action[t] == state[t+1]`` the two distributions match, and the script prints the largest
++difference between them as a check.
++
++Usage (from the repo root, in the training venv):
++
++    python tools/compute_robotwin_action_stats.py \
++        --dataset-root /path/to/RoboTwin-mix200-aloha_agilex-joint \
++        --index-cache /path/to/cache/RoboTwin-mix200-aloha_agilex-joint.index.npz
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import time
++from pathlib import Path
++
++import numpy as np
++
++from cosmos_framework.data.generator.action.datasets.robotwin_lerobot_dataset import (
++    ROBOTWIN_DEFAULT_STATS_PATH,
++    load_robotwin_index,
++)
++
++_DIM_NAMES = [f"{side}_joint_{i}" for side in ("left", "right") for i in range(7)]
++
++
++def compute_stats(values: np.ndarray) -> dict[str, list[float]]:
++    """Exact per-dimension stats of a ``[N, D]`` array (population std, linear-interpolated quantiles)."""
++    x = values.astype(np.float64)
++    q01, q99 = np.quantile(x, [0.01, 0.99], axis=0)
++    return {
++        "q01": q01.tolist(),
++        "q99": q99.tolist(),
++        "mean": x.mean(axis=0).tolist(),
++        "std": x.std(axis=0).tolist(),
++        "min": x.min(axis=0).tolist(),
++        "max": x.max(axis=0).tolist(),
++    }
++
++
++def main() -> None:
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument("--dataset-root", type=Path, required=True, help="RoboTwin LeRobot v2.1 root.")
++    parser.add_argument("--index-cache", type=Path, required=True, help="Index .npz to load, or build if missing.")
++    parser.add_argument("--output", type=Path, default=ROBOTWIN_DEFAULT_STATS_PATH, help="Stats JSON to write.")
++    args = parser.parse_args()
++
++    t0 = time.time()
++    index = load_robotwin_index(args.dataset_root, args.index_cache)
++    print(f"index: {len(index['episode_index'])} episodes, {len(index['action'])} frames ({time.time() - t0:.1f} s)")
++
++    stats = compute_stats(index["action"])
++    state_stats = compute_stats(index["state"])
++    for key in ("q01", "q99", "mean", "std"):
++        diff = np.abs(np.array(stats[key]) - np.array(state_stats[key])).max()
++        print(f"max |action - state| {key}: {diff:.2e}")
++    spread = np.array(stats["q99"]) - np.array(stats["q01"])
++    for name, s in zip(_DIM_NAMES, spread):
++        if s < 1e-3:
++            print(f"WARNING: {name} has q99 - q01 = {s:.2e}; quantile normalization will blow it up")
++
++    payload = {
++        **stats,
++        "metadata": {
++            "dataset_root": str(args.dataset_root.resolve()),
++            "source_key": "action",
++            "num_frames": int(len(index["action"])),
++            "num_episodes": int(len(index["episode_index"])),
++            "dim_names": _DIM_NAMES,
++            "normalization": "quantile",
++            "quantiles": "exact over all frames (numpy linear interpolation)",
++        },
++    }
++    args.output.parent.mkdir(parents=True, exist_ok=True)
++    args.output.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
++    print(f"wrote {args.output}")
++    for name, lo, hi, mn, mx in zip(_DIM_NAMES, stats["q01"], stats["q99"], stats["min"], stats["max"]):
++        print(f"  {name:16s} q01={lo:+.4f} q99={hi:+.4f}  min={mn:+.4f} max={mx:+.4f}")
++
++
++if __name__ == "__main__":
++    main()
+diff --git a/tools/robotwin_dataset_smoke_test.py b/tools/robotwin_dataset_smoke_test.py
+new file mode 100644
+index 0000000..7a7d988
+--- /dev/null
++++ b/tools/robotwin_dataset_smoke_test.py
+@@ -0,0 +1,178 @@
++"""CPU-only smoke test of the RoboTwin action-policy data path.
++
++Loads ``examples/toml/sft_config/action_policy_robotwin_nano.toml`` the way training does
++(``load_experiment_from_toml``), instantiates the configured dataset
++(``RoboTwinLeRobotDataset`` -> ``ActionTransformPipeline`` -> ``ActionIterableShuffleDataset``)
++and checks:
++
++* raw samples: composite layout (head pixels unchanged on top, wrists below), the action
++  window (row 0 = current state, rows 1..T = the next T actions) after undoing the
++  normalization, instruction text, domain id, fps;
++* transformed samples: canvas size and padding, padded action width, sequence plan
++  (state row is conditioning), JSON prompt and token count;
++* normalization ranges over many windows (index only, no video);
++* the streaming iterator, in-process and through DataLoader workers, with timings.
++
++Writes PNGs of a few composites to ``--out-dir``. Exits non-zero on a failed check.
++
++    ROBOTWIN_ROOT=... ROBOTWIN_INDEX_CACHE=... python tools/robotwin_dataset_smoke_test.py --out-dir /tmp/robotwin_smoke
++"""
++
++from __future__ import annotations
++
++import argparse
++import json
++import os
++import time
++from pathlib import Path
++
++import numpy as np
++import torch
++from PIL import Image
++
++_TOML = Path(__file__).resolve().parents[1] / "examples/toml/sft_config/action_policy_robotwin_nano.toml"
++_FAILURES: list[str] = []
++
++
++def check(cond: bool, msg: str) -> None:
++    print(("  ok   " if cond else "  FAIL ") + msg)
++    if not cond:
++        _FAILURES.append(msg)
++
++
++def save_frame(video_c_t_h_w: torch.Tensor, t: int, path: Path) -> None:
++    Image.fromarray(video_c_t_h_w[:, t].permute(1, 2, 0).numpy()).save(path)
++
++
++def main() -> int:
++    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
++    parser.add_argument("--out-dir", type=Path, required=True)
++    parser.add_argument("--num-stream-samples", type=int, default=48)
++    args = parser.parse_args()
++    args.out_dir.mkdir(parents=True, exist_ok=True)
++    for key in ("ROBOTWIN_ROOT", "ROBOTWIN_INDEX_CACHE"):
++        if not os.environ.get(key):
++            raise SystemExit(f"set {key}")
++    # Only the dataset node is instantiated; these just keep the TOML's interpolations resolvable.
++    os.environ.setdefault("WAN_VAE_PATH", "unused")
++    os.environ.setdefault("BASE_CHECKPOINT_PATH", "unused")
++
++    from cosmos_framework.configs.toml_config.sft_config import load_experiment_from_toml
++    from cosmos_framework.data.generator.action.action_normalization import denormalize_action
++    from cosmos_framework.data.generator.action.datasets.robotwin_lerobot_dataset import (
++        ROBOTWIN_CAMERA_KEYS,
++        decode_robotwin_video,
++    )
++    from cosmos_framework.utils.lazy_config import instantiate
++
++    t0 = time.time()
++    config = load_experiment_from_toml(_TOML)
++    ds_cfg = config.dataloader_train.dataloader.datasets.robotwin.dataset
++    stream = instantiate(ds_cfg)
++    print(f"instantiated {type(stream).__name__} from {_TOML.name} in {time.time() - t0:.1f} s")
++    sft = stream._dataset
++    raw = sft._dataset
++    stats = raw._load_norm_stats()
++    T = raw.chunk_length
++    print(f"windows={len(raw)} episodes={len(raw._ep_index)} chunk_length={T} resolution={sft._resolution}")
++
++    # ---- raw samples ---------------------------------------------------------
++    rng = np.random.default_rng(0)
++    last_pos = len(raw._ep_index) - 1
++    picks = {
++        "episode 0, first window": 0,
++        "random window": int(rng.integers(len(raw))),
++        "last window of the last episode": len(raw) - 1,
++    }
++    print("\n[raw samples]")
++    for label, idx in picks.items():
++        pos, start = raw.locate(idx)
++        row = int(raw._ep_start[pos]) + start
++        ep = int(raw._ep_index[pos])
++        print(f"- {label}: idx={idx} episode={ep} start={start} length={int(raw._ep_length[pos])}")
++        s = raw[idx]
++        video, action = s["video"], s["action"]
++        check(tuple(video.shape) == (3, T + 1, 360, 320) and video.dtype == torch.uint8, f"video {tuple(video.shape)} {video.dtype}")
++        root = Path(os.environ["ROBOTWIN_ROOT"])
++        head_path = root / raw._info["video_path"].format(
++            episode_chunk=ep // raw._chunks_size, video_key=ROBOTWIN_CAMERA_KEYS[0], episode_index=ep
++        )
++        head = decode_robotwin_video(head_path, start + T + 1)[start:]  # [T+1,3,240,320]
++        check(torch.equal(video[:, :, :240].permute(1, 0, 2, 3), head), "top 240 rows == decoded head frames (exact)")
++        check(tuple(action.shape) == (T + 1, 14), f"action {tuple(action.shape)}")
++        denorm = denormalize_action(action, "quantile", stats).numpy()
++        err_state = np.abs(denorm[0] - raw._state[row]).max()
++        err_action = np.abs(denorm[1:] - raw._action[row : row + T]).max()
++        check(err_state < 1e-5 and err_action < 1e-5, f"denormalized row 0 == state[s] ({err_state:.1e}); rows 1.. == action[s:s+T] ({err_action:.1e})")
++        check(np.abs(raw._action[row : row + T - 1] - raw._state[row + 1 : row + T]).max() == 0, "action[t] == state[t+1] in this window")
++        check(s["ai_caption"] == raw._instructions[pos], f"instruction: {s['ai_caption']!r}")
++        check(int(s["domain_id"]) == 17 and int(s["conditioning_fps"]) == 15 and s["viewpoint"] == "concat_view", f"domain_id={int(s['domain_id'])} fps={int(s['conditioning_fps'])} viewpoint={s['viewpoint']} idle_frames={int(s['idle_frames'])}")
++        tag = label.split(",")[0].replace(" ", "_")
++        save_frame(video, 0, args.out_dir / f"raw_{tag}_t00.png")
++        save_frame(video, T, args.out_dir / f"raw_{tag}_t{T:02d}.png")
++
++    # ---- transformed samples ---------------------------------------------------
++    print("\n[transformed samples]")
++    idx = picks["random window"]
++    s = sft[idx]
++    print("  keys:", sorted(s.keys()))
++    video = s["video"]
++    check(tuple(video.shape) == (3, T + 1, 256, 256), f"video {tuple(video.shape)} (360x320 -> 256x228 + 28 px reflect pad -> 256x256)")
++    check(s["image_size"].tolist() == [256.0, 256.0, 256.0, 228.0], f"image_size {s['image_size'].tolist()}")
++    action = s["action"]
++    check(tuple(action.shape) == (T + 1, 64) and bool((action[:, 14:] == 0).all()), f"action padded {tuple(action.shape)}, cols 14+ zero")
++    check(int(s["raw_action_dim"]) == 14, f"raw_action_dim {int(s['raw_action_dim'])}")
++    plan = s["sequence_plan"]
++    plan_d = plan.as_dict() if hasattr(plan, "as_dict") else vars(plan)
++    print(f"  sequence_plan {plan_d}")
++    check(list(plan.condition_frame_indexes_vision) == [0] and list(plan.condition_frame_indexes_action) == [0], "first frame and state row are conditioning")
++    caption = s["ai_caption"]
++    print("  prompt:", json.dumps(caption) if isinstance(caption, dict) else caption)
++    tokens = s.get("text_token_ids")
++    n_tok = len(tokens) if tokens is not None else -1
++    check(n_tok > 0, f"text tokens: {n_tok}")
++    save_frame(video, 0, args.out_dir / "transformed_t00.png")
++
++    # ---- normalization ranges over many windows (index only) --------------------
++    print("\n[normalization ranges, 20k random windows, normalized space]")
++    idxs = rng.integers(len(raw), size=20000)
++    rows = np.array([int(raw._ep_start[p]) + st for p, st in (raw.locate(int(i)) for i in idxs)])
++    window = np.concatenate([raw._state[rows][:, None], raw._action[rows[:, None] + np.arange(T)]], axis=1)  # [N,T+1,14]
++    q01, q99 = stats["q01"].numpy(), stats["q99"].numpy()
++    norm = 2.0 * (window - q01) / np.maximum(q99 - q01, 1e-8) - 1.0
++    flat = norm.reshape(-1, 14)
++    outside = (np.abs(flat) > 1.0).mean(axis=0)
++    for d in range(14):
++        print(f"  dim {d:2d}: min={flat[:, d].min():+.3f} max={flat[:, d].max():+.3f} outside[-1,1]={outside[d]:.3%}")
++    check(np.abs(flat).max() < 10.0, f"max |normalized| = {np.abs(flat).max():.2f} (< 10)")
++
++    # ---- streaming iterator ------------------------------------------------------
++    print("\n[streaming iterator]")
++    t0 = time.time()
++    it = iter(stream)
++    first = next(it)
++    t_first = time.time() - t0
++    t0 = time.time()
++    for _ in range(args.num_stream_samples - 1):
++        next(it)
++    per = (time.time() - t0) / max(1, args.num_stream_samples - 1)
++    print(f"  in-process: first sample {t_first:.2f} s (decodes a whole episode), then {per * 1000:.1f} ms/sample")
++    check(tuple(first["video"].shape) == (3, T + 1, 256, 256), "stream sample shape")
++
++    loader = torch.utils.data.DataLoader(stream, batch_size=None, num_workers=2)
++    t0 = time.time()
++    n = 0
++    for _ in loader:
++        n += 1
++        if n == args.num_stream_samples:
++            break
++    print(f"  DataLoader (2 workers): {n} samples in {time.time() - t0:.1f} s")
++    check(n == args.num_stream_samples, "DataLoader workers stream samples")
++
++    print(f"\nPNGs in {args.out_dir}")
++    print("FAILED: " + "; ".join(_FAILURES) if _FAILURES else "ALL CHECKS PASSED")
++    return 1 if _FAILURES else 0
++
++
++if __name__ == "__main__":
++    raise SystemExit(main())
+-- 
+2.34.1
+

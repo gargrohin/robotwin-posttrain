@@ -1,0 +1,138 @@
+From 5e8d3df97267f7762020292a4ee4416804f11554 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Thu, 5 Nov 2026 06:28:48 +0000
+Subject: [PATCH 4/4] Continue the RoboTwin run from step 3000 for 6000 updates
+
+TrainConfig.heads_warmup_start (default 0 = recipe) starts the heads' warmup at
+a given update, so a run resumed from a cooled-down checkpoint can re-warm its
+heads; the trunk re-warms with frozen_steps set to the resume step.
+
+configs/robotwin/train_b512_cont6k.json: resume of step 3000 (model, optimizer,
+both EMAs) to 9000 updates at batch 512; trunk re-warm 3000->3200, heads
+3000->3100, constant, cooldown 8000->9000; official peak LRs; checkpoint every
+125 updates so the 1000-update exports land on checkpoints.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ configs/robotwin/train_b512_cont6k.json | 56 +++++++++++++++++++++++++
+ src/flux_action/training/schedule.py    |  9 +++-
+ src/flux_action/training/trainer.py     |  4 ++
+ 3 files changed, 67 insertions(+), 2 deletions(-)
+ create mode 100644 configs/robotwin/train_b512_cont6k.json
+
+diff --git a/configs/robotwin/train_b512_cont6k.json b/configs/robotwin/train_b512_cont6k.json
+new file mode 100644
+index 0000000..69a0560
+--- /dev/null
++++ b/configs/robotwin/train_b512_cont6k.json
+@@ -0,0 +1,56 @@
++{
++  "source_root": "outputs/robotwin/source",
++  "index_dir": "outputs/robotwin/index",
++  "output_dir": "outputs/robotwin/run-b512-cont6k",
++  "policy": {
++    "action_modality": "action_prediction_aloha",
++    "action_dim": 14,
++    "camera_layout": "droid",
++    "camera_keys": [
++      "images.high",
++      "images.left_wrist",
++      "images.right_wrist"
++    ],
++    "gripper_flip_dims": [],
++    "trunk_weights": "outputs/weights/flux-3-action-base.safetensors",
++    "video_vae_id": "outputs/weights/video_vae.safetensors",
++    "text_encoder_id": "outputs/weights/text_encoder",
++    "attn_mode": "torch",
++    "vae_batch_windows": 1
++  },
++  "steps": 9000,
++  "cooldown_start": 8000,
++  "cooldown_steps": 1000,
++  "frozen_steps": 3000,
++  "trunk_warmup_steps": 200,
++  "heads_warmup_steps": 100,
++  "heads_warmup_start": 3000,
++  "seed": 42,
++  "reseed_on_resume": true,
++  "windows_per_rank": 4,
++  "grad_accumulation": 8,
++  "num_workers": 8,
++  "prefetch_factor": 4,
++  "decoder": "ffmpeg",
++  "shard_size": 8,
++  "param_dtype": "float32",
++  "compute_dtype": "bfloat16",
++  "reduce_dtype": "float32",
++  "activation_checkpointing": true,
++  "reshard_after_forward": true,
++  "betas": [
++    0.9,
++    0.99
++  ],
++  "eps": 1e-08,
++  "weight_decay": 0.05,
++  "fused_optimizer": true,
++  "max_grad_norm": null,
++  "ema_sigma_rels": [
++    0.1,
++    0.05
++  ],
++  "checkpoint_every": 125,
++  "log_every": 10,
++  "resume": "auto"
++}
+diff --git a/src/flux_action/training/schedule.py b/src/flux_action/training/schedule.py
+index fc8c868..7e9d6fd 100644
+--- a/src/flux_action/training/schedule.py
++++ b/src/flux_action/training/schedule.py
+@@ -154,6 +154,7 @@ def droid_lr_lambdas(
+     frozen_steps: int = DROID_FROZEN_STEPS,
+     trunk_warmup_steps: int = DROID_TRUNK_WARMUP_STEPS,
+     heads_warmup_steps: int = DROID_HEADS_WARMUP_STEPS,
++    heads_warmup_start: int = 0,
+ ) -> tuple[LRLambda, LRLambda]:
+     """Factors for ``FluxActionPolicy.get_optim_params()`` in its order: ``(trunk, heads)``.
+ 
+@@ -161,10 +162,14 @@ def droid_lr_lambdas(
+     ``(g + 1) / (heads_warmup_steps + 1)`` for the first ``heads_warmup_steps`` updates, then constant.
+     Defaults are the DROID recipe (1000 / 2000 / 1000); a short finetune passes smaller phases or its trunk
+     never trains. ``cooldown_start=None`` leaves both constant (the reference's open-ended base launch); the
+-    default cools both down from 25000 to zero at 30000.
++    default cools both down from 25000 to zero at 30000. ``heads_warmup_start`` moves the heads' warmup to
++    begin at that update (a run continued from a cooled-down checkpoint re-warms its heads; the trunk does the
++    same with ``frozen_steps`` set to the resume step). Zero is the recipe.
+     """
+     trunk: LRLambda = FrozenThenLinearWarmup(frozen_steps, trunk_warmup_steps, lr_scale)
+-    heads: LRLambda = LinearWarmupLinearDecay(heads_warmup_steps, None, lr_scale=lr_scale)
++    heads: LRLambda = LinearWarmupLinearDecay(
++        heads_warmup_steps, None, lr_scale=lr_scale, start_step=heads_warmup_start
++    )
+     if cooldown_start is not None:
+         trunk = CooldownFrom(trunk, cooldown_start, cooldown_steps, lr_scale)
+         heads = CooldownFrom(heads, cooldown_start, cooldown_steps, lr_scale)
+diff --git a/src/flux_action/training/trainer.py b/src/flux_action/training/trainer.py
+index 186bb05..7a440d3 100644
+--- a/src/flux_action/training/trainer.py
++++ b/src/flux_action/training/trainer.py
+@@ -107,6 +107,9 @@ class TrainConfig:
+     frozen_steps: int = DROID_FROZEN_STEPS
+     trunk_warmup_steps: int = DROID_TRUNK_WARMUP_STEPS
+     heads_warmup_steps: int = DROID_HEADS_WARMUP_STEPS
++    # Update at which the heads' warmup begins (0 = the recipe). A run continued from a cooled-down checkpoint
++    # sets it to the resume step to re-warm its heads; frozen_steps = resume step does the same for the trunk.
++    heads_warmup_start: int = 0
+     seed: int = 42
+     reseed_on_resume: bool = True
+     windows_per_rank: int = 32
+@@ -301,6 +304,7 @@ class Trainer:
+                 frozen_steps=cfg.frozen_steps,
+                 trunk_warmup_steps=cfg.trunk_warmup_steps,
+                 heads_warmup_steps=cfg.heads_warmup_steps,
++                heads_warmup_start=cfg.heads_warmup_start,
+             ),
+         )
+         self.emas = {ema_folder(s): PowerEMA.from_module(policy, s) for s in cfg.ema_sigma_rels}
+-- 
+2.34.1
+
