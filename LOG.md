@@ -1959,3 +1959,13 @@ the saving scheme changed.**
 - So if the full run is pre-empted, it resumes from its last complete save. No change was needed to
   the running job.
 - The test's leftover files in cloud storage (581 GB) are on your delete list, ready to run.
+
+**11:35 EST (Thu Nov 5)** **Storage cleanup done (your explicit OK).**
+- Cloud storage: deleted Cosmos 500–4,500 and decay 5,250/5,750, Flux states 150–2,850, the Flux
+  test checkpoints and the Flux continuation's test files: 5.4 TB, 0 errors (a dry run first
+  matched the plan object by object). Left: Cosmos 5,000 / 5,500 / 6,000, Flux step 3,000, the Flux
+  weight exports, GR00T weights (214 GB) and the running Flux run's two save slots.
+- Local disk: deleted the old local Cosmos checkpoints (532 GB), the 24 old GR00T checkpoints
+  (857 GB) and the optimizer folders of the two kept GR00T checkpoints (58 GB). Kept on disk:
+  GR00T mix200_150k 150000 and decay60k 10000 (weights and configs).
+- Also cancelled 64 empty leftover upload records from the stopped upload attempts.
