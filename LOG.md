@@ -1908,3 +1908,15 @@ file.**
   old GR00T checkpoint folders (857 GB). The two stopped attempts left 64 unfinished upload records
   with no stored parts (optional tidying).
   Kept on disk: mix200_150k 150000 and decay60k 10000.
+
+**04:50 EST (Thu Nov 5)** **Flux continuation: the cluster job can't delete its old checkpoints, so
+the saving scheme changed.**
+- A 1-node test on the cluster resumed correctly from step 3,000 (same loss as the end of the first
+  run, learning rate re-warming as planned). But deleting older full states failed: the cluster job's
+  role isn't allowed to delete in our storage. As designed, it would have piled up ~6.6 TB.
+- New scheme: two fixed save slots that take turns being overwritten (overwriting is allowed), with
+  a pointer to the last complete one. At most 2 full states (~276 GB) for the whole run. A slot isn't
+  overwritten until its 1,000-update weight export exists.
+- The queued full run and two queued test copies (old scheme, none started) were cancelled. Next: a
+  test of the slots, including resuming after a kill, then the full run (~46 h).
+- The test files left in storage (~290 GB) go on your delete list.
