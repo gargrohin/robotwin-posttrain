@@ -160,6 +160,10 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 - `RoboTwin/XPolicyLab`: local branch `local/aloha-gr00t` holds our adapter edits (not
   pushed). Revert with `git -C RoboTwin/XPolicyLab revert <sha>`, or switch back to
   the detached upstream commit `7074afb`.
+- `/mnt/efs/rohingarg/cri/cosmos3/cosmos-framework` and `/mnt/efs/rohingarg/cri/flux3/flux-action`:
+  local branch `robotwin` in each holds our trainer changes for Cosmos and Flux. Neither is
+  pushed anywhere; both are exported to `patches/`. Re-export after new commits, with the noreply
+  author.
 - `RoboTwin/envs/curobo`: local branch `h100-fix` (commit `13d961c`) holds the H100
   L-BFGS kernel fix. The built `.so` files are git-ignored; see Status, step 0, for the
   build and revert steps.

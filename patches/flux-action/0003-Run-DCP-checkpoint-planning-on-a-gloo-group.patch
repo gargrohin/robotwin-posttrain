@@ -1,0 +1,80 @@
+From 8ccb308c22536fd481d7f7a42e749c0272335c00 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 16:41:19 +0000
+Subject: [PATCH 3/4] Run DCP checkpoint planning on a gloo group
+
+On 2x8 H100 (p5, EFA) the first checkpoint save failed in DCP's gather_object
+(NCCL point-to-point) with 'NCCL Error 1: unhandled cuda error'. DCP only
+exchanges Python plans between ranks; tensor data is written locally, so the
+planning collectives can run on a gloo group created on first use.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ src/flux_action/training/checkpoint.py  |  6 +++---
+ src/flux_action/training/distributed.py | 19 +++++++++++++++++++
+ 2 files changed, 22 insertions(+), 3 deletions(-)
+
+diff --git a/src/flux_action/training/checkpoint.py b/src/flux_action/training/checkpoint.py
+index 4fa48d7..9f17952 100644
+--- a/src/flux_action/training/checkpoint.py
++++ b/src/flux_action/training/checkpoint.py
+@@ -53,7 +53,7 @@ from torch.distributed.checkpoint.state_dict import (
+ )
+ 
+ from ..config import PolicyConfig
+-from .distributed import barrier, rank_world
++from .distributed import barrier, checkpoint_group, rank_world
+ from .ema import PowerEMA
+ 
+ STATE_FORMAT = 1
+@@ -141,7 +141,7 @@ def set_rng_state(state: dict[str, Any]) -> None:
+ def _dcp_save(state_dict: dict[str, Any], path: Path) -> None:
+     with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", message=_SINGLE_PROCESS_WARNING)
+-        dcp.save(state_dict, checkpoint_id=str(path))
++        dcp.save(state_dict, checkpoint_id=str(path), process_group=checkpoint_group())
+ 
+ 
+ def _dcp_load(state_dict: dict[str, Any], path: Path, *, partial: bool = False) -> None:
+@@ -151,7 +151,7 @@ def _dcp_load(state_dict: dict[str, Any], path: Path, *, partial: bool = False)
+     with warnings.catch_warnings():
+         warnings.filterwarnings("ignore", message=_SINGLE_PROCESS_WARNING)
+         planner = DefaultLoadPlanner(allow_partial_load=True) if partial else None
+-        dcp.load(state_dict, checkpoint_id=str(path), planner=planner)
++        dcp.load(state_dict, checkpoint_id=str(path), planner=planner, process_group=checkpoint_group())
+ 
+ 
+ def checkpoint_dir(root: str | Path, step: int) -> Path:
+diff --git a/src/flux_action/training/distributed.py b/src/flux_action/training/distributed.py
+index 5cdfc77..9768a8f 100644
+--- a/src/flux_action/training/distributed.py
++++ b/src/flux_action/training/distributed.py
+@@ -67,6 +67,25 @@ def rank_world() -> tuple[int, int]:
+     return 0, 1
+ 
+ 
++_CHECKPOINT_GROUP = None
++
++
++def checkpoint_group():
++    """A gloo group for torch.distributed.checkpoint's planning collectives (Python objects only).
++
++    DCP's default is the NCCL world group, whose ``gather`` runs as point-to-point sends. On two 8-GPU
++    nodes over EFA that first point-to-point call failed with "NCCL Error 1: unhandled cuda error" at
++    the first checkpoint save; the tensor data never crosses ranks, so the planning can run on gloo.
++    Created on first use, which every rank reaches at the same save or load. ``None`` without a
++    process group (single process)."""
++    global _CHECKPOINT_GROUP
++    if not (dist.is_available() and dist.is_initialized()):
++        return None
++    if _CHECKPOINT_GROUP is None:
++        _CHECKPOINT_GROUP = dist.new_group(backend="gloo")
++    return _CHECKPOINT_GROUP
++
++
+ def barrier() -> None:
+     if dist.is_available() and dist.is_initialized():
+         dist.barrier()
+-- 
+2.34.1
+

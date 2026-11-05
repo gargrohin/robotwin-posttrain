@@ -1,0 +1,141 @@
+From 2c5c79398415125c32a4b3cff915f39f7b4389d8 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:43:02 +0000
+Subject: [PATCH 4/8] RoboTwin recipe: 5-GPU default, nearest-2048 global
+ batch, document schedule
+
+Per the user's recipe decisions: keep NVIDIA's LIBERO schedule exactly (lr
+5e-5, warmup 500, LambdaLinear cycle 16000, betas (0.9, 0.99), wd 0.05),
+max_iter 5000, save_iter 500. The launcher takes the GPU set from
+CUDA_VISIBLE_DEVICES (NPROC_PER_NODE must match) and rounds grad_accum_iter to
+the nearest value for a ~2048 global batch (5 GPUs: 32 x 5 x 13 = 2080)
+instead of requiring an exact divisor. The TOML documents the arithmetic and
+defaults grad_accum_iter to the 5-GPU value.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../launch_sft_action_policy_robotwin_nano.sh | 29 +++++++++------
+ .../action_policy_robotwin_nano.toml          | 36 ++++++++++++-------
+ 2 files changed, 42 insertions(+), 23 deletions(-)
+
+diff --git a/examples/launch_sft_action_policy_robotwin_nano.sh b/examples/launch_sft_action_policy_robotwin_nano.sh
+index d02f5ca..b1295b2 100755
+--- a/examples/launch_sft_action_policy_robotwin_nano.sh
++++ b/examples/launch_sft_action_policy_robotwin_nano.sh
+@@ -9,17 +9,22 @@
+ #   ROBOTWIN_ROOT         RoboTwin LeRobot v2.1 dir, e.g. .../RoboTwin-mix200-aloha_agilex-joint
+ #   ROBOTWIN_INDEX_CACHE  index .npz written by tools/compute_robotwin_action_stats.py
+ # Optional env vars:
++#   NPROC_PER_NODE        ranks; default = number of ids in CUDA_VISIBLE_DEVICES (must match it)
+ #   BASE_CHECKPOINT_PATH  default: examples/checkpoints/Cosmos3-Nano (convert_model_to_dcp output)
+ #   WAN_VAE_PATH          default: examples/checkpoints/wan22_vae/Wan2.2_VAE.pth
+ #   OUTPUT_ROOT           default: outputs/train (checkpoints under $OUTPUT_ROOT/<project>/<group>/<name>)
+ #   MAX_SAMPLES_PER_RANK  samples per rank per micro-batch (default 32)
+-#   GLOBAL_BATCH          samples per optimizer step (default 2048, the LIBERO recipe); the
+-#                         launcher sets grad_accum_iter = GLOBAL_BATCH / (MAX_SAMPLES_PER_RANK x GPUs)
++#   GLOBAL_BATCH          target samples per optimizer step (default 2048, the LIBERO recipe).
++#                         grad_accum_iter = round(GLOBAL_BATCH / (MAX_SAMPLES_PER_RANK x ranks)), so
++#                         the real global batch is MAX_SAMPLES_PER_RANK x ranks x grad_accum_iter:
++#                         4 GPUs 32x4x16=2048, 5 GPUs 32x5x13=2080, 6 GPUs 32x6x11=2112, 8 GPUs 32x8x8=2048
+ #   EXTRA_TAIL_OVERRIDES  extra Hydra overrides, e.g. "trainer.max_iter=20 checkpoint.save_iter=10"
+ #   MASTER_PORT           torchrun port (default 50012); change it to run two jobs on one node
+ #
+-# Usage (4 GPUs):
+-#   CUDA_VISIBLE_DEVICES=0,1,2,3 \
++# FSDP shards over every rank (TOML data_parallel_shard_degree = -1 = WORLD_SIZE).
++#
++# Usage (5 GPUs):
++#   CUDA_VISIBLE_DEVICES=0,1,2,3,4 \
+ #   ROBOTWIN_ROOT=<...>/RoboTwin-mix200-aloha_agilex-joint \
+ #   ROBOTWIN_INDEX_CACHE=<...>/RoboTwin-mix200-aloha_agilex-joint.index.npz \
+ #     bash examples/launch_sft_action_policy_robotwin_nano.sh
+@@ -35,16 +40,18 @@ export ROBOTWIN_ROOT="${ROBOTWIN_ROOT:-}"
+ export ROBOTWIN_INDEX_CACHE="${ROBOTWIN_INDEX_CACHE:-}"
+ 
+ IFS=, read -ra _GPUS <<< "$CUDA_VISIBLE_DEVICES"
+-NPROC_PER_NODE="${#_GPUS[@]}"
++NPROC_PER_NODE="${NPROC_PER_NODE:-${#_GPUS[@]}}"
++if (( NPROC_PER_NODE != ${#_GPUS[@]} )); then
++    echo "ERROR: NPROC_PER_NODE=$NPROC_PER_NODE but CUDA_VISIBLE_DEVICES lists ${#_GPUS[@]} GPUs" >&2
++    exit 1
++fi
+ MAX_SAMPLES_PER_RANK="${MAX_SAMPLES_PER_RANK:-32}"
+ GLOBAL_BATCH="${GLOBAL_BATCH:-2048}"
+ _PER_MICRO_STEP=$(( MAX_SAMPLES_PER_RANK * NPROC_PER_NODE ))
+-if (( GLOBAL_BATCH % _PER_MICRO_STEP != 0 )); then
+-    echo "ERROR: GLOBAL_BATCH=$GLOBAL_BATCH is not a multiple of MAX_SAMPLES_PER_RANK x GPUs = $_PER_MICRO_STEP" >&2
+-    exit 1
+-fi
+-GRAD_ACCUM=$(( GLOBAL_BATCH / _PER_MICRO_STEP ))
+-echo ">>> GPUs=$CUDA_VISIBLE_DEVICES ranks=$NPROC_PER_NODE samples/rank=$MAX_SAMPLES_PER_RANK grad_accum=$GRAD_ACCUM global_batch=$GLOBAL_BATCH"
++# Nearest integer to GLOBAL_BATCH / _PER_MICRO_STEP, at least 1.
++GRAD_ACCUM=$(( (2 * GLOBAL_BATCH + _PER_MICRO_STEP) / (2 * _PER_MICRO_STEP) ))
++(( GRAD_ACCUM >= 1 )) || GRAD_ACCUM=1
++echo ">>> GPUs=$CUDA_VISIBLE_DEVICES ranks=$NPROC_PER_NODE: global batch = $MAX_SAMPLES_PER_RANK samples/rank x $NPROC_PER_NODE ranks x grad_accum $GRAD_ACCUM = $(( _PER_MICRO_STEP * GRAD_ACCUM )) (target $GLOBAL_BATCH)"
+ 
+ EXTRA_DATASET_CHECK='[[ -f "$ROBOTWIN_ROOT/meta/info.json" ]] || { echo "ERROR: ROBOTWIN_ROOT must be a LeRobot v2.1 dir containing meta/info.json (got: '\''$ROBOTWIN_ROOT'\'')" >&2; exit 1; }
+ [[ -f "$ROBOTWIN_INDEX_CACHE" ]] || { echo "ERROR: ROBOTWIN_INDEX_CACHE not found (got: '\''$ROBOTWIN_INDEX_CACHE'\''); run tools/compute_robotwin_action_stats.py first" >&2; exit 1; }'
+diff --git a/examples/toml/sft_config/action_policy_robotwin_nano.toml b/examples/toml/sft_config/action_policy_robotwin_nano.toml
+index fecc13b..5a0991b 100644
+--- a/examples/toml/sft_config/action_policy_robotwin_nano.toml
++++ b/examples/toml/sft_config/action_policy_robotwin_nano.toml
+@@ -1,14 +1,26 @@
+ # RoboTwin 2.0 (aloha_agilex) action-policy SFT run config for the
+-# `action_policy_robotwin_nano` experiment. Same recipe scalars as the LIBERO run
+-# (lr 5e-5, warmup 500, cycle 16000, global batch 2048), sized for one node of
+-# H100-80GB instead of 2 nodes of H200:
+-#   - FSDP over every rank (shard degree -1 = WORLD_SIZE, no HSDP replicate);
+-#   - 32 samples per rank per micro-batch (LIBERO's 128 is an H200 bound; 32 is an
+-#     unmeasured starting point, so probe memory first);
+-#   - grad_accum_iter 16 = 2048 / (32 x 4 GPUs). The launcher recomputes it for
+-#     other GPU counts.
++# `action_policy_robotwin_nano` experiment. Launch with
++# examples/launch_sft_action_policy_robotwin_nano.sh.
++#
++# Schedule: NVIDIA's LIBERO recipe unchanged (faithful baseline). LambdaLinear, lr 5e-5,
++# warmup 500, cycle 16000 (linear decay from iter 500 to 16000, so at iter 5000 the LR is
++# still (16000 - 5000) / (16000 - 500) = 0.71 x peak; a decay-to-0 variant is a separate
++# experiment). FusedAdam betas
++# (0.9, 0.99), eps 1e-8, weight decay 0.05 and the 5x LR on the action heads come from
++# the experiment (action_policy_robotwin_nano.py, copied from action_policy_libero_nano).
++# max_iter 5000 = NVIDIA's libero-all length; at ~2048 samples/iter that is ~10.2M
++# samples, about GR00T mix200_150k's 9.6M (150k x 64). Checkpoint every 500 iters.
++#
++# Parallelism: one node, FSDP over all ranks (shard degree -1 = WORLD_SIZE, no HSDP
++# replicate), 32 samples per rank per micro-batch (LIBERO's 128 is an H200 bound;
++# 32 for H100-80GB is an estimate, so probe memory first). The launcher sets
++#   grad_accum_iter = round(2048 / (32 x num_GPUs)),  global batch = 32 x num_GPUs x grad_accum:
++#     4 GPUs: 32 x 4 x 16 = 2048     5 GPUs: 32 x 5 x 13 = 2080
++#     6 GPUs: 32 x 6 x 11 = 2112     8 GPUs: 32 x 8 x  8 = 2048
++# The value below is the 5-GPU default; the launcher always overrides it.
++#
+ # Env: ROBOTWIN_ROOT, ROBOTWIN_INDEX_CACHE, BASE_CHECKPOINT_PATH, WAN_VAE_PATH,
+-# IMAGINAIRE_OUTPUT_ROOT. Launch with examples/launch_sft_action_policy_robotwin_nano.sh.
++# IMAGINAIRE_OUTPUT_ROOT.
+ 
+ [job]
+ task         = "vfm"
+@@ -23,7 +35,7 @@ precision = "bfloat16"
+ max_num_tokens_after_packing = 74000
+ 
+ [model.parallelism]
+-data_parallel_shard_degree     = -1   # FSDP across all ranks on the node
++data_parallel_shard_degree     = -1   # FSDP across all ranks on the node (= WORLD_SIZE)
+ data_parallel_replicate_degree = 1
+ 
+ [model.activation_checkpointing]
+@@ -44,9 +56,9 @@ warm_up_steps = [500]
+ max_samples_per_batch = 32
+ 
+ [trainer]
+-max_iter        = 5000    # 5000 x 2048 = 10.2M samples, about GR00T mix200_150k's 9.6M (150k x 64)
++max_iter        = 5000
+ logging_iter    = 10
+-grad_accum_iter = 16      # global batch = 32 samples x 4 ranks x 16 = 2048
++grad_accum_iter = 13      # 5 GPUs: 32 x 5 x 13 = 2080 (launcher recomputes per GPU count)
+ 
+ [checkpoint]
+ load_path = "${oc.env:BASE_CHECKPOINT_PATH}"
+-- 
+2.34.1
+

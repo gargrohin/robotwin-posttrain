@@ -1,0 +1,466 @@
+From bd01a0817b1b186077cd2cab5524e2455724a24f Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:31:06 +0000
+Subject: [PATCH 1/8] Add RoboTwin aloha_agilex action-policy dataset and SFT
+ wrapper
+
+RoboTwinLeRobotDataset reads the LeRobot v2.1 RoboTwin layout directly
+(per-episode parquet + AV1 mp4, one instruction per episode) and emits the
+DROID joint_pos + use_state contract: 14-D absolute joint positions with the
+current state as a clean conditioning row, quantile-normalized from a stats
+JSON. The three cameras are composed AgiBot-style (head on top, both wrists
+at half size below, 360x320). The flat frame index is cached in an .npz
+because reading 12,500 parquet files from EFS takes minutes per rank, and
+each worker decodes a whole episode once since the shuffle stream reads
+windows sequentially within an episode.
+
+get_action_robotwin_sft_dataset wraps it in ActionTransformPipeline with
+resolution pinned to "256" (auto-detect would choose the 480 tier for a
+360x320 canvas).
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ .../action/datasets/action_sft_dataset.py     |  57 +++
+ .../datasets/robotwin_lerobot_dataset.py      | 358 ++++++++++++++++++
+ 2 files changed, 415 insertions(+)
+ create mode 100644 cosmos_framework/data/generator/action/datasets/robotwin_lerobot_dataset.py
+
+diff --git a/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py b/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
+index 7840d1e..00f84d8 100644
+--- a/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
++++ b/cosmos_framework/data/generator/action/datasets/action_sft_dataset.py
+@@ -26,6 +26,7 @@ from cosmos_framework.data.generator.action.datasets.robocasa_lerobot_dataset im
+     DEFAULT_ALL_ATOMIC_TASKS,
+     RoboCasaLeRobotDataset,
+ )
++from cosmos_framework.data.generator.action.datasets.robotwin_lerobot_dataset import RoboTwinLeRobotDataset
+ from cosmos_framework.data.generator.action.utils.transforms import ActionTransformPipeline
+ 
+ 
+@@ -371,3 +372,59 @@ def get_action_libero_sft_dataset(
+     if iterable_shuffle:
+         return ActionIterableShuffleDataset(sft, seed=episode_shuffle_seed)
+     return sft
++
++
++def get_action_robotwin_sft_dataset(
++    *,
++    root: str,
++    index_cache_path: str | None = None,
++    action_stats_path: str | None = None,
++    fps: float = 15.0,
++    chunk_length: int = 16,
++    mode: str = "wam",
++    use_state: bool = True,
++    action_normalization: str | None = "quantile",
++    resolution: str | int | None = "256",
++    max_action_dim: int = 64,
++    tokenizer_config: dict | None = None,
++    cfg_dropout_rate: float = 0.1,
++    append_viewpoint_info: bool = True,
++    append_duration_fps_timestamps: bool = True,
++    append_resolution_info: bool = True,
++    append_idle_frames: bool = True,
++    format_prompt_as_json: bool = False,
++    iterable_shuffle: bool = False,
++    episode_shuffle_seed: int = 42,
++) -> Dataset:
++    """Build the RoboTwin ``aloha_agilex`` action-policy SFT dataset.
++
++    Feeds ``RoboTwinLeRobotDataset`` (14-D absolute joint positions with the current state as
++    a conditioning row, ``quantile``-normalized; head + two wrist cameras composed into a
++    360x320 ``concat_view``) through ``ActionTransformPipeline``. ``root`` is a local LeRobot
++    v2.1 dir. Keep ``resolution="256"``: auto-detection would pick the 480 tier for a
++    360x320 canvas (min side > 256) and pad it to 640x640.
++    """
++    dataset = RoboTwinLeRobotDataset(
++        root=root,
++        fps=fps,
++        chunk_length=chunk_length,
++        mode=mode,
++        use_state=use_state,
++        action_normalization=action_normalization,
++        action_stats_path=action_stats_path,
++        index_cache_path=index_cache_path,
++    )
++    transform = ActionTransformPipeline(
++        tokenizer_config=tokenizer_config,
++        cfg_dropout_rate=cfg_dropout_rate,
++        max_action_dim=max_action_dim,
++        append_viewpoint_info=append_viewpoint_info,
++        append_duration_fps_timestamps=append_duration_fps_timestamps,
++        append_resolution_info=append_resolution_info,
++        append_idle_frames=append_idle_frames,
++        format_prompt_as_json=format_prompt_as_json,
++    )
++    sft = ActionSFTDataset(dataset, transform, resolution)
++    if iterable_shuffle:
++        return ActionIterableShuffleDataset(sft, seed=episode_shuffle_seed)
++    return sft
+diff --git a/cosmos_framework/data/generator/action/datasets/robotwin_lerobot_dataset.py b/cosmos_framework/data/generator/action/datasets/robotwin_lerobot_dataset.py
+new file mode 100644
+index 0000000..b65fc8a
+--- /dev/null
++++ b/cosmos_framework/data/generator/action/datasets/robotwin_lerobot_dataset.py
+@@ -0,0 +1,358 @@
++"""RoboTwin 2.0 ``aloha_agilex`` LeRobot v2.1 dataset for a joint-space action policy.
++
++Source layout (RoboTwin/XPolicyLab converter, LeRobot v2.1, 15 fps):
++
++* ``meta/info.json``; ``meta/episodes.jsonl`` with one instruction per episode (``tasks[0]``).
++* ``data/chunk-XXX/episode_XXXXXX.parquet``: ``observation.state`` and ``action``, both 14-D
++  ``[left joints(6), left gripper, right joints(6), right gripper]``, with ``action[t] == state[t+1]``.
++* ``videos/chunk-XXX/<camera>/episode_XXXXXX.mp4``: AV1, 240x320, one file per episode and camera
++  (``cam_high`` = head, ``cam_left_wrist``, ``cam_right_wrist``).
++
++Sample contract (mirrors the released joint-space recipe, DROID ``joint_pos`` + ``use_state``):
++
++* ``video``: ``chunk_length + 1`` frames starting at the window start, composed into one
++  ``concat_view`` canvas per frame -- head camera on top, both wrist cameras at half size side by
++  side below (the AgiBot head + two-wrist layout) -> ``[T+1, 3, 360, 320]`` before the transform
++  pipeline snaps it to the 256-tier canvas.
++* ``action``: ``[state[s], action[s], ..., action[s+T-1]]`` -> ``[T+1, 14]`` absolute joint
++  positions. Row 0 is the current proprio state; ``build_sequence_plan_from_mode`` sees
++  ``action_length == video_length`` (Case B) and marks it as clean conditioning, so rows 1..T are
++  the supervised action chunk. With ``use_state=False`` the state row is dropped (Case A).
++* Normalization: ``quantile`` (per-dim q01/q99 -> [-1, 1]) from a stats JSON written by
++  ``tools/compute_robotwin_action_stats.py``.
++
++Reading 12,500 per-episode parquet files takes minutes on EFS, so the flat frame index is cached
++in one ``.npz`` (``index_cache_path``), built once by the stats tool or on first use.
++
++The training loop streams windows sequentially within an episode
++(``ActionIterableShuffleDataset``), so each worker decodes a whole episode once and serves all of
++its windows from memory.
++"""
++
++from __future__ import annotations
++
++import json
++import os
++import random
++import tempfile
++from concurrent.futures import ThreadPoolExecutor
++from pathlib import Path
++from typing import Any
++
++import numpy as np
++import pyarrow.parquet as pq
++import torch
++import torch.nn.functional as F
++from torch.utils.data import Dataset
++
++from cosmos_framework.data.generator.action.action_normalization import load_action_stats
++from cosmos_framework.data.generator.action.datasets.base_dataset import ActionBaseDataset
++from cosmos_framework.data.generator.action.utils.action_spec import ActionSpec, Gripper, Joint, build_action_spec
++from cosmos_framework.data.generator.action.utils.domain_utils import get_domain_id
++from cosmos_framework.utils import log
++
++# Head first, then left and right wrist: the order compose_robotwin_views expects.
++ROBOTWIN_CAMERA_KEYS = (
++    "observation.images.cam_high",
++    "observation.images.cam_left_wrist",
++    "observation.images.cam_right_wrist",
++)
++ROBOTWIN_ACTION_DIM = 14
++ROBOTWIN_VIEW_DESCRIPTION = (
++    "The top row shows the head-mounted camera view looking down at the workspace. "
++    "The bottom row contains two horizontally concatenated wrist-mounted camera views: "
++    "the left arm camera on the left and the right arm camera on the right."
++)
++ROBOTWIN_DEFAULT_STATS_PATH = (
++    Path(__file__).parent.parent / "normalizer_stats" / "robotwin_mix200_aloha_joint_pos_stats.json"
++)
++
++_STATE_KEY = "observation.state"
++_ACTION_KEY = "action"
++_INDEX_VERSION = 1
++# libdav1d otherwise starts one thread per core in every dataloader worker.
++_DECODE_THREADS = 2
++
++
++# ---- helpers shared with the eval adapter ---------------------------------
++
++
++def compose_robotwin_views(head: torch.Tensor, left_wrist: torch.Tensor, right_wrist: torch.Tensor) -> torch.Tensor:
++    """Compose the three RoboTwin cameras into one ``concat_view`` frame stack.
++
++    Inputs are ``[T, 3, H, W]`` float tensors in ``[0, 1]``. The head view keeps its size on top;
++    both wrist views are resized to ``(H/2, W/2)`` and placed side by side below (left arm camera
++    on the left). Returns ``[T, 3, 3H/2, W]`` (360x320 for 240x320 cameras).
++    """
++    _, _, h, w = head.shape
++    size = (h // 2, w // 2)
++    left = F.interpolate(left_wrist, size=size, mode="bilinear", align_corners=False)
++    right = F.interpolate(right_wrist, size=size, mode="bilinear", align_corners=False)
++    return torch.cat([head, torch.cat([left, right], dim=-1)], dim=-2)
++
++
++def decode_robotwin_video(path: Path, num_frames: int) -> torch.Tensor:
++    """Decode the first ``num_frames`` frames of one episode video -> ``[T, 3, H, W]`` uint8 RGB."""
++    import av  # PyAV ships with lerobot (the "train" extra); import lazily like the LIBERO loader.
++
++    with av.open(str(path)) as container:
++        stream = container.streams.video[0]
++        stream.thread_type = "AUTO"
++        stream.codec_context.thread_count = _DECODE_THREADS
++        frames = []
++        for frame in container.decode(stream):
++            frames.append(frame.to_ndarray(format="rgb24"))
++            if len(frames) == num_frames:
++                break
++    if len(frames) < num_frames:
++        raise RuntimeError(f"{path} has {len(frames)} frames, expected at least {num_frames}")
++    return torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2).contiguous()
++
++
++# ---- flat frame index (cached) --------------------------------------------
++
++
++def _read_jsonl(path: Path) -> list[dict[str, Any]]:
++    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
++
++
++def _list_column(table: Any, key: str, num_rows: int) -> np.ndarray:
++    values = table[key].combine_chunks().flatten().to_numpy().astype(np.float32, copy=False)
++    return values.reshape(num_rows, -1)
++
++
++def build_robotwin_index(root: str | Path, num_threads: int = 32) -> dict[str, np.ndarray]:
++    """Read every episode parquet of a LeRobot v2.1 root into flat, episode-ordered arrays."""
++    root = Path(root)
++    info = json.loads((root / "meta" / "info.json").read_text())
++    episodes = sorted(_read_jsonl(root / "meta" / "episodes.jsonl"), key=lambda e: int(e["episode_index"]))
++    chunks_size = int(info["chunks_size"])
++
++    def read_episode(episode: dict[str, Any]) -> tuple[np.ndarray, np.ndarray]:
++        ep = int(episode["episode_index"])
++        path = root / info["data_path"].format(episode_chunk=ep // chunks_size, episode_index=ep)
++        table = pq.read_table(path, columns=["episode_index", "frame_index", _STATE_KEY, _ACTION_KEY])
++        n = table.num_rows
++        if n != int(episode["length"]):
++            raise ValueError(f"{path}: {n} rows but episodes.jsonl says length {episode['length']}")
++        if not (table["episode_index"].to_numpy() == ep).all():
++            raise ValueError(f"{path}: episode_index column does not match {ep}")
++        if not np.array_equal(table["frame_index"].to_numpy(), np.arange(n)):
++            raise ValueError(f"{path}: frame_index is not 0..{n - 1}")
++        return _list_column(table, _STATE_KEY, n), _list_column(table, _ACTION_KEY, n)
++
++    with ThreadPoolExecutor(num_threads) as pool:
++        per_episode = list(pool.map(read_episode, episodes))
++
++    lengths = np.array([len(state) for state, _ in per_episode], dtype=np.int64)
++    index = {
++        "version": np.array(_INDEX_VERSION),
++        "total_frames": np.array(int(info["total_frames"])),
++        "episode_index": np.array([int(e["episode_index"]) for e in episodes], dtype=np.int64),
++        "episode_start": np.concatenate([[0], np.cumsum(lengths)[:-1]]).astype(np.int64),
++        "episode_length": lengths,
++        "state": np.concatenate([state for state, _ in per_episode]).astype(np.float32),
++        "action": np.concatenate([action for _, action in per_episode]).astype(np.float32),
++    }
++    if int(lengths.sum()) != int(info["total_frames"]):
++        raise ValueError(f"{root}: read {int(lengths.sum())} frames but info.json says {info['total_frames']}")
++    for key in ("state", "action"):
++        if index[key].shape[1] != ROBOTWIN_ACTION_DIM or not np.isfinite(index[key]).all():
++            raise ValueError(f"{root}: {key} must be finite and {ROBOTWIN_ACTION_DIM}-D, got {index[key].shape}")
++    return index
++
++
++def load_robotwin_index(root: str | Path, cache_path: str | Path | None) -> dict[str, np.ndarray]:
++    """Load the cached index, building (and atomically saving) it if the cache is missing."""
++    root = Path(root)
++    if cache_path is None:
++        return build_robotwin_index(root)
++    cache_path = Path(cache_path)
++    if cache_path.exists():
++        with np.load(cache_path) as data:
++            index = {key: data[key] for key in data.files}
++        total_frames = int(json.loads((root / "meta" / "info.json").read_text())["total_frames"])
++        if int(index["version"]) != _INDEX_VERSION or int(index["total_frames"]) != total_frames:
++            raise ValueError(
++                f"Index cache {cache_path} does not match {root} (version/total_frames differ); delete it to rebuild."
++            )
++        return index
++    log.warning(f"RoboTwin index cache {cache_path} not found; reading every episode parquet under {root}.")
++    index = build_robotwin_index(root)
++    cache_path.parent.mkdir(parents=True, exist_ok=True)
++    fd, tmp = tempfile.mkstemp(dir=cache_path.parent, suffix=".npz.tmp")
++    with os.fdopen(fd, "wb") as f:
++        np.savez(f, **index)
++    os.replace(tmp, cache_path)
++    log.info(f"Saved RoboTwin index cache to {cache_path}")
++    return index
++
++
++# ---- dataset ---------------------------------------------------------------
++
++
++class RoboTwinLeRobotDataset(ActionBaseDataset):
++    """RoboTwin ``aloha_agilex`` action-policy dataset: 14-D absolute joint positions + 3 cameras."""
++
++    def __init__(
++        self,
++        root: str,
++        fps: float = 15.0,
++        chunk_length: int = 16,
++        mode: str = "wam",
++        use_state: bool = True,
++        action_normalization: str | None = "quantile",
++        action_stats_path: str | None = None,
++        index_cache_path: str | None = None,
++    ) -> None:
++        # ActionBaseDataset.__init__ parses LeRobot v3.0 metadata (meta/tasks.parquet, ...). This
++        # dataset is v2.1, so set here the fields the base-class helpers read
++        # (_build_result, _compute_idle_frames, _choose_mode).
++        Dataset.__init__(self)
++        if chunk_length % 4 != 0:
++            raise ValueError(f"chunk_length must be divisible by 4 (VAE temporal compression), got {chunk_length}.")
++        self._root = Path(root)
++        self._info = json.loads((self._root / "meta" / "info.json").read_text())
++        native_fps = float(self._info["fps"])
++        if abs(native_fps - float(fps)) > 1e-6:
++            raise ValueError(f"fps={fps} requested but {root} is recorded at {native_fps} fps; this loader does not resample.")
++        self._fps = native_fps
++        self._dt = 1.0 / self._fps
++        self._chunk_length = int(chunk_length)
++        self._sample_stride = 1
++        self._mode = mode
++        self._pose_convention = "backward_framewise"
++        self._viewpoint = "concat_view"
++        self._domain_name = "robotwin"
++        self._domain_id = get_domain_id(self._domain_name)
++        self._action_normalization = action_normalization
++        self._norm_stats: dict[str, torch.Tensor] | None = None
++        self._use_state = bool(use_state)
++        self._stats_file = Path(action_stats_path) if action_stats_path else ROBOTWIN_DEFAULT_STATS_PATH
++        if action_normalization is not None and not self._stats_file.exists():
++            raise FileNotFoundError(
++                f"Action stats {self._stats_file} not found; run tools/compute_robotwin_action_stats.py first."
++            )
++
++        index = load_robotwin_index(self._root, index_cache_path)
++        self._ep_index = index["episode_index"]
++        self._ep_start = index["episode_start"]
++        self._ep_length = index["episode_length"]
++        self._state = index["state"]
++        self._action = index["action"]
++        instructions = {
++            int(e["episode_index"]): str(e["tasks"][0]) for e in _read_jsonl(self._root / "meta" / "episodes.jsonl")
++        }
++        self._instructions = [instructions[int(ep)] for ep in self._ep_index]
++        self._chunks_size = int(self._info["chunks_size"])
++        # Windows need chunk_length + 1 frames inside one episode: length - chunk_length per episode.
++        self._valid_cum = np.cumsum(np.maximum(0, self._ep_length - self._chunk_length)).astype(np.int64)
++
++        # Per-worker cache of the decoded episode currently being streamed.
++        self._cached_episode: int | None = None
++        self._cached_frames: list[torch.Tensor] | None = None
++
++        log.info(
++            f"Loaded RoboTwin dataset root={self._root} fps={self._fps} episodes={len(self._ep_index)} "
++            f"frames={len(self._state)} windows={len(self)} chunk_length={self._chunk_length} "
++            f"use_state={self._use_state} normalization={action_normalization} stats={self._stats_file}"
++        )
++
++    # ---- spec / stats -------------------------------------------------------
++
++    @property
++    def action_dim(self) -> int:
++        return ROBOTWIN_ACTION_DIM
++
++    def _action_spec(self) -> ActionSpec:
++        return build_action_spec(
++            Joint(n=6, prefix="left"),
++            Gripper(prefix="left"),
++            Joint(n=6, prefix="right"),
++            Gripper(prefix="right"),
++        )
++
++    @classmethod
++    def _stats_path(cls) -> Path:
++        return ROBOTWIN_DEFAULT_STATS_PATH
++
++    def _load_norm_stats(self) -> dict[str, torch.Tensor]:
++        if self._norm_stats is None:
++            self._norm_stats = {k: torch.from_numpy(v).float() for k, v in load_action_stats(str(self._stats_file)).items()}
++        return self._norm_stats
++
++    # ---- indexing -----------------------------------------------------------
++
++    def __len__(self) -> int:
++        return int(self._valid_cum[-1]) if self._valid_cum.size else 0
++
++    def get_shuffle_blocks(self) -> list[tuple[int, int]]:
++        """Per-episode ``(start, length)`` flat-index blocks for ``ActionIterableShuffleDataset``."""
++        blocks: list[tuple[int, int]] = []
++        prev = 0
++        for c in self._valid_cum.tolist():
++            if c > prev:
++                blocks.append((prev, c - prev))
++            prev = c
++        return blocks
++
++    def locate(self, idx: int) -> tuple[int, int]:
++        """Map a flat window index to ``(episode position, start frame within the episode)``."""
++        pos = int(np.searchsorted(self._valid_cum, idx, side="right"))
++        prev = int(self._valid_cum[pos - 1]) if pos > 0 else 0
++        return pos, int(idx) - prev
++
++    # ---- sample build -------------------------------------------------------
++
++    def __getitem__(self, idx: int) -> dict[str, Any]:
++        # Resample a different window if a video fails to decode (EFS can throw one-off I/O errors).
++        n = len(self)
++        last_err: Exception | None = None
++        for _attempt in range(8):
++            try:
++                return self._build_item(idx)
++            except Exception as e:  # noqa: BLE001
++                last_err = e
++                log.warning(f"RoboTwin: sample idx={idx} failed to load ({type(e).__name__}: {e}); resampling")
++                self._cached_episode = None
++                self._cached_frames = None
++                idx = random.randint(0, n - 1)
++        raise RuntimeError(f"RoboTwin: failed to load a sample after 8 resamples; last error: {last_err}")
++
++    def _episode_frames(self, pos: int) -> list[torch.Tensor]:
++        if self._cached_episode != pos:
++            ep = int(self._ep_index[pos])
++            length = int(self._ep_length[pos])
++            self._cached_frames = [
++                decode_robotwin_video(
++                    self._root
++                    / self._info["video_path"].format(
++                        episode_chunk=ep // self._chunks_size, video_key=key, episode_index=ep
++                    ),
++                    length,
++                )
++                for key in ROBOTWIN_CAMERA_KEYS
++            ]
++            self._cached_episode = pos
++        assert self._cached_frames is not None
++        return self._cached_frames
++
++    def _build_item(self, idx: int) -> dict[str, Any]:
++        mode = self._choose_mode()
++        pos, start = self.locate(idx)
++        row = int(self._ep_start[pos]) + start
++
++        window = slice(start, start + self._chunk_length + 1)
++        views = [frames[window].float().div_(255.0) for frames in self._episode_frames(pos)]
++        video = compose_robotwin_views(*views)  # [T+1,3,360,320]
++
++        action = self._action[row : row + self._chunk_length]  # [T,14]
++        if self._use_state:
++            action = np.concatenate([self._state[row : row + 1], action], axis=0)  # [T+1,14]
++        return self._build_result(
++            mode=mode,
++            video=video,
++            action=torch.from_numpy(np.ascontiguousarray(action)).float(),
++            ai_caption=self._instructions[pos],
++            additional_view_description=ROBOTWIN_VIEW_DESCRIPTION,
++        )
+-- 
+2.34.1
+

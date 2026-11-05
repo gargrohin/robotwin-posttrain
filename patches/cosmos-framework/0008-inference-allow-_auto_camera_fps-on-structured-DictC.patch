@@ -1,0 +1,61 @@
+From 30bd31a4531bfa3fe337893b8a00d80ae929b167 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 14:05:06 +0000
+Subject: [PATCH 8/8] inference: allow _auto_camera_fps on structured
+ DictConfig model configs
+
+Loading a DCP checkpoint through a MODULE experiment config gives model.config as a
+structured OmegaConf DictConfig, which rejects the new key and crashed policy loading.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ cosmos_framework/inference/inference.py | 19 ++++++++++++-------
+ 1 file changed, 12 insertions(+), 7 deletions(-)
+
+diff --git a/cosmos_framework/inference/inference.py b/cosmos_framework/inference/inference.py
+index afa2e02..7c3f65f 100644
+--- a/cosmos_framework/inference/inference.py
++++ b/cosmos_framework/inference/inference.py
+@@ -1,6 +1,7 @@
+ # SPDX-FileCopyrightText: Copyright (c) 2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ # SPDX-License-Identifier: OpenMDW-1.1
+ 
++import contextlib
+ import hashlib
+ import json
+ import os
+@@ -17,6 +18,7 @@ import cattrs
+ import cattrs.preconf.json
+ import safetensors.torch
+ import torch
++from omegaconf import DictConfig, open_dict
+ from PIL import Image
+ from qwen_vl_utils.vision_process import smart_nframes
+ from torch.utils._pytree import tree_map_only
+@@ -1807,13 +1809,16 @@ class OmniInference(Inference):
+         # Runtime-only policy: preserve immutable published checkpoint files and the shared
+         # argument-builder signature. CLI, Ray and Python callers all use pipe.model_config.
+         checkpoint_hf = setup_args.checkpoint_hf
+-        setattr(
+-            model.config,
+-            "_auto_camera_fps",
+-            auto_camera_fps(
+-                exported_metadata, repository=checkpoint_hf.repository if checkpoint_hf is not None else None
+-            ),
+-        )
++        # A DCP checkpoint loaded through a MODULE experiment config gives a structured
++        # DictConfig, which rejects new keys unless opened.
++        with open_dict(model.config) if isinstance(model.config, DictConfig) else contextlib.nullcontext():
++            setattr(
++                model.config,
++                "_auto_camera_fps",
++                auto_camera_fps(
++                    exported_metadata, repository=checkpoint_hf.repository if checkpoint_hf is not None else None
++                ),
++            )
+         pipe = cls(setup_args=setup_args, model=model, vae_decode_stream=vae_decode_stream, **kwargs)
+         pipe.per_view_captions = exported_per_view_captions
+         pipe.per_view_caption_task = exported_per_view_caption_task
+-- 
+2.34.1
+

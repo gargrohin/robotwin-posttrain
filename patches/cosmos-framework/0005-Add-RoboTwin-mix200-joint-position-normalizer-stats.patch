@@ -1,0 +1,167 @@
+From da866f87cb6ec6ba7ec4d9f5194bd9aaa913cb41 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:46:45 +0000
+Subject: [PATCH 5/8] Add RoboTwin mix200 joint-position normalizer stats
+
+Exact per-dim stats of the action column over all 2,759,740 frames of
+RoboTwin-mix200-aloha_agilex-joint (12,500 episodes), written by
+tools/compute_robotwin_action_stats.py. action and state stats agree to
+within 1e-2 (action[t] == state[t+1]). The base joints (dims 0 and 7) have
+a thin tail past +-2 pi: 0.37% of frames normalize beyond |5| (115
+episodes, max ~11), so the smoke test now checks the per-dim fraction
+outside [-1, 1] instead of a hard max.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ ...robotwin_mix200_aloha_joint_pos_stats.json | 122 ++++++++++++++++++
+ tools/robotwin_dataset_smoke_test.py          |   5 +-
+ 2 files changed, 126 insertions(+), 1 deletion(-)
+ create mode 100644 cosmos_framework/data/generator/action/normalizer_stats/robotwin_mix200_aloha_joint_pos_stats.json
+
+diff --git a/cosmos_framework/data/generator/action/normalizer_stats/robotwin_mix200_aloha_joint_pos_stats.json b/cosmos_framework/data/generator/action/normalizer_stats/robotwin_mix200_aloha_joint_pos_stats.json
+new file mode 100644
+index 0000000..62d00b3
+--- /dev/null
++++ b/cosmos_framework/data/generator/action/normalizer_stats/robotwin_mix200_aloha_joint_pos_stats.json
+@@ -0,0 +1,122 @@
++{
++  "q01": [
++    -1.0051149141788482,
++    -5.257390398583084e-07,
++    -2.8116939574829303e-05,
++    -1.568685702085495,
++    -0.6433541178703308,
++    -2.2349692606925964,
++    0.0,
++    -0.16707893893122672,
++    0.0,
++    -2.81171942333458e-05,
++    -1.6486278283596039,
++    -1.024474402666092,
++    -1.6018378734588623,
++    0.0
++  ],
++  "q99": [
++    0.1757515200972541,
++    2.600797653198242,
++    2.447983741760254,
++    1.3478784394264216,
++    1.2270293974876352,
++    1.59904944896698,
++    1.0,
++    1.0017749667167655,
++    2.6154155230522145,
++    2.453625609874725,
++    1.2923438429832443,
++    0.8898080855607983,
++    2.2683661031722933,
++    1.0
++  ],
++  "mean": [
++    -0.23991977511822893,
++    1.1376762041959165,
++    0.8143433646670387,
++    -0.3176228922997359,
++    0.053726289774397806,
++    -0.04031383240256045,
++    0.6625325293355582,
++    0.21683583951430424,
++    1.0761595567651063,
++    0.786817308562604,
++    -0.32014985132244816,
++    -0.01758540618653164,
++    0.03739795332585452,
++    0.6805672455205858
++  ],
++  "std": [
++    0.402951736378141,
++    1.0007755416196886,
++    0.7756927306197705,
++    0.6766911759165775,
++    0.26920785413269294,
++    0.6180897058820181,
++    0.45569033631706923,
++    0.3456790756597165,
++    1.0234902305851186,
++    0.7949067823561803,
++    0.6878597761633395,
++    0.2473586080426747,
++    0.6073210027161163,
++    0.44939317007214863
++  ],
++  "min": [
++    -7.321954727172852,
++    -0.005189999938011169,
++    -0.18577136099338531,
++    -1.9549700021743774,
++    -1.43248450756073,
++    -7.678869724273682,
++    0.0,
++    -8.539926528930664,
++    -0.6262922883033752,
++    -0.07775841653347015,
++    -2.1061859130859375,
++    -2.047459840774536,
++    -7.377403259277344,
++    0.0
++  ],
++  "max": [
++    3.463582754135132,
++    4.179152488708496,
++    5.346591472625732,
++    1.791752576828003,
++    1.8604620695114136,
++    4.408362865447998,
++    1.0,
++    6.954646587371826,
++    4.157068729400635,
++    5.672450065612793,
++    1.957612156867981,
++    1.5263450145721436,
++    4.98815393447876,
++    1.0
++  ],
++  "metadata": {
++    "dataset_root": "/mnt/efs/rohingarg/cri/robotwin-posttrain/data/lerobot/RoboTwin-mix200-aloha_agilex-joint",
++    "source_key": "action",
++    "num_frames": 2759740,
++    "num_episodes": 12500,
++    "dim_names": [
++      "left_joint_0",
++      "left_joint_1",
++      "left_joint_2",
++      "left_joint_3",
++      "left_joint_4",
++      "left_joint_5",
++      "left_joint_6",
++      "right_joint_0",
++      "right_joint_1",
++      "right_joint_2",
++      "right_joint_3",
++      "right_joint_4",
++      "right_joint_5",
++      "right_joint_6"
++    ],
++    "normalization": "quantile",
++    "quantiles": "exact over all frames (numpy linear interpolation)"
++  }
++}
+diff --git a/tools/robotwin_dataset_smoke_test.py b/tools/robotwin_dataset_smoke_test.py
+index 7a7d988..f6086f8 100644
+--- a/tools/robotwin_dataset_smoke_test.py
++++ b/tools/robotwin_dataset_smoke_test.py
+@@ -144,7 +144,10 @@ def main() -> int:
+     outside = (np.abs(flat) > 1.0).mean(axis=0)
+     for d in range(14):
+         print(f"  dim {d:2d}: min={flat[:, d].min():+.3f} max={flat[:, d].max():+.3f} outside[-1,1]={outside[d]:.3%}")
+-    check(np.abs(flat).max() < 10.0, f"max |normalized| = {np.abs(flat).max():.2f} (< 10)")
++    # q01/q99 put ~2% of values outside [-1, 1] per dim. The base joints (dims 0 and 7) have a
++    # thin tail past +-2 pi in ~1% of episodes (normalized up to ~11 over the whole dataset).
++    check(bool((outside <= 0.025).all()), f"<= 2.5% outside [-1, 1] in every dim (max {outside.max():.2%})")
++    check(bool(np.isfinite(flat).all()) and np.abs(flat).max() < 15.0, f"finite, max |normalized| = {np.abs(flat).max():.2f} (< 15)")
+ 
+     # ---- streaming iterator ------------------------------------------------------
+     print("\n[streaming iterator]")
+-- 
+2.34.1
+

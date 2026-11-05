@@ -1,0 +1,41 @@
+From f8a651963d78ba66504dab4244bd51be7e2e11d2 Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Mon, 2 Nov 2026 07:59:27 +0000
+Subject: [PATCH 7/8] RoboTwin smoke test: report the normalized tail instead
+ of checking it
+
+User decision: keep the official cosmos-framework quantile normalization,
+which does not clip (action_normalization.normalize_action), exactly as on
+the LIBERO path. The smoke test now prints the max |normalized| value and the
+per-dim fraction outside [-1, 1] and only fails on non-finite values.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ tools/robotwin_dataset_smoke_test.py | 11 ++++++-----
+ 1 file changed, 6 insertions(+), 5 deletions(-)
+
+diff --git a/tools/robotwin_dataset_smoke_test.py b/tools/robotwin_dataset_smoke_test.py
+index 5e10423..d19d180 100644
+--- a/tools/robotwin_dataset_smoke_test.py
++++ b/tools/robotwin_dataset_smoke_test.py
+@@ -144,11 +144,12 @@ def main() -> int:
+     outside = (np.abs(flat) > 1.0).mean(axis=0)
+     for d in range(14):
+         print(f"  dim {d:2d}: min={flat[:, d].min():+.3f} max={flat[:, d].max():+.3f} outside[-1,1]={outside[d]:.3%}")
+-    # q01/q99 put ~2% of values outside [-1, 1] per dim. The base joints (dims 0 and 7) have a
+-    # thin tail past +-2 pi in ~1% of episodes; over the whole mix200 set they normalize to at
+-    # most 11.7 (left) and 15.33 (right); every other dim stays within 4.
+-    check(bool((outside <= 0.025).all()), f"<= 2.5% outside [-1, 1] in every dim (max {outside.max():.2%})")
+-    check(bool(np.isfinite(flat).all()) and np.abs(flat).max() < 16.0, f"finite, max |normalized| = {np.abs(flat).max():.2f} (< 16)")
++    # The official quantile path does not clip (action_normalization.normalize_action), so the
++    # tail is reported, not checked. q01/q99 put ~2% of values outside [-1, 1] per dim; the base
++    # joints (dims 0 and 7) wind past +-2 pi in ~1% of episodes and normalize to at most 11.7
++    # (left) and 15.33 (right) over the whole mix200 set; every other dim stays within 4.
++    print(f"  max |normalized| = {np.abs(flat).max():.2f}; max per-dim fraction outside [-1, 1] = {outside.max():.2%}")
++    check(bool(np.isfinite(flat).all()), "normalized actions are finite")
+ 
+     # ---- streaming iterator ------------------------------------------------------
+     print("\n[streaming iterator]")
+-- 
+2.34.1
+

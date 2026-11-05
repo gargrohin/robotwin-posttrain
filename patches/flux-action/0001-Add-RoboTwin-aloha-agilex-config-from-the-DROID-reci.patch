@@ -1,0 +1,65 @@
+From aae6772fb1817a37f5a0fa3bd40494c2e8c53acc Mon Sep 17 00:00:00 2001
+From: gargrohin <29701609+gargrohin@users.noreply.github.com>
+Date: Tue, 3 Nov 2026 06:19:58 +0000
+Subject: [PATCH 1/4] Add RoboTwin aloha-agilex config from the DROID recipe
+
+14-D absolute joint actions, three cameras in the DROID layout (head on top,
+wrists below), gripper flip off (LeRobot index statistics), shard_size 8 for
+8-GPU nodes. Batch and schedule are set at launch.
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+---
+ configs/robotwin/train.json | 41 +++++++++++++++++++++++++++++++++++++
+ 1 file changed, 41 insertions(+)
+ create mode 100644 configs/robotwin/train.json
+
+diff --git a/configs/robotwin/train.json b/configs/robotwin/train.json
+new file mode 100644
+index 0000000..228a6a3
+--- /dev/null
++++ b/configs/robotwin/train.json
+@@ -0,0 +1,41 @@
++{
++  "source_root": "outputs/robotwin/source",
++  "index_dir": "outputs/robotwin/index",
++  "output_dir": "outputs/robotwin/run-seed42",
++  "policy": {
++    "action_modality": "action_prediction_aloha",
++    "action_dim": 14,
++    "camera_layout": "droid",
++    "camera_keys": ["images.high", "images.left_wrist", "images.right_wrist"],
++    "gripper_flip_dims": [],
++    "trunk_weights": "outputs/weights/flux-3-action-base.safetensors",
++    "video_vae_id": "outputs/weights/video_vae.safetensors",
++    "text_encoder_id": "outputs/weights/text_encoder",
++    "attn_mode": "torch"
++  },
++  "steps": 30000,
++  "cooldown_start": 25000,
++  "cooldown_steps": 5000,
++  "seed": 42,
++  "reseed_on_resume": true,
++  "windows_per_rank": 32,
++  "grad_accumulation": 1,
++  "num_workers": 8,
++  "prefetch_factor": 2,
++  "decoder": "ffmpeg",
++  "shard_size": 8,
++  "param_dtype": "float32",
++  "compute_dtype": "bfloat16",
++  "reduce_dtype": "float32",
++  "activation_checkpointing": true,
++  "reshard_after_forward": true,
++  "betas": [0.9, 0.99],
++  "eps": 1e-08,
++  "weight_decay": 0.05,
++  "fused_optimizer": true,
++  "max_grad_norm": null,
++  "ema_sigma_rels": [0.1, 0.05],
++  "checkpoint_every": 1000,
++  "log_every": 10,
++  "resume": "auto"
++}
+-- 
+2.34.1
+
