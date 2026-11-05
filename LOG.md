@@ -1920,3 +1920,15 @@ the saving scheme changed.**
 - The queued full run and two queued test copies (old scheme, none started) were cancelled. Next: a
   test of the slots, including resuming after a kill, then the full run (~46 h).
 - The test files left in storage (~290 GB) go on your delete list.
+
+**06:20 EST (Thu Nov 5)** **Flux continuation training started (06:06 EST), from step 3,000 toward 9,000.**
+- **Test result:** a one-node test continued step 3,000 for 6 updates. The loss continued where
+  the first run ended (0.067), the learning rates ramped up from zero as planned, and the EMAs
+  carried on. It saved, uploaded, exported (13 GB) and resumed from its own save.
+- **Storage change:** the cluster jobs are not allowed to delete files in our cloud storage
+  (found by the test). Instead, each save now overwrites the older of two fixed slots, so at most
+  two full training states (~276 GB) exist at any time. The test's own leftover files need a
+  manual delete; they are listed for you.
+- **Run:** 2 nodes (16 GPUs), 25.1 s per update, 65 GB GPU memory peak, loss 0.067 at update
+  3,010. ETA ~03:00 EST Saturday (Nov 7). Weights-only exports at 4,000 … 9,000; the 10-task check
+  runs on 6,000 (expected ~04:30 EST Friday).
