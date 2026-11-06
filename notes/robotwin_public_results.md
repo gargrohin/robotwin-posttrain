@@ -368,7 +368,10 @@ style).**
   It reached 91.4 without changing the policy weights. TACO's verifier-based best-of-50 gave +4.7
   on π0.5 (59.3 → 64.0).
 - **What we would build:**
-  - Train a ~1B Q-function on Cosmos rollouts (successes and failures; we already log them).
+  - Train a ~1B Q-function on Cosmos rollouts (successes and failures). Correction
+    (2026-11-06): our evals don't record what this needs yet. Each episode saves only the
+    head-camera video and a one-line summary (`episode<N>.json`), without per-step joint
+    positions, actions or wrist cameras, so recording full rollouts comes first.
   - At each step, sample several action chunks from Cosmos and execute the one the Q-function
     rates highest.
   - Repeat rollouts → Q update → eval.

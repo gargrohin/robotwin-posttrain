@@ -16,10 +16,10 @@ part 2 is the earlier GR00T analysis.
 - **Within a task, Cosmos fails the same way each time.** The most common failure: the first
   grasp knocks the object over (gripper not open enough, or off center). Then placement near
   misses, then no recovery after a mistake.
-- **About half of Cosmos's failed scenes succeed with a nearly identical checkpoint**
-  (6,000 solves 93 of the 209 scenes 5,500 failed). A rerun of 5,500 itself on those scenes is
-  pending.
-- **Some failures come from the success check or the simulator,** not the policy's attempt:
+- **43% of Cosmos's failed scenes succeed on a second try** with the same checkpoint, scene and
+  instruction sentence (89 of 209). Counting a scene as solved if either try worked: randomized
+  91.4%, clean 93.4%. The repeat failures concentrate in hanging_mug and handover_block.
+- **Some failures come from the success check or the simulator:**
   place_mouse_pad's check allows 1.5 × 1.2 cm and one direction; 30 of the 50 tasks require
   both grippers open at the end; stack_bowls_three seed 100007 looks like a physics glitch.
 - **Open question:** in two tasks without a handover, one arm tries to take the object from
@@ -95,9 +95,21 @@ Checkpoints 5,500 and 6,000 on the 1,514 scenes both ran:
   209 flip, 44%). So about half of the failures are scenes Cosmos can do, but not every time.
 - Scenes both failed, most per task: hanging_mug 17 of 30, handover_block 11, pick_diverse_bottles
   9, rotate_qrcode 7, turn_switch 6.
-- **Pending:** checkpoint 5,500 itself rerun on its 209 failed scenes, with the original
-  instruction sentences (request: `/mnt/efs/rohingarg/cri/tmp/cosmos_rerun_evals.md`). It
-  measures the retry rate without the small difference between the two checkpoints.
+- **Rerun of 5,500 itself on its 209 failed scenes** (2026-11-05, cluster, ~30 GPU-hours; label
+  `cosmos3_nano_mix200_2n_decay_rerun1`): every scene got the same instruction sentence as in
+  the original episode (checked against each episode record).
+  - **89 of 209 succeed (43%):** randomized 65/152, clean 24/57. Checkpoint 6,000 solved 93 of the
+    same 209 (44%), so the difference between the two checkpoints mattered about as much as a
+    plain retry.
+  - **Why a retry can differ:** the Cosmos policy draws fresh random noise for every chunk of
+    actions; its random generator is seeded once per policy-server process, not per episode.
+  - **Counting a scene as solved if either try worked:** randomized 91.4%, clean 93.4% (one try:
+    85.0% / 88.6%).
+  - **Failures that repeated** (failed again / failed scenes): hanging_mug clean 9/9 and
+    randomized 11/14, handover_block randomized 8/11, put_bottles_dustbin randomized 7/9,
+    place_mouse_pad randomized 6/8, place_fan randomized 5/6, move_stapler_pad 6/7,
+    put_object_cabinet 6/7.
+  - Source: LOG.md 2026-11-05 20:45 EST; the cluster eval package's `per_scene.csv`.
 
 ### 1.5 What the failures look like
 
