@@ -2033,3 +2033,12 @@ requests).
   resubmitted. About 30 GPU-hours.
 - Logs are in logs/ under the label cosmos3_nano_mix200_2n_decay_rerun1; videos and episode
   records are in the local eval package's results folder (per-scene table there: per_scene.csv).
+
+**11:40 EST (Fri Nov 6)** **Flux continuation training again, on 1 node of another team's GPUs.**
+- The 2-node job waited 17.5 hours in another team's queue without starting; on your call it was
+  replaced by a 1-node job, which started at once (11:28).
+- Its first start failed in the first minute on a storage permission (the cluster jobs cannot
+  delete files, and a cleanup step treated that as fatal); fixed, and the second start runs.
+- It continued from the 4,375 save as planned (update 4,380: loss 0.076, same learning-rate
+  schedule), batch 512 as before, at about half the 2-node speed (~53 s per update).
+- ETA: update 6,000 (10-task check) around midday Saturday, 9,000 around 11:00 Monday.
