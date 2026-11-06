@@ -2042,3 +2042,11 @@ requests).
 - It continued from the 4,375 save as planned (update 4,380: loss 0.076, same learning-rate
   schedule), batch 512 as before, at about half the 2-node speed (~53 s per update).
 - ETA: update 6,000 (10-task check) around midday Saturday, 9,000 around 11:00 Monday.
+
+**12:45 EST (Fri Nov 6)** **Flux continuation stopped at update 4,450 (resumable).**
+- Cancelled at 12:43 right after the 4,450 save completed, to free the robotics GPUs (your call).
+  Nothing was lost; the full training state at 4,450 is saved, and a job submitted under the same
+  run name continues from it with the same schedule (on 1 or 2 nodes).
+- Progress of the continuation so far: 1,450 of the planned 6,000 extra updates. A weights-only
+  export exists for update 4,000 (not evaluated yet); the planned checks at 6,000 and 9,000 wait
+  for the run to continue.
