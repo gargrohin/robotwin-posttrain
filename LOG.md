@@ -2015,3 +2015,21 @@ requests).
 - New job on another team's quota: 2 nodes, batch 512 as before, a save every 50 updates.
   It continues the same run and the same saves, from update 4,375. It is queued (that quota is
   full right now; two jobs ahead of it) and starts when GPUs free up.
+
+**20:45 EST (Thu Nov 5)** **Cosmos decay 5,500 rerun on the 209 scenes it failed: 89 succeed (43%).**
+- Randomized 65/152 (43%), clean 24/57 (42%). Same checkpoint, same scenes, and all 209 got the
+  same instruction sentence as in the original eval (checked against each episode record).
+- Checkpoint 6,000 solved 93 of the same 209 (44%), so the near-identical checkpoint flipped about
+  as many failures as a plain retry does. That difference was mostly sampling randomness: the
+  policy samples fresh noise for every action chunk (its random generator is seeded once per
+  policy-server process, not per episode).
+- So about 43% of Cosmos's failures are scenes it solves on a second try. Counting a scene as
+  solved if either try succeeded: randomized 91.4%, clean 93.4% (vs 85.0% / 88.6% for one try).
+- Failures that repeated: hanging_mug clean 0/9 and randomized 3/14, handover_block randomized
+  3/11, put_bottles_dustbin randomized 2/9, place_mouse_pad randomized 2/8, place_fan randomized
+  1/6, move_stapler_pad 1/7, put_object_cabinet 1/7.
+- Every scene ran; 5 ran twice because a borrowed slice was pre-empted (the later attempt counts).
+  One slice failed at start-up (a seed-list file missing after upload; not reproduced) and was
+  resubmitted. About 30 GPU-hours.
+- Logs are in logs/ under the label cosmos3_nano_mix200_2n_decay_rerun1; videos and episode
+  records are in the local eval package's results folder (per-scene table there: per_scene.csv).
