@@ -2050,3 +2050,12 @@ requests).
 - Progress of the continuation so far: 1,450 of the planned 6,000 extra updates. A weights-only
   export exists for update 4,000 (not evaluated yet); the planned checks at 6,000 and 9,000 wait
   for the run to continue.
+
+**13:20 EST (Fri Nov 6)** **Flux continuation running again (1 node, shared borrowed pool).**
+- No team quota is free, so on your call it runs on the shared borrowed pool, where jobs can be
+  pre-empted. I watch it and restart it from the latest save whenever it stops; saves happen every
+  50 updates (~45 min), so a pre-emption costs at most that much.
+- Started 12:48 and continued from the 4,450 save: update 4,460 at 53 s per update, loss 0.068,
+  same learning-rate schedule.
+- ETA without pre-emptions: update 6,000 (10-task check) around noon Saturday, 9,000 around
+  10:00 Monday.
