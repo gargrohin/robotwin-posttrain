@@ -2059,3 +2059,15 @@ requests).
   same learning-rate schedule.
 - ETA without pre-emptions: update 6,000 (10-task check) around noon Saturday, 9,000 around
   10:00 Monday.
+
+**22:15 EST (Fri Nov 6)** **Flux continuation: update 5,000 reached; its full evaluation is running.**
+- Eval plan for the continuation (your call): the full 50-task evaluation at 5,000, 6,000, 7,000,
+  8,000 and 9,000, each with the step-3,000 protocol (randomized: all GR00T seeds, ~1,015 episodes;
+  clean: GR00T's first 10 seeds per task, ~499 episodes; same exact seeds; EMA 0.10 weights in
+  bf16). This replaces the 10-task check at 6,000.
+- The run reached 5,000 at 21:26 with no pre-emptions (~56 s per update including saves). Its
+  weights export landed at 21:36; the evaluation (12 jobs of 2 GPUs each on the shared borrowed
+  pool) was submitted 21:45-22:11. Expected run time ~5 h once the jobs start.
+- The halfway points (5,500, 6,500, ...) are optional. A small export-only job on one GPU can copy a
+  save while the run keeps going; it has about 90 minutes before the run overwrites that save. First
+  try at 5,500 (~05:15 Saturday); if it misses, that point is skipped.
