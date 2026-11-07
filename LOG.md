@@ -2115,3 +2115,17 @@ it isn't overfitting.**
 - Our run uses the DROID recipe's peak learning rate with no gradient clipping at batch 512; BFL's own
   batch-512 recipe uses a lower learning rate and clips at 1.0. Your call: no change. The run continues,
   and spikes (gradient norm above 1.0) get reported and marked against each export's eval.
+
+**06:40 EST (Sat Nov 7)** **Flux loss spike at 4,790: investigation done; most likely an optimizer
+instability at peak learning rate without gradient clipping (moderate confidence).**
+- Nothing in the job's logs, the hardware metrics or the data explains it: no errors or retries, normal
+  GPU health, and the exact training windows (rebuilt from the seed) look like every other batch. Two very
+  hard windows sat right before it, but equally hard ones trained many times without a spike.
+- It built up over updates 4,780–4,789 and took ~40 updates to recover. Two smaller ones happened earlier in
+  this continuation (around 3,370 and 4,370); the first run had none at peak learning rate.
+- Averaged vs training weights at 5,350: the averaged copy is worse than the training weights it comes
+  from (0.034 vs 0.029 held-out error on training clean demos), so averaging across the spike explains part
+  of step 5,000's drop. The training weights are still ~0.007 worse than step 4,000; with no pre-spike
+  training weights left, that can't be pinned down.
+- For a future run (the current run stays unchanged): clip gradients at 1.0, re-warm to a lower peak
+  learning rate after a cool-down, log every update, and keep a spare save when a spike shows up.
