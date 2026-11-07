@@ -2093,3 +2093,15 @@ requests).
   start-up because their seed lists were missing after a download that reported success; the
   eval job now checks the lists and downloads again, and the 3 were rerun.
 - Training continues (no pre-emptions so far); update 6,000 expected ~13:10 Saturday.
+
+**03:20 EST (Sat Nov 7)** **Flux continuation, step 5,000: worse than step 3,000, and the held-out check says
+it isn't overfitting.**
+- 50-task sim eval on GR00T's exact scenes: randomized 64.0%, clean 61.9% (step 3,000: 71.0% / 71.1%).
+  Seed by seed: 177 randomized scenes only 3,000 solves vs 106 only 5,000 solves (p ≈ 3e-5).
+- Held-out prediction error (rad; training randomized / training clean / unseen randomized):
+  step 1,500 0.037 / 0.027 / 0.030; step 3,000 0.029 / 0.021 / 0.023; step 5,000 0.050 / 0.044 / 0.043.
+  The error doubled on the training demos too, on all 10 tasks, so it isn't overfitting. It fits the
+  re-warm to the peak learning rate making predictions worse everywhere. Step 1,500 was at the same
+  learning rate and much better, so step 4,000 (after the re-warm, before the 1-node resumes) is
+  being checked next.
+- The run continues as planned (user decision); full evals at every 1,000.
