@@ -2150,3 +2150,21 @@ instability at peak learning rate without gradient clipping (moderate confidence
   (p = 0.14); 5,500 vs 3,000, randomized 105 vs 153 (p = 0.003), clean 60 vs 80 (p = 0.11).
 - The 5,500 weights came from a small export-only job (1 GPU, 1.5 GPU-hours) that copied the
   save while training kept going. Each eval costs ~80 GPU-hours.
+
+**17:20 EST (Sat Nov 7)** **Flux continuation, update 6,000: back to the step-3,000 level (71.8% / 71.3%).**
+
+| | randomized, all GR00T seeds (1,015) | clean, GR00T's first 10 per task (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 5,000 | 64.0% | 61.9% |
+| Flux update 5,500 | 66.3% | 67.1% |
+| Flux update 6,000 | 71.8% | 71.3% |
+| Cosmos 5,000 | 81.9% | 84.4% |
+
+- Paired by seed, 6,000 vs 3,000: randomized 124 vs 116 scenes (p = 0.65), clean 60 vs 59: no
+  difference. 6,000 vs 5,500: randomized 134 vs 78 (p = 0.0001), clean 60 vs 39 (p = 0.04).
+- ~17% of the averaged weights at 6,000 still date from before the 4,790 spike. Held-out arm error
+  at 6,000: 0.035 / 0.027 / 0.029 rad (step 3,000: 0.029 / 0.021 / 0.023; update 5,000: 0.050 /
+  0.044 / 0.043).
+- Cosmos 5,000 is still ahead by 10-13 points (p < 1e-7). No new spikes; training continues to
+  9,000 (ETA ~12:30 Monday), with the same eval every 500 updates.
