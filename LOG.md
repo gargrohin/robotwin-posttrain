@@ -2071,3 +2071,25 @@ requests).
 - The halfway points (5,500, 6,500, ...) are optional. A small export-only job on one GPU can copy a
   save while the run keeps going; it has about 90 minutes before the run overwrites that save. First
   try at 5,500 (~05:15 Saturday); if it misses, that point is skipped.
+
+**02:45 EST (Sat Nov 7)** **Flux continuation, update 5,000: lower than step 3,000 on all 50 tasks.**
+
+| | randomized, all GR00T seeds (1,015) | clean, GR00T's first 10 per task (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 5,000 (continuation) | 64.0% (650) | 61.9% (309) |
+| Cosmos 5,000 | 81.9% | 84.4% |
+
+- Same seeds as step 3,000, checked seed by seed (the same 3 scenes could not be set up in either
+  eval).
+- Paired by seed against step 3,000: randomized, 106 scenes only 5,000 solves vs 177 only 3,000
+  solves (sign test p = 3e-5); clean, 54 vs 100 (p = 3e-4). By task: 12 better, 28 worse
+  (randomized), 13 better, 29 worse (clean). The drop is larger than run-to-run noise.
+- Context: step 3,000 was the end of a learning-rate cool-down; at 5,000 the continuation is in
+  its constant phase at the peak rate (cool-down 8,000 → 9,000). Part of the drop may come back in
+  that cool-down; step 1,500 (also constant rate) matched 3,000 on the 10-task check, so the rate
+  phase may not be the whole story. The 6,000 eval shows the trend.
+- Evaluation cost: ~84 GPU-hours (failed episodes run longer). 3 of the 12 eval jobs failed at
+  start-up because their seed lists were missing after a download that reported success; the
+  eval job now checks the lists and downloads again, and the 3 were rerun.
+- Training continues (no pre-emptions so far); update 6,000 expected ~13:10 Saturday.
