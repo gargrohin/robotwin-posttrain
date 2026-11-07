@@ -2129,3 +2129,24 @@ instability at peak learning rate without gradient clipping (moderate confidence
   training weights left, that can't be pinned down.
 - For a future run (the current run stays unchanged): clip gradients at 1.0, re-warm to a lower peak
   learning rate after a cool-down, log every update, and keep a spare save when a spike shows up.
+
+**09:40 EST (Sat Nov 7)** **Flux continuation, update 5,500: partly recovered (66.3% / 67.1%).**
+
+| | randomized, all GR00T seeds (1,015) | clean, GR00T's first 10 per task (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 5,000 | 64.0% | 61.9% |
+| Flux update 5,500 | 66.3% | 67.1% |
+| Cosmos 5,000 | 81.9% | 84.4% |
+
+- Why 5,000 dropped: one loss spike at update 4,790 (gradient norm 3.9, ~25 times the usual;
+  recovered within ~40 updates). The evaluated weights are a running average of past weights, so
+  the disturbed weights still counted at 5,000. Held-out arm error at 4,000 matched step 3,000;
+  at 5,000 it was ~1.7 times higher. No other update so far has a gradient norm above 1.0. On
+  your call the run continues unchanged.
+- At 5,500 about a third of the averaged weights still date from before the spike (that share is
+  ~17% at 6,000 and ~5% at 7,000).
+- Paired by seed: 5,500 vs 5,000, clean 70 vs 44 scenes (p = 0.02), randomized 120 vs 97
+  (p = 0.14); 5,500 vs 3,000, randomized 105 vs 153 (p = 0.003), clean 60 vs 80 (p = 0.11).
+- The 5,500 weights came from a small export-only job (1 GPU, 1.5 GPU-hours) that copied the
+  save while training kept going. Each eval costs ~80 GPU-hours.
