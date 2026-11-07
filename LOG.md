@@ -2142,7 +2142,7 @@ instability at peak learning rate without gradient clipping (moderate confidence
 - Why 5,000 dropped: one loss spike at update 4,790 (gradient norm 3.9, ~25 times the usual;
   recovered within ~40 updates). The evaluated weights are a running average of past weights, so
   the disturbed weights still counted at 5,000. Held-out arm error at 4,000 matched step 3,000;
-  at 5,000 it was ~1.7 times higher. No other update so far has a gradient norm above 1.0. On
+  at 5,000 it was 1.7-2 times higher. No other update so far has a gradient norm above 1.0. On
   your call the run continues unchanged.
 - At 5,500 about a third of the averaged weights still date from before the spike (that share is
   ~17% at 6,000 and ~5% at 7,000).
