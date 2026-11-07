@@ -2105,3 +2105,13 @@ it isn't overfitting.**
   learning rate and much better, so step 4,000 (after the re-warm, before the 1-node resumes) is
   being checked next.
 - The run continues as planned (user decision); full evals at every 1,000.
+
+**04:15 EST (Sat Nov 7)** **Flux step 5,000's drop came from one loss spike at update 4,790.**
+- Held-out error at step 4,000 is the same as step 3,000 (0.030 / 0.022 / 0.023), so the model was fine
+  1,000 updates after the re-warm. Between 4,000 and 5,000, one update blew up: loss 0.169, action error
+  0.124 (20× normal), gradient norm 3.9 (25×). Training recovered within ~40 updates.
+- The exported weights are an average over roughly the last 600 updates, so step 5,000's export still
+  carried the spike. That explains both its worse held-out error and its 7–9 point sim drop.
+- Our run uses the DROID recipe's peak learning rate with no gradient clipping at batch 512; BFL's own
+  batch-512 recipe uses a lower learning rate and clips at 1.0. Your call: no change. The run continues,
+  and spikes (gradient norm above 1.0) get reported and marked against each export's eval.
