@@ -2035,7 +2035,7 @@ requests).
   records are in the local eval package's results folder (per-scene table there: per_scene.csv).
 
 **11:40 EST (Fri Nov 6)** **Flux continuation training again, on 1 node of another team's GPUs.**
-- The 2-node job waited 17.5 hours in another team's queue without starting; on your call it was
+- The 2-node job waited 17.5 hours in the other team's queue without starting; on your call it was
   replaced by a 1-node job, which started at once (11:28).
 - Its first start failed in the first minute on a storage permission (the cluster jobs cannot
   delete files, and a cleanup step treated that as fatal); fixed, and the second start runs.
@@ -2044,7 +2044,7 @@ requests).
 - ETA: update 6,000 (10-task check) around midday Saturday, 9,000 around 11:00 Monday.
 
 **12:45 EST (Fri Nov 6)** **Flux continuation stopped at update 4,450 (resumable).**
-- Cancelled at 12:43 right after the 4,450 save completed, to free the robotics GPUs (your call).
+- Cancelled at 12:43 right after the 4,450 save completed, to free the other team's GPUs (your call).
   Nothing was lost; the full training state at 4,450 is saved, and a job submitted under the same
   run name continues from it with the same schedule (on 1 or 2 nodes).
 - Progress of the continuation so far: 1,450 of the planned 6,000 extra updates. A weights-only
