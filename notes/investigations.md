@@ -446,6 +446,16 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Open (Cosmos):** in training the same encoder work logs 0.90 s per micro-batch (16-GPU run) and 1.09 s (local
   run), 1.7–2× the isolated time. Not yet known why: GPU gaps inside the calls, CPU contention slowing the
   launches, or something else. The 1-node profiling run (queued on the borrowed pool) is meant to answer it.
+- **Found (speed, 1 GPU, real trainer and encoders, tiny DiT):**
+  - no autocast: −8% encoder time; RoPE cache: −0.4%. Both are bitwise (DiT inputs, loss, grad norm).
+  - Exact v2 (overlap + graph + no padding + no autocast + RoPE cache): −33% encoder time, bitwise.
+  - With both recompile fixes, all 12 compiles happen at warm-up and none after. Steps after the first ran
+    1.82–2.01 s, with no spikes.
+  - The 4-GPU check is running.
+- **Found (cluster):**
+  - Tiling on top of gradient sharding at 16 per GPU is slower: 51.9 vs 45.7 s.
+  - 32 per GPU still runs out of memory, because at that size the DiT's activations are the limit.
+  - So tiling buys nothing once gradient sharding is on.
 
 ---
 
