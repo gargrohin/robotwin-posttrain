@@ -535,6 +535,16 @@ earlier belief that was wrong. **Open** = not yet answered.
   - So compiled eval means the same work for both runs. Two options:
     - compile the generic DiT and the encoder in our adapter;
     - port BFL's inference DiT to the 14-D head.
+- **Q (user): would compiling the eval policy speed up evals?** No: the simulator dominates. From the 6,500
+  eval's logs: 72.9 GPU-h in total.
+  - Startup, per-queue-line model loads (26 s each) and idle tails: 7.6 h (10%). Episodes: 65.3 h (90%).
+  - Policy calls: 15,833 at a median 786 ms, ~3.5 h, 5.3% of episode time. The rest, ~0.46 s per executed
+    action (~62 h), is simulator stepping, rendering and client work. The logs don't split it further.
+  - A 2× faster policy call would save ~1.7 GPU-h per eval (~2.4%).
+  - Failures run to the step limit: median 252 s vs 83 s for a success. The 25% of episodes that fail take
+    ~46% of episode time.
+  - **Open:** with one stream per GPU, how busy is the GPU during an episode? Not measured for Flux. If the
+    GPU is mostly idle, two streams per GPU could cut eval GPU-hours.
 
 ---
 
