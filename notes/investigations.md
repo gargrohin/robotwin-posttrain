@@ -349,6 +349,15 @@ earlier belief that was wrong. **Open** = not yet answered.
     the encoder is causal in time, the result is bitwise identical, as measured.
 - **Open (subagent):** why compiling the encoder changes its output, whether that size of change harms training
   (yardstick: bf16 vs fp32), why BFL doesn't compile in training, and why BFL's compile option crashes.
+- **Found (speed test stage 1, 1 node, today's settings, updates 4–20):**
+  - 4 per GPU: 52.4 s (its repeat 51.8 s: 1% noise).
+  - 8 per GPU: 61.8 s, **18% slower**. Near the memory limit the allocator retried 263 times and the GPU idled
+    16.8 s per update. The loss was unchanged.
+  - 16 per GPU: out of memory.
+  - 8 per GPU with tiling: 54.6 s.
+- **Corrected:** "more examples per GPU would spread the small-kernel cost". The GPU does the same total work per
+  update at 4 and 8 per GPU (46.1 vs 46.5 s busy, ~23 s of small kernels either way). Bigger batches don't
+  reduce that work, so the gains have to come from the encoder's ~22 s.
 
 ---
 
