@@ -2325,3 +2325,25 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 - Switch criteria:
   - the speed flags are bitwise identical to the old flags at 8 per GPU;
   - the same windows per update at 4 and 8 per GPU.
+
+**02:40 EST (Sun Nov 8)** **Flux speed experiment: where the time goes, and what makes it faster.**
+Short benchmark runs of the Flux trainer on one 8-GPU node (batch 512, same recipe, same weights and seed), with
+new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
+- Where the time went: the video encoder (VAE) took ~22 s of each update. It was meant to run during the backward
+  pass, but the trainer queued it in between: the CPU was busy preparing the next windows (blocking copies and
+  thousands of small kernel launches) before it could start the backward pass.
+- Activation recomputation was already on for every transformer block, so it could not free more memory.
+- Changes that keep training identical (the model gets bitwise-identical inputs and the same first loss; later
+  differences are the size of run-to-run noise):
+  - prepare the next windows in a background thread, so the encoder really runs during the backward pass;
+  - skip the 12 black padding frames before the VAE (the encoder only looks back in time, so they never change the
+    result): 25% less VAE work;
+  - replay the VAE as a CUDA graph, and run it without autocast;
+  - shard gradients across GPUs during accumulation (frees ~22 GB per GPU), which allows 16 windows per GPU.
+  - Together: 38.6 s per update, 1.36 times faster.
+- Did not help: time-tiling the VAE (slower), more windows per GPU without freeing memory (8 per GPU was 18%
+  slower because the memory allocator thrashed; 16 did not fit).
+- Compiling the VAE and text encoder makes the encoder ~half as costly but changes its output slightly (loss off by
+  ~1e-4 relative, about 4 times the run-to-run noise). The user chose to use it for the next full Flux run; its
+  final configuration (16 or 8 windows per GPU, with or without the CUDA graph) and a 200-update check with a save,
+  resume and export are queued.
