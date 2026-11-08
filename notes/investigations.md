@@ -523,6 +523,18 @@ earlier belief that was wrong. **Open** = not yet answered.
     ~18 s, about 0.75 s per update. Over 3,000 updates that's ~37 min, small but avoidable. Not checked yet
     whether persistent workers or prefetching across the epoch boundary would remove it.
   - The frozen-trunk phase (updates <100) and the unfrozen phase run at the same speed (38.6 vs 39.0 s).
+- **Q (user): what extra work would compiled eval need for the head-native canvas?**
+  - **Corrected (mine):** "BFL's compiled model only supports the DROID canvas, so head-native needs extra work".
+    The restriction is the action head, not the canvas. `_released_inference_config` (flux-action
+    policy.py:55-66) requires `action_prediction_droid`, action_dim 8 and chunk 32. Canvas and layout aren't
+    checked. The compiled inference DiT (`BF16InferenceDiT`) hard-codes the DROID action stream with 8 channels
+    (transformer_inf_bf16.py:34-37).
+  - Both our runs (main and head-native) use `action_prediction_aloha` with 14-D actions, so neither can use it.
+    `prepare_inference` returns before compiling anything, encoder included (policy.py:276-277). Our adapter
+    already notes this (XPolicyLab Flux3_Action/model.py:127).
+  - So compiled eval means the same work for both runs. Two options:
+    - compile the generic DiT and the encoder in our adapter;
+    - port BFL's inference DiT to the 14-D head.
 
 ---
 
