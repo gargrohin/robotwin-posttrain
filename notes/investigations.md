@@ -250,6 +250,10 @@ earlier belief that was wrong. **Open** = not yet answered.
   - With no resize anywhere, the head-native eval input is bit-identical to training on 9 real windows. The
     baseline's eval differed from training by 1.8–2.0/255 because of its resize.
 
+- **Open (Nov 7, 22:10):** how often do borrowed 1-node jobs get pre-empted? Both experiment test jobs run on the
+  borrowed queue by choice. Our quota had 32 GPUs free, but no node was physically idle. Each experiment's notes
+  keep a running count of pre-emptions, updates lost and time to re-admission.
+
 ---
 
 ## Lessons
