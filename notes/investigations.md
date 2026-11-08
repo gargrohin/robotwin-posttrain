@@ -293,6 +293,11 @@ earlier belief that was wrong. **Open** = not yet answered.
   - If they don't, adopt them in the head-native runs (both runs at once, switched right after a save) and in
     future Flux runs.
   - The ongoing main run only with your explicit permission.
+- **Idea (yours, Nov 7, ~23:30):** if the speedups are large, train Flux 0→9,000 from scratch with one schedule
+  (BFL's DROID recipe scaled to 3/10), instead of today's 0→3,000 + re-warm 3,000→9,000. That gives one recipe
+  end to end, and a direct test of longer training without the re-warm. On 2 nodes: ~3 days at today's speed,
+  ~1.8 days at an estimated 1.6×. "Within a day" needs ~2.9×. Same canvas and settings as the first run. Decide
+  once the speed numbers are measured.
 
 ---
 
