@@ -339,6 +339,16 @@ earlier belief that was wrong. **Open** = not yet answered.
   - gradient sharding 52.4 s (no faster, but frees 22.5 GB per GPU);
   - 16 per GPU with tiling still runs out of memory.
 - **Open:** the end-to-end speed of the overlap fix and the full stacks (six jobs submitted at 23:02).
+- **Q:** the padding satisfies a shape rule, so how can it be skipped?
+- **Found (code):**
+  - The encoder itself only needs T ≡ 1 (mod 4) frames (`video_vae.py:892`), and 33 qualifies.
+  - The 45 + 44n rule belongs only to BFL's chunked routine for long videos (`min_chunk_enc`, lines 730–767).
+    Training pads 33 → 45 so each window is one chunk ("so training and deployment see the same latent
+    distribution").
+  - The no-padding version calls BFL's own unchunked `encode_task` ("without padding or chunk overlap"). Since
+    the encoder is causal in time, the result is bitwise identical, as measured.
+- **Open (subagent):** why compiling the encoder changes its output, whether that size of change harms training
+  (yardstick: bf16 vs fp32), why BFL doesn't compile in training, and why BFL's compile option crashes.
 
 ---
 
