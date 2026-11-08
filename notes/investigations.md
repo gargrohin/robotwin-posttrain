@@ -917,6 +917,20 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Lesson:** both Cosmos silent no-ops (the overlap's fallback, the detach flag) were caught only because each
   benchmark logged what the option actually did (encodes done ahead, backward time). Every opt-in speedup needs a
   counter that proves it ran.
+- **Found (longrun, completed, 1 node, compiled encoders + graph + gradient sharding, 16 per GPU):** safe for a long
+  run with saves, resumes and exports.
+  - Median 31.97 s per update (updates 1–150), 31.83 s after the resume; 35.6 s mean with the old loader's
+    epoch-boundary restarts.
+  - Memory flat at 61–62 / 70–70.5 GB, 0 retries.
+  - Recompiles only during warm-up, in both phases.
+  - Save 129 GB in ~99 s.
+  - Resume:
+    - LR schedule and both EMAs continue exactly; loss is continuous;
+    - the data is reseeded, as every resume does;
+    - start-up ~4 min (build, then 18 s compile warm-up with a warm cache, then the first update).
+  - Export: 13 GB, checksums verified.
+  - Not covered: DiT compile and the spanning loader. A 2-node rehearsal with the exact final flags is prepared,
+    pending the user's yes on DiT compile.
 
 ---
 
