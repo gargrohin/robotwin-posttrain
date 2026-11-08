@@ -851,6 +851,25 @@ earlier belief that was wrong. **Open** = not yet answered.
   - With the CUDA graph the encoder's CPU cost is 0.07 s per update, so this no longer matters for speed.
   - Also measured: the speed noise floor is ~0.3% (reference repeat 19.96 vs 20.01 s). No recomputation in the last
     24 layers runs out of memory.
+- **Found (loader fix on the cluster, compiled config, 16 per GPU, 27 updates across the epoch boundary):**
+  - Boundary update: 120.6 s (68.3 + 52.3 s data wait) → 32.8 s, no wait.
+  - Average per update over an epoch: 35.7 → 32.3 s (−9.6%).
+  - Same windows in the same order: text and state/actions identical in 108/108 micro-batches.
+- **Open (determinism):** latents still differed between the two runs from update 1, before the boundary, so the
+  cause is the compiled encoders. `inductor_deterministic` set through the trainer config didn't make compile
+  reproducible across runs; the compile investigation got bitwise runs with `TORCHINDUCTOR_DETERMINISTIC=1` in the
+  launch environment. Untested on the cluster.
+- **Found (2 nodes):**
+  - Gradient sharding across nodes is exact: DiT inputs bitwise 40/40, update-1 loss bitwise.
+  - Compiled stack at 16 per GPU on 2 nodes: 16.08 s per update, 1.98× the 1-node 31.8 s (GPU busy 16.0 of 16.2 s).
+- **Found (DiT compile, 1 node, 16 per GPU):**
+  - Compiled stack + DiT compile: **26.4 s (1.98×)**, peak 57.3/69.0 GB, 0 retries, 0 recompiles after update 1.
+    Time in small kernels drops from ~19–23 s to 5.3 s per update.
+  - DiT compile changes the loss by 1.6e-4 from update 1, about 7–10× the noise (rounding, the same order as the
+    VAE compile).
+  - Save/resume/export with DiT compile is untested.
+- **Ruled out:** tiling under compile (35.7 s vs 31.8 s), and the graph without gradient sharding (278 allocator
+  retries).
 
 ---
 
