@@ -285,6 +285,9 @@ earlier belief that was wrong. **Open** = not yet answered.
     training unchanged (equivalence run against the reference).
   - Also important: drop the padding frames (exact), measured alone and with the overlap fix.
   - Tiling is adopted only if it pays off, likely only on top of a working overlap.
+- **Found (checked in code):** nothing is compiled during Flux training. `compile_model` defaults to False and
+  would only compile the video encoder and text encoder; the DiT is never compiled. That fits the ~23 s per
+  update of small non-matmul kernels. Compiling the encoders is now a candidate in the overlap work.
 
 ---
 
