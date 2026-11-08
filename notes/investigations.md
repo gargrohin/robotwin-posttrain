@@ -439,6 +439,13 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Corrected (mine):** "VAE compile changes the loss ~20× the noise". That compared a mini-trainer change with the
   cluster runs' noise, two different setups. Measured on the same setup, compile moves the loss less than
   switching to an fp32 encoder does.
+- **Found (Cosmos, devbox, isolated encoder):** the Wan2.2 encoder on 32 real-sized clips, one clip per call as
+  training does, is 0.54 s of GPU time per micro-batch: 0.49 s of kernels over 23,904 launches. The CPU needs 0.54
+  s just to launch them, so the call is launch-bound. Batching all 32 clips into one call is 0.46 s, so one clip
+  per call isn't the main cost.
+- **Open (Cosmos):** in training the same encoder work logs 0.90 s per micro-batch (16-GPU run) and 1.09 s (local
+  run), 1.7–2× the isolated time. Not yet known why: GPU gaps inside the calls, CPU contention slowing the
+  launches, or something else. The 1-node profiling run (queued on the borrowed pool) is meant to answer it.
 
 ---
 
