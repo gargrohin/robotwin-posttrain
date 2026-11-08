@@ -358,6 +358,14 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Corrected:** "more examples per GPU would spread the small-kernel cost". The GPU does the same total work per
   update at 4 and 8 per GPU (46.1 vs 46.5 s busy, ~23 s of small kernels either way). Bigger batches don't
   reduce that work, so the gains have to come from the encoder's ~22 s.
+- **Q (user): does more examples per GPU reduce the number of updates, or show the model more data?** Neither.
+  The global batch is GPUs × examples per GPU × accumulation rounds (flux-action `trainer.py:253`). The speed tests
+  set accumulation = 512 / (8 × examples per GPU), so every update still uses 512 examples, and the number of
+  updates and the total data seen don't change. Only the split changes: 4 per GPU is 16 rounds of 4; 8 per GPU is
+  8 rounds of 8. At 4 and 8 per GPU each GPU even sees the same windows in an update (speed NOTES). That's why the
+  loss matched.
+- **Found (head-native launch, measured):** the smaller canvas runs at ~38.6 s per update on 1 node, vs 52.4 s
+  for today's canvas on the same setup, about 26% faster, before any speedups.
 
 ---
 
