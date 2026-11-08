@@ -2274,3 +2274,11 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
   every step.
 - Across runs it does not line up the same way: 3,000 has lower arm error than 6,000 and 6,500 on
   all three sets, with about the same success as 6,000 and lower success than 6,500.
+
+**01:45 EST (Sun Nov 8)** **Decision: use compile for the next Flux run.**
+- The user chose model compilation for the next end-to-end Flux run (0–9,000 from scratch), from update 0.
+- Runs already training stay as they are. The main run has no speedups; the head-native runs get only the exact
+  pieces.
+- The speed experiments now centre on the compiled stack:
+  - pick 16 vs 8 per GPU, with or without the VAE graph;
+  - a longer check of ~150–200 updates with a save, a resume and an export.

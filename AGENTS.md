@@ -271,6 +271,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     metric as GR00T's and Cosmos's.
 
 ## Decisions
+- Flux training speedups (user, 2026-11-08):
+  - Runs already training keep their settings. The main continuation gets no speedups without the user's OK;
+    the head-native runs get only the exact (bitwise) pieces.
+  - The next end-to-end Flux run (0–9,000 from scratch) trains with compile from update 0: video and text
+    encoders, both recompile fixes, deterministic Inductor.
+  - Compile changes the loss ~1e-4 (rounding, closer to fp32 than eager); see notes/investigations.md.
 - Models: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`) first, as the only assigned model with an
   XPolicyLab adapter. Since 2026-11-02, also Cosmos3-Nano and FLUX 3 Action, through our own
   adapters (patches 0011, 0012). All three train on `mix200` and are compared on GR00T's eval
