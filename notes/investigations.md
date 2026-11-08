@@ -244,6 +244,12 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Speedups:** only ones whose training math is unchanged and that measurably help (exact time-tiling; more
   examples per GPU and gradient sharding, checked equivalent). The same on both runs. Never the padding drop.
 
+- **Found (Nov 7, building the head-native runs):**
+  - The cluster launcher's entrypoint forces `log_every` 10 in training mode, whatever the config says. That's
+    why the main run logs every 10 updates. Logging every update needs an explicit override at launch.
+  - With no resize anywhere, the head-native eval input is bit-identical to training on 9 real windows. The
+    baseline's eval differed from training by 1.8–2.0/255 because of its resize.
+
 ---
 
 ## Lessons
