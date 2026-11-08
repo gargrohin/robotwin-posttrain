@@ -667,29 +667,110 @@ earlier belief that was wrong. **Open** = not yet answered.
   - **Encoder share:** 3% of the arithmetic (the trainer's own count) but ~35% of the time.
   - **Data loading:** 8 workers per GPU, 4 batches queued each. The logged wait for data is 0.03 s per
     micro-batch, about 1% of an update.
-  - **Memory per GPU, 16-GPU run.** Weights, averaged copy and encoder sizes were measured at start-up of the
-    profiling run; the other rows are computed from parameter counts.
+  - **Memory per GPU, 16-GPU run.** The fixed items were measured in the profiling run below (same 8-way split).
 
     | item | GB |
     |---|---|
-    | fp32 weights, whole model (15.17B parameters) | 7.6 |
-    | fp32 averaged copy (EMA) | 7.6 |
-    | Adam states (6.98B trainable) | 7.0 |
-    | sharded fp32 gradients | 3.5 |
-    | bf16 partial gradients (2 nodes only) | 1.75 |
-    | video encoder, bf16 (705M parameters) | 1.4 |
-    | fixed total | ~29 |
-    | logged peak allocated / reserved | 34.4–34.7 / 41.9–42.3 |
+    | fp32 weights, whole model (15.17B parameters) | 7.59 |
+    | fp32 averaged copy (EMA) | 7.59 |
+    | Adam states (6.98B trainable) | 6.98 |
+    | sharded fp32 gradients | 3.49 |
+    | bf16 partial gradients (2 nodes only, computed) | 1.75 |
+    | video encoder, bf16 (705M parameters) | 1.41 |
+    | logged peak allocated / reserved | 36.9–37.3 / 45.0–45.4 |
 
-    So activations and buffers take ~6 GB.
+    - **Corrected (mine):** I first wrote the logged peaks as 34.4–34.7 / 41.9–42.3 GB, with "~6 GB of
+      activations". The trainer's device monitor reports GiB (device_monitor.py:125). In GB they're 36.9–37.3 and
+      45.0–45.4.
+    - The profiling run measures ~12 GB above the fixed items at the backward peak. Of that, ~4.3 GB is the saved
+      input of each of the 36 layers (computed). The rest (gathered weights, the layer being recomputed, gradient
+      buffers) wasn't broken down.
 - **Found (one devbox GPU, the encoder alone, 32 clips):**
   - Called as training calls it (one clip per call), it takes 0.54 s.
   - Batched as one call, it takes 0.46 s.
   - In training the same work logs 0.90 s per micro-batch (16-GPU run) and 1.09 s (local run). That's 1.7–2× the
     isolated time.
-- **Open:** why the encoder takes twice as long inside training, how much of the backward is recomputation, the
-  text's share of GPU time, and how much communication isn't hidden. A 1-node profiling run (20 updates, profiler
-  on one update) is queued.
+- **Measured (profiling run, Nov 8, 1 node, base model, 20 updates of 2,048 = 8 micro-batches of 32 per GPU,
+  no checkpoint):**
+  - Instrumentation only: GPU timestamps at each phase boundary, memory counters, and the PyTorch profiler on
+    one update.
+  - Per micro-batch, each GPU does exactly what it does in the 16-GPU run. The table halves the 8-micro-batch
+    numbers to the 16-GPU run's 4 micro-batches.
+  - 1-node update: median 20.23 s over 14 updates and 8 GPUs (updates 5–20, leaving out the profiled update and
+    the one after it).
+
+  | where | phase | seconds per update (4 micro-batches) |
+  |---|---|---|
+  | main stream | video encoder | 3.55 (GPU busy 1.95, idle 1.60) |
+  | main stream | other input prep | 0.07 |
+  | main stream | main model forward + loss | 2.31 (GPU busy ~1.6) |
+  | main stream | backward, incl. recomputation | 4.00 (GPU busy ~3.85) |
+  | main stream | data wait + copy to GPU | 0.07 |
+  | main stream | gradient clip + optimizer + EMA | 0.05 |
+  | total | estimate for the 16-GPU layout | ~10.1 (16-GPU run measured: 10.38) |
+
+  - The encoder number matches the 16-GPU run's own encoder timer (3.62 s), so the bench reproduces the run.
+    The ~0.3 s difference in the total includes the exchange between the two nodes, which a 1-node run can't
+    measure.
+  - The profiled update took 23.3 s against 20.2 s for the others, because the profiler slows the CPU. So GPU idle
+    times in the profile are upper bounds.
+  - **Why the encoder is ~2× slower in training:**
+    - The GPU runs the encoder's kernels in 0.49 s per micro-batch, the same as alone (0.49 s).
+    - Inside training the encoder spans 0.89 s per micro-batch, so the GPU sits idle 45% of that time. No
+      communication or other GPU work runs in those gaps (0.0 s).
+    - The CPU takes 0.91 s per micro-batch to issue the encoder's ~23,600 kernels: 38 µs per kernel, against
+      23 µs in the standalone test on the same CPU model. The encoder is limited by how fast the CPU issues work.
+    - **Open:** why issuing is 1.7× slower inside training. Same kernel count per clip (737 vs 747), and no other
+      PyTorch work on the process's other threads during the encoder. One devbox test with a busy Python thread in the
+      same process didn't finish before its 15-minute limit.
+  - **Recomputation:** yes, every layer is recomputed in full. The backward launches as many attention-forward
+    kernels as the forward does (72 per micro-batch, 2 per layer). Backward matrix-multiply time is 5.95 s per 8
+    micro-batches, which is ≈ recomputation (2.4) + gradients for the trained half (3.0) + the text part below
+    (0.4).
+  - **Text tokens:**
+    - They're 35% of the sequence and take 27% of the matrix-multiply time: 38% in the forward, 23% in the
+      backward.
+    - The backward also computes gradients through the text half of the model: text attention backward, and
+      input gradients through the text layers (~0.4 s of matrix multiplies per 8 micro-batches). Those gradients
+      reach only frozen weights, so they don't change any update.
+    - The config's `freeze_und=false` flag, which would mark this path, isn't read by the model code. Only the
+      trainer's FLOP count reads it.
+  - **GPU idle and communication:**
+    - On the main stream the GPU is idle ~4.9 of 20.2 s per 1-node update (24%): 3.2 s inside the encoder, ~1.4 s
+      in the forward, 0.3 s in the backward.
+    - Communication kernels run 5.7 s per profiled update on their own streams. 0.91 s of that isn't covered by
+      any computation (~0.45 s per 16-GPU-layout update). Most of it (0.74 s) is the forward waiting for weights.
+  - **Memory, 1 node:**
+    - fixed items 27.1 GB; peak allocated 38.4–39.1 GB, at the backward; reserved 42.6–43.5 GB
+    - peaks by phase: main-model forward 37.4 GB, encoder 28.6 GB
+    - no allocator retries
+  - **Data:** waiting for data is 0.2 s per 8 micro-batches (1%). Nothing to gain there.
+- **Candidate speedups, by expected gain per 16-GPU update (10.4 s)** (none tried; each needs your OK):
+  1. **Encode the videos once, ahead of training**, and load latents.
+     - Gain: removes the encoder's 3.55 s (−34%).
+     - Training stays the same: the video path has no random augmentation (resize and mirrored padding only),
+       so each window always gets the same latent.
+     - Cost: one pass over 2.56M windows (~11 GPU-h of encoder time at the measured rate), ~275 GB of bf16
+       latents, and a data-loader change.
+  2. **Remove the encoder's CPU launch overhead.**
+     - Gain: from 0.89 to ≤0.49 s per micro-batch, ≥1.6 s per update (−15%).
+     - Ways, with what each changes:
+       - capture the per-clip encode as a CUDA graph: same kernels, so expected identical (to be checked);
+       - turn on the framework's encoder compile option: config only; it also fuses the encoder's elementwise
+         kernels, and rounding changes slightly;
+       - encode 8 clips per call: 0.46 s on the devbox; latents differ slightly (max 0.03 at 32 per call).
+     - Option 1 makes this unnecessary.
+  3. **Skip the text half's backward** (detach it from the gradient).
+     - Gain: up to ~1.3 s per 8 micro-batches, ~0.65 s per update (−6%).
+     - The trained weights' gradients are unchanged, because no trained weight is on that path. It needs a code
+       change and an equivalence check.
+  4. **Recompute fewer layers.**
+     - Gain: recomputation is ~1.2 s per update; turning it off for some layers saves part of that, with the
+       same math.
+     - Cost: memory. Peak is 39 of 80 GB, but the memory per uncheckpointed layer wasn't measured.
+     - Fixing the "fmha" setting would only save the attention part of the recomputation (~0.05 s per update).
+  5. **Prefetch weights earlier in the forward.**
+     - Gain: at most the ~0.45 s per update of unhidden communication.
 
 ---
 
