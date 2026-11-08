@@ -2,13 +2,16 @@
 
 Started 2026-11-02; kept up to date as the analysis goes. What goes well and what goes badly for
 our models, to decide what to improve next. Part 1 is the current best model, Cosmos3-Nano;
-part 2 is the earlier GR00T analysis.
+part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 
-## Conclusions so far (updated 2026-11-05)
+## Conclusions so far (updated 2026-11-08)
 
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
   the same data (`mix200`).
+- **FLUX 3 Action's continuation is past its step-3,000 level at update 6,500:** 74.1% randomized,
+  76.0% clean (step 3,000: 71.0% / 71.1%). The run dipped at 5,000 after a loss spike and recovered by 6,000
+  (part 3). It's still 8 points behind Cosmos 5,000 on both settings.
 - **No Cosmos task is at 0%.** 14 tasks are under 80% on randomized; the lowest is hanging_mug
   (30%).
 - **For Cosmos, task length matters little; using both arms is the weak spot** (80% vs 89%
@@ -341,6 +344,34 @@ policy has no good sense of where the other arm and the object are at the same t
    clutter, like grabbing a clutter object?
 2. The short tasks that score low (section 2.1), where length can't be the reason: lift_pot,
    place_fan, place_mouse_pad, place_object_scale, stamp_seal, turn_switch.
+
+## Part 3: FLUX 3 Action, continuation from step 3,000 (in progress)
+
+Same 50 tasks and exact seeds as the other models (1,015 randomized, 499 clean). Full evals every 1,000 updates
+plus the 500s; the run is going to 9,000.
+
+| checkpoint | randomized | clean |
+|---|---|---|
+| step 3,000 (first run) | 71.0% | 71.1% |
+| 5,000 | 64.0% | 61.9% |
+| 5,500 | 66.3% | 67.1% |
+| 6,000 | 71.8% | 71.3% |
+| 6,500 | 74.1% | 76.0% |
+| Cosmos 5,000 (same eval) | 81.9% | 84.4% |
+
+Paired by seed ("only A solves" vs "only B solves"):
+- 6,500 vs 6,000: randomized 110 vs 87 (p = 0.12); clean 61 vs 38 (p = 0.027).
+- 6,500 vs 3,000: randomized 132 vs 101 (p = 0.049; by task 24 better, 13 worse); clean 69 vs 45 (p = 0.031;
+  by task 24 better, 12 worse).
+- 6,500 vs Cosmos 5,000: Cosmos ahead by 8.0 points randomized (p = 3e-7) and 8.4 clean (p = 4e-4).
+
+Reading:
+- The dip at 5,000 followed a loss spike near 4,790 that the averaged (EMA) weights carried into the export.
+  The spike investigation is in notes/investigations.md.
+- At 6,500 the weights from before that spike are ~9% of the EMA, and those after a smaller spike at 6,460
+  are ~5%.
+- **Caution:** p ≈ 0.03–0.05 against step 3,000 is weak evidence on its own, since several checkpoints have now
+  been compared against it. The coming checkpoints (7,000–9,000) will show whether the gain holds.
 
 ## Appendix A: is the median a fair summary of a task's length?
 
