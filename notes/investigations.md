@@ -516,6 +516,13 @@ earlier belief that was wrong. **Open** = not yet answered.
     removes that cost but can't be combined with tiling. The Cosmos encoder is also launch-bound (see above).
 - **Corrected (relayed by me):** "gradient sharding at 16 per GPU is 1.20×". That was against the stage-2 job's
   own baseline. Against the stage-1 reference (52.4 s) it's 1.15×.
+- **Found (head-native run 1, updates 1–216, from its metrics log):** wall time is 41.5 s per update against
+  38.8 s of measured step time. The extra comes from two things:
+  - each save (every 50 updates) adds ~95–125 s, about 2.2 s per update;
+  - every 24 updates the loader starts a new "epoch" (384 batches per rank ÷ 16 rounds) and refills, which adds
+    ~18 s, about 0.75 s per update. Over 3,000 updates that's ~37 min, small but avoidable. Not checked yet
+    whether persistent workers or prefetching across the epoch boundary would remove it.
+  - The frozen-trunk phase (updates <100) and the unfrozen phase run at the same speed (38.6 vs 39.0 s).
 
 ---
 
