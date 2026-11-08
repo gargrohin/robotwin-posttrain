@@ -883,6 +883,26 @@ earlier belief that was wrong. **Open** = not yet answered.
   overlap and overlap + graph all give inputs identical 320/320 and latents bitwise 320/320. Loss is bitwise in
   updates 1–2. Later differences come only from the nondeterministic backward, the same source as the reference
   repeat. So training is unchanged.
+- **Found (Cosmos best stacks, cluster, 1 node; reference 20.01–20.05 s):**
+
+  | stack | s/update | change | peak alloc |
+  |---|---|---|---|
+  | overlap + graph | 16.03 | −19.9% | 39.2 GB |
+  | graph + text detach | 14.85 | −25.8% | — |
+  | overlap + graph + text detach | 14.07 | −29.7% | 39.0 GB |
+  | + no recompute in last 16 layers | 13.39 | −33.1% | 56.5 GB |
+  | + no recompute in last 20 layers | **13.21** | **−34.0%** | 61.3 GB |
+
+  - With overlap + graph + text detach, the GPU sits idle only 0.77 s of a 14.77 s update (today ~7 s). Further gains
+    need less GPU work.
+  - Exactness:
+    - Graph and overlap are bitwise: latents, and the losses of updates 1–2.
+    - The text detach and skipped recomputation are the same math, but under compile the first loss differs at 1e-4.
+      Verified cause: with compile off, updates 1–2 are bitwise. The compiler builds different fused kernels when the
+      backward's structure changes.
+  - The detach removes the text half's backward multiplies (1.39 → 0.07 s per update).
+  - **Open:** the framework's own encoder-compile option changes 296/320 latents and the loss by 5–8%. Not used; cause
+    unknown.
 
 ---
 
