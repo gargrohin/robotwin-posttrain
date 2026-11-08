@@ -401,6 +401,15 @@ earlier belief that was wrong. **Open** = not yet answered.
   verified cause: the worker thread's intra-op thread count differed from the main thread's, where the encoders
   were compiled. Compiled code guards on that count, so everything recompiled once in the worker. That's fixed.
   The 10.1 s at the 4-GPU run's fifth update is still unexplained and being checked.
+- **Found (compile agent, 1-GPU mini trainer, TORCH_LOGS=recompiles):** a second recompile, measured 6/6 times, also
+  after the thread fix. The warm-up encodes two captions (`trainer.py:748-750`), so the text encoder compiles for
+  batch 2 and guards `2 <= hidden_states.size()[0]`. The first micro-batch that encodes exactly one caption fails
+  the guard and recompiles every language-model layer: 3.0–4.7 s, once per rank, at whichever early update.
+  Adding a one-caption warm-up call removed it (zero recompiles after the loader starts, 2 runs). Caption length
+  doesn't trigger recompiles. Whether this explains the 10.1 s fifth update is being verified.
+- **Found (compile agent):** the thread-count mismatch has a race behind it. The DataLoader's pin-memory thread
+  calls `torch.set_num_threads(1)`. A thread created after that starts with 1 thread, while the main thread keeps 96,
+  so the outcome depends on thread start order. Setting the count in the worker's initializer removes the race.
 
 ---
 
