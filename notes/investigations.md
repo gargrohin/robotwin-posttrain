@@ -366,6 +366,30 @@ earlier belief that was wrong. **Open** = not yet answered.
   loss matched.
 - **Found (head-native launch, measured):** the smaller canvas runs at ~38.6 s per update on 1 node, vs 52.4 s
   for today's canvas on the same setup, about 26% faster, before any speedups.
+- **Found (speed, cluster stage 2): gradient sharding at 16 per GPU is 45.7 s per update, 1.20× the
+  reference** (peak 57.6 / 69.2 GB, 0 allocator retries; 32 per GPU runs out of memory). The DiT forward + backward
+  drops from 30.0 to 24.0 s per update: 4 rounds per update instead of 16 means fewer parameter all-gathers. The
+  VAE stays at ~21 s. The equivalence check passed (update-1 loss bitwise identical; later differences within
+  run-to-run noise).
+- **Corrected (my stage-1 note above):** "more examples per GPU won't buy much". It was true at 8 per GPU without
+  sharding, where the allocator thrashed. Once gradient sharding frees memory, fewer rounds per update mean fewer
+  all-gathers, and that saves 6 s per update.
+- **Found (overlap fix, cluster, 8 GPUs):**
+  - DiT inputs were bitwise identical in all 80 hashed micro-batches.
+  - Update-1 loss was bitwise identical. Later loss and grad norm stayed within run-to-run noise.
+  - So the overlap fix is exact.
+- **Found (local 4-GPU, real DiT, small batch):**
+  - Overlap removes the gap but gains only 3.5–4.4%.
+  - Dropping the padding gains 8.9%.
+  - Overlap + VAE graph + no padding gains 13.5%.
+  - Every exact variant had a bitwise-identical update-1 loss.
+- **Corrected (my earlier framing):** "the gains have to come from the encoder's ~22 s via overlap". Overlap only
+  recovers time the GPU sits idle. When the encoder overlaps the backward, the two share the GPU and the backward
+  stretches. On the cluster at 4 per GPU the profiler showed 46.5 s of GPU work in 52.4 s, so overlap alone can
+  recover at most ~6 s. Larger gains need less GPU work: no padding (−25% of encoder work) and fewer all-gathers.
+- **Open (compile):** the local compiled stack ran 63, 16.5, 8.4, 5.9, 10.1, 5.5 s per update. That's start-up
+  compile, then spikes. The speed agent's guess: recompiles from new caption shapes in the text encoder. Not
+  verified yet; the cluster's 20-update compile runs and the compile investigation should settle it.
 
 ---
 
