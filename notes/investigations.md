@@ -616,6 +616,16 @@ earlier belief that was wrong. **Open** = not yet answered.
   - **Corrected (my suggestion):** "evals might use the GPU lightly, so 2 streams per GPU could cut GPU-hours".
     The measurements say no.
   - The 4,000 eval runs with 2 streams per GPU as the full-scale measurement (two of each fit: ≤75 of 79.6 GB).
+- **Q (user): why did only our 4,000 eval jobs fail on the broken node?** Timing plus the scheduler's packing.
+  - One GPU on that node was lost at 04:12 ET: the device plugin logged Xid 79 and marked the device unhealthy.
+    The node stayed Ready with 7 allocatable GPUs.
+  - Other users' pods there all started before the loss, and none of them failed. Every pod placed there after the
+    loss was ours: 11 two-GPU eval slices, all rejected ("GetPreferredAllocation … GPU is lost").
+  - The node had 3 free GPUs, healthy nodes had 4, and the scheduler packs onto the fullest node that still fits.
+    So every small slice went to the bad node.
+  - Unresolved: whether 1-GPU requests would also fail there. No 1-GPU pod was placed there after the loss.
+  - Workaround: 4-GPU slices can't fit on the bad node. The evals now use them, with the same seed lists and
+    per-stream queue lines.
 
 ---
 
