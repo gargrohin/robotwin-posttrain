@@ -303,6 +303,43 @@ earlier belief that was wrong. **Open** = not yet answered.
   ~1.8 days at an estimated 1.6×. "Within a day" needs ~2.9×. Same canvas and settings as the first run. Decide
   once the speed numbers are measured.
 
+## 8d. Why Flux's video encoder doesn't overlap, and what the speedups do (Nov 7, 23:00)
+- **Found (root cause, from a devbox profiler trace):**
+  - The step that prepares the next small batch (augmentation, text encoder, video encoder) holds the CPU
+    thread ~1.45 s per small batch, about as long as the encoders' GPU work.
+  - The main cause: camera frames from the data loader get stacked into a new, non-pinned CPU tensor
+    (~274 MB per small batch), so each copy to the GPU blocks until the previous window's encoding is done.
+    There are 122 blocking copies plus other syncs.
+  - The backward pass can only be queued after that step returns, so the GPU's main queue sits idle meanwhile.
+  - Fix that works: run the preparation in a worker thread. The backward is then queued at once, and the gap
+    disappears in the trace.
+- **Found (correctness, end-to-end on 1 GPU with real data):**
+  - Bitwise identical inputs to the main model, and bitwise identical loss and gradient norm: the worker
+    thread, staging frames to the GPU first, a CUDA graph for the encoder, dropping the padding, tiling, and
+    all of them together.
+  - Gradient sharding and tiling at 4 per GPU: the first update's loss bitwise identical, later differences
+    within run-to-run noise (loss ~1.5e-5, gradient norm ~1e-4).
+  - Compiling the text encoder: within noise.
+  - **Compiling the video encoder changes its output** (1.16% relative difference) and moves the loss ~20× the
+    noise. By the agreed criterion that changes training, so it needs your decision.
+- **Found (speed per window on one GPU):**
+
+  | encoder mode | GPU time per window |
+  |---|---|
+  | today | 0.322 s |
+  | CUDA graph | same |
+  | no padding | 0.242 s (−25%, exact) |
+  | compiled | 0.167 s (−48%, not exact) |
+  | compiled + no padding | 0.128 s (−60%, not exact) |
+
+  BFL's own compile option crashes in training (a CUDA-graph mode that conflicts with repeated encodes). The
+  experiment compiles it a different way.
+- **Found (whole updates, 1 node, 4 per GPU):**
+  - tiling 59.4 s (+14%, slower);
+  - gradient sharding 52.4 s (no faster, but frees 22.5 GB per GPU);
+  - 16 per GPU with tiling still runs out of memory.
+- **Open:** the end-to-end speed of the overlap fix and the full stacks (six jobs submitted at 23:02).
+
 ---
 
 ## Lessons

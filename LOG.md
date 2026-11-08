@@ -2208,3 +2208,9 @@ with the same recipe, and add timing logs showing where each update's time goes.
 - A small spike at update 6,460 (gradient norm 1.18; a brief rise in action error, normal again
   within ~20 updates), much smaller than the one at 4,790.
 - Update 6,500 was exported and its full eval is running (results ~01:00).
+
+**23:05 EST (Sat Nov 7)** **At your request, stopped two other users' idle vLLM servers on the devbox (GPUs 0
+and 3).** Checked first: both at 0% GPU use over 30 s, no client connections, up ~2.7 days and ~1.5 days. Stopped
+gracefully (a normal stop signal); both GPUs freed within 25 s. Their exact launch commands are saved locally
+(git-ignored) in `scratch/stopped_servers/` so they can be restarted. GPUs 0–6 now go to short profiling and test
+runs for the speed experiments.
