@@ -564,6 +564,14 @@ earlier belief that was wrong. **Open** = not yet answered.
     updates. Look at the grad-norm distribution before choosing a threshold for a new run.
   - Schedule (`train_b512_cont6k.json`): constant peak LR until 8,000, then a 1,000-update cooldown to 9,000.
     Cosmos gained most from its decay, so 9,000 is the main run's verdict.
+- **Corrected (mine): "at 8 per GPU training stays identical".** The data stays the same, but the noise doesn't.
+  Diffusion noise and timesteps come from each rank's CPU random generator, drawn once per micro-batch
+  (flux-action policy.py:728, `packing.build_forward_kwargs`), as found by the head-native agent. Going from 4 per GPU
+  × 16 rounds to 8 per GPU × 8 keeps the same windows per update, but they get different noise and timestep draws.
+  That's the same recipe with different random draws, like another noise seed. Bitwise-identical training needs the
+  same windows per GPU (stay at 4 per GPU).
+  - The head-native equivalence job checks the two parts separately: the speed flags at 8 per GPU (bitwise
+    expected), and the 4→8 split (same windows per update; the loss differs by the noise redraw).
 
 ---
 
