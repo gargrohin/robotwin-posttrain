@@ -461,6 +461,17 @@ earlier belief that was wrong. **Open** = not yet answered.
   (no recompile, no allocator retries, no data wait: ~10% jitter). Update 2 (8.8 s) was the first real text-encoder
   batches and the memory pools filling. So the earlier spike was the batch-of-one text-encoder recompile, which
   the one-caption warm-up removes.
+- **Found (cluster compile equivalence, 8 GPUs, 4 per GPU, 5 updates, 80 micro-batches hashed):**
+  - Text-encoder compile: text contexts differ in 80/80, but the loss stays within run-to-run noise (update 1
+    9.6e-6; later ≤2.6e-5).
+  - Video-encoder compile: latents differ in 80/80, and the loss is off 9.1e-5 at update 1 and ≤1.1e-4 later,
+    4–7× the noise (1.5–2.4e-5). It changes training slightly, in line with the 1.1% latent difference the
+    compile investigation measured. Whether that matters for the policy needs a training run plus eval.
+- **Found (local 4-GPU, real DiT, small batch, mean of updates 4–10):** reference 6.79 s; exact v2 5.72 s
+  (−15.8%, bitwise); fixed compiled stack 4.91 s (−27.7%, update-1 loss 2.1e-4 off).
+- **Corrected:** "compile adds at most ~7% once the overlap works" (the speed agent's earlier estimate, quoted in
+  the compile report). Measured on top of exact v2, compile cuts update time a further 14% locally (5.72 → 4.91 s).
+  The cluster numbers (v2exact vs v2cmp) are still to come.
 
 ---
 
