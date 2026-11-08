@@ -2168,3 +2168,7 @@ instability at peak learning rate without gradient clipping (moderate confidence
   0.044 / 0.043).
 - Cosmos 5,000 is still ahead by 10-13 points (p < 1e-7). No new spikes; training continues to
   9,000 (ETA ~12:30 Monday), with the same eval every 500 updates.
+
+**19:50 EST (Sat Nov 7)** **Cleanup (your OK):** deleted the 2-node test's cloud-storage folder (104 objects,
+138 GB) and its wandb run, plus the spike investigation's 78 GB of local copies. The investigation's
+scripts, CSVs and report stay.
