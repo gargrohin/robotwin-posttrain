@@ -2406,3 +2406,15 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
 - Cosmos 5,000 leads by 7-10 points (p < 0.001).
 - This eval took longer because of a broken GPU on one cluster node (fixed by taking the node out of
   scheduling at 11:00); every affected job was rejected before it started, so nothing ran twice.
+
+**16:05 EST (Sun Nov 8)** **Cosmos speed experiments started (user OK, no limit on tests).**
+- Main idea (user's): overlap the video encoder with the model, encoding the next micro-batch while the current one
+  trains, as done for Flux. Profiling showed ~1.6 s of idle GPU inside the encoder and ~0.7 s in the forward pass per
+  16-GPU update. My estimate (not measured): ~15–22% faster, with training unchanged.
+- Also tested:
+  - lower encoder launch cost: batching clips, a CUDA graph, the existing encoder compile;
+  - stopping the backward at the frozen text half;
+  - recomputing fewer layers;
+  - combinations.
+- Checked in code: the RoboTwin data path has no image augmentation today, so encoding videos ahead of time would also
+  be exact. It's not pursued now, since adding augmentation later would break it.
