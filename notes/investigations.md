@@ -456,6 +456,11 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Tiling on top of gradient sharding at 16 per GPU is slower: 51.9 vs 45.7 s.
   - 32 per GPU still runs out of memory, because at that size the DiT's activations are the limit.
   - So tiling buys nothing once gradient sharding is on.
+- **Closed (the 10.1 s spike):** the 4-GPU rerun of the fixed compiled stack (10 updates, recompile logging)
+  logged 48 recompiles, all during start-up, and zero in updates 2–10. Steady updates ran ~4.8 s, with one of 5.34 s
+  (no recompile, no allocator retries, no data wait: ~10% jitter). Update 2 (8.8 s) was the first real text-encoder
+  batches and the memory pools filling. So the earlier spike was the batch-of-one text-encoder recompile, which
+  the one-caption warm-up removes.
 
 ---
 
