@@ -608,6 +608,14 @@ earlier belief that was wrong. **Open** = not yet answered.
     has to hold is that the speed flags compute the same thing at the same layout (E1: bitwise inputs and update-1
     loss at 8 per GPU).
   - Same for the main run: each of its resumes since 3,000 reseeded the data order.
+- **Answered (open item above: how busy is the GPU during a Flux eval?):** busy. From the 7,000 eval's GPU logs at
+  1 stream per GPU: median utilization 91% (mean 68%), peak memory 37.5 GB (policy server ≤27.5 GB, sim client
+  ≤9.8 GB). The simulator's ray-traced rendering runs on the GPU.
+  - In the Nov 4 test with 2 streams on one GPU, policy calls went from 0.78–0.93 s to 3.8–4.8 s and sim steps from
+    ~0.55 to 1.19 s, so each stream ran ~2.2× slower. That implies 2 per GPU costs ~10% more GPU-h, not less.
+  - **Corrected (my suggestion):** "evals might use the GPU lightly, so 2 streams per GPU could cut GPU-hours".
+    The measurements say no.
+  - The 4,000 eval runs with 2 streams per GPU as the full-scale measurement (two of each fit: ≤75 of 79.6 GB).
 
 ---
 
