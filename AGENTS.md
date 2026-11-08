@@ -79,6 +79,10 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
   preemption, overwritten in turn. Cluster jobs can't delete in cloud storage.
 
 **Working rules from the user**
+- How to do this research: keep asking small questions about the runs (why is it slower, what is this number,
+  what does this setting actually do), verify each answer against the code, configs, logs or a measurement, and
+  follow every anomaly deeper. Hold no preconceived notion of how a run behaves; any belief can be overturned.
+  Say what is measured vs assumed, discuss findings with the user, and record them in `notes/investigations.md`.
 - Before big train or eval runs, write out the protocol, GPU-hours and cheaper options. The user
   decides.
 - Comparison evals use GR00T's protocol exactly: all 50 tasks, clean and randomized, the same

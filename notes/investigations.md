@@ -1,6 +1,7 @@
 # Investigations: questions, findings, corrected assumptions
 
-A running record of questions asked about our training and evals, what checking them showed, which earlier
+This is how the project is run: keep asking small questions, verify every answer, follow anomalies deeper,
+and hold no preconceived assumptions. A running record of questions asked about our training and evals, what checking them showed, which earlier
 assumptions turned out wrong, and what is still open. Small questions about speed or odd numbers have
 repeatedly overturned things we believed about the runs, so every claim here says how it was checked.
 Newest topics at the bottom. Times are ET.
