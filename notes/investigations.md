@@ -903,6 +903,20 @@ earlier belief that was wrong. **Open** = not yet answered.
   - The detach removes the text half's backward multiplies (1.39 → 0.07 s per update).
   - **Open:** the framework's own encoder-compile option changes 296/320 latents and the loss by 5–8%. Not used; cause
     unknown.
+- **Found (Cosmos, details behind the table, cluster, 1 node):**
+  - **Corrected (mine, above):** "no recomputation in the last 24 layers runs out of memory". That run had the text
+    detach silently off.
+    - With the detach on, 24 layers fit: 66.0 GB peak, without the encoder speedups.
+    - Text detach + no recompute in the last 16 / 20 / 24 layers, no encoder speedup: 17.67 / 17.29 / 17.19 s;
+      peak 56.4 / 61.2 / 66.0 GB.
+  - The detach also halves the attention-forward kernels in the backward (576 → 288), because the text attention is
+    no longer recomputed.
+  - Compile-off check (3 updates): text detach and no recompute in 8 layers give bitwise losses in updates 1–2. Their
+    update-3 difference is the size of the reference repeat's (2.5e-4 vs 2.4e-4).
+  - 8 clips per encode call: all 320 latents differ, first loss 2.6e-4 relative. Not exact.
+- **Lesson:** both Cosmos silent no-ops (the overlap's fallback, the detach flag) were caught only because each
+  benchmark logged what the option actually did (encodes done ahead, backward time). Every opt-in speedup needs a
+  counter that proves it ran.
 
 ---
 
