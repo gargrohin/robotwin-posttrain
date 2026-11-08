@@ -826,6 +826,23 @@ earlier belief that was wrong. **Open** = not yet answered.
   A devbox test with the 8 loader workers in the same process slowed launches by 17%: CPU contention from the
   loader's worker processes, not a lock (noisy shared box). The cluster run with 2 loader workers will measure it
   cleanly.
+- **Found (Cosmos speedups round 1, cluster, 1 node, 8 micro-batches, median of updates 5–20):**
+
+  | condition | s/update | change | exact? | peak alloc |
+  |---|---|---|---|---|
+  | reference | 20.01 | — | — | 39.1 GB |
+  | CUDA graph of the per-clip encode | 16.89 | −15.6% | bitwise (devbox test) | same |
+  | 8 clips per encode call | 16.58 | −17.1% | no (latents ~0.5–0.7% rel.) | same |
+  | framework encoder compile | 16.55 | −17.3% | no; 311 s first-update compile | same |
+  | no recompute in last 8 layers | 19.52 | −2.4% | same math | 51.2 GB |
+  | no recompute in last 16 layers | 19.14 | −4.3% | same math | 65.3 GB |
+
+  - With the graph, the encoder's stream time drops from 6.95 to 4.02 s per update, about its kernel time: the idle
+    time inside the encoder is gone.
+  - Each layer left without recomputation costs ~1.6 GB and saves ~63 ms per update.
+- **Found (second silent no-op):** `freeze_und` never took effect. The text model's live config is rebuilt from a
+  copy that drops the override, so freeze_und + skip-16 gave the same numbers as skip-16 alone. Fixed and checked
+  that the flag reaches the live config; the affected jobs were resubmitted.
 
 ---
 
