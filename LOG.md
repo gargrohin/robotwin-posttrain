@@ -2190,3 +2190,21 @@ with the same recipe, and add timing logs showing where each update's time goes.
   no checkpoint uploads) and correctness checks (identical losses update by update; encoder
   outputs with and without tiling). About 23 GPU-hours on one borrowed node. Waiting for your
   decisions on each code change.
+
+**21:05 EST (Sat Nov 7)** **Flux continuation moved to 2 nodes on our team's quota (from update 6,400).**
+- On your call the run moved from 1 node on the shared borrowed pool to 2 nodes on our team's
+  quota, where other teams' jobs cannot pre-empt it. Batch 512 as before (16 GPUs x 4 windows
+  x 8 accumulation), same schedule and settings.
+- Before the move, a fix for 2-node restarts: if a pre-empted 2-node job came back under the same
+  job, leftover "save finished" notes from before could let one node declare a save complete
+  while the other node's half was still from the earlier attempt. Now each start of a job gets
+  its own folder for these notes. A local simulation reproduced the fault with the old code and
+  passed with the new one; a short real 2-node test passed (start from the 1-node save, a save,
+  a forced kill during the next save, a second start that resumed from the last complete save).
+- Switch: the 1-node job was stopped right after its 6,400 save (19:44); the 2-node job started
+  at 19:48 from that save (update 6,410: loss 0.066, same learning rates) and its first two
+  saves (6,450 and 6,500) were complete and correct. Speed: ~26.5 s per update (1 node: ~56.5 s).
+  New ETA for 9,000: ~15:30 Sunday.
+- A small spike at update 6,460 (gradient norm 1.18; a brief rise in action error, normal again
+  within ~20 updates), much smaller than the one at 4,790.
+- Update 6,500 was exported and its full eval is running (results ~01:00).
