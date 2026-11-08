@@ -870,6 +870,19 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Save/resume/export with DiT compile is untested.
 - **Ruled out:** tiling under compile (35.7 s vs 31.8 s), and the graph without gradient sharding (278 allocator
   retries).
+- **Found (Cosmos overlap, the user's idea, cluster, 1 node):**
+  - Overlap + CUDA graph: **16.03 s per update, −19.9%** (−5.1% beyond the graph alone). The main thread replays the
+    graph on a side stream for the next micro-batch, and the step never waits.
+  - Overlap with the plain encoder in a worker thread: only −3.1%. The worker needs 2.4 s per micro-batch to launch
+    the encoder (0.86 s on the main thread), competing for CPU and Python's lock. The main thread still waits 3.3 s,
+    and forward/backward stretch ~2.9 s from sharing the GPU. Same lesson as Flux: overlap pays only once launching
+    the encoder costs little CPU.
+  - `freeze_und` (detach the text half from the backward), alone: 18.42 s, −7.9%. The backward drops 8.05 → 6.21 s,
+    more than the profile predicted. Equivalence pending.
+- **Found (Cosmos equivalence, deterministic loader, cudnn benchmark off, 320 micro-batches per condition):** graph,
+  overlap and overlap + graph all give inputs identical 320/320 and latents bitwise 320/320. Loss is bitwise in
+  updates 1–2. Later differences come only from the nondeterministic backward, the same source as the reference
+  repeat. So training is unchanged.
 
 ---
 
