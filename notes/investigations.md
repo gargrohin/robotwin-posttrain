@@ -254,6 +254,33 @@ earlier belief that was wrong. **Open** = not yet answered.
   borrowed queue by choice. Our quota had 32 GPUs free, but no node was physically idle. Each experiment's notes
   keep a running count of pre-emptions, updates lost and time to re-admission.
 
+## 8c. Where Flux's training time goes (Nov 7, speed test stage 1, reference run, 1 node, 4 examples/GPU)
+- **Measured:** 52.4 s per update; peak allocated 65.8 GB, peak reserved 75.3 GB.
+
+  | where | phase | seconds per update |
+  |---|---|---|
+  | main model (main stream) | forward | 8.5 |
+  | main model (main stream) | gap with no main-model work, between forward and backward | 22.4 |
+  | main model (main stream) | backward, incl. recomputation | 21.5 |
+  | encoders (side stream) | video encoder | 22.1 |
+  | encoders (side stream) | text encoder | 2.0 |
+  | encoders (side stream) | augmentation + canvas | 1.8 |
+  | other | optimizer + averaging + gradient sync | ~0.05 |
+  | other | data wait | ~0 |
+
+- **Corrected:** the trainer is designed to run the next micro-batch's encoders on a side stream *during* the
+  current backward pass. In practice they don't overlap. The 22.4 s gap matches the video encoder's 22 s, so the
+  encoder runs on its own, and it takes ~43% of every update. The profiler agrees: the GPU is busy 46.5 of
+  53.2 s, and the summed kernel time (48.5 s) shows the two streams barely overlap. This applies to the main
+  run too, since it uses the same code.
+- **Implications:**
+  - Time-tiling makes the encoder slower (+33%) with nothing to hide it behind, so it's expected to be slower
+    overall unless its freed memory buys more examples per GPU.
+  - The big levers are outside the approved tests:
+    - dropping the padding frames (exact, ~5 s/update less);
+    - making the overlap actually work (up to ~22 s/update less if fully hidden);
+    - encoding the video once ahead of time (removes the encoder entirely, but changes how augmentation works).
+
 ---
 
 ## Lessons
