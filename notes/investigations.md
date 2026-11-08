@@ -627,6 +627,70 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Workaround: 4-GPU slices can't fit on the bad node. The evals now use them, with the same seed lists and
     per-stream queue lines.
 
+## 10. Where Cosmos's training time and memory go (Nov 7–8)
+- **Q:** the questions of sections 8–8c, asked of Cosmos3-Nano. Where does an update's time go, and what uses the
+  memory? Code facts below are from cosmos-framework (our branch). Numbers come from the run logs and the
+  experiment tracker.
+- **Found (code and configs):**
+  - **Video encoder:**
+    - It runs on the GPU's main stream inside the training step, one clip per call: 32 calls per micro-batch
+      (omni_mot_model.py:5476).
+    - There is no side stream, so the code never tries to overlap the encoder with the main model. Unlike Flux,
+      there is no broken overlap to fix.
+    - An option to spread encoder work across GPUs exists; it's off in this recipe.
+  - **Where "14 s of encoder per update" came from:** the trainer's own speed callback times every encoder call
+    with GPU timestamps and sums them per update.
+    - Local run: 14.1 s of 36.7 s (38%).
+    - 16-GPU run: 3.6 s of 10.4 s (35%), the median over 4,950 logged updates.
+  - **Compiled:** the 36 main-model layers are compiled. The video encoder and the small input/output heads
+    aren't.
+  - **Recomputation:**
+    - It's on for all 36 layers, in "selective" mode, meant to keep the attention outputs.
+    - The setting names attention "fmha". On H100 the attention kernel is FlashAttention 3, whose name doesn't
+      contain "fmha", so nothing is kept and each layer is recomputed in full in the backward pass.
+    - The framework's own code comment describes this case (activation_checkpointing.py:63-71).
+  - **Gradients during accumulation:**
+    - They're spread across the 8 GPUs of a node after every micro-batch. There's no full unsharded copy like
+      Flux's 27.6 GB.
+    - On 2 nodes, the exchange between the nodes waits for the last micro-batch; until then the partial sums are
+      kept in bf16.
+  - **Text:**
+    - The data workers turn each caption into ~162 token ids. There's no separate text encoder.
+    - The tokens run through the frozen understanding half of the same model on every micro-batch, with no
+      cache.
+    - Per GPU and micro-batch that's ~5,040 text tokens next to 9,504 video and action tokens: 35% of the
+      sequence.
+  - **Frames:**
+    - 17 frames per sample (16 actions + 1) on a 256×256 canvas: the 256×228 camera composite plus 28 mirrored
+      padding columns (11% of the encoded pixels).
+    - 17 is one of the encoder's exact lengths, so there are no black padding frames (unlike Flux).
+  - **Encoder share:** 3% of the arithmetic (the trainer's own count) but ~35% of the time.
+  - **Data loading:** 8 workers per GPU, 4 batches queued each. The logged wait for data is 0.03 s per
+    micro-batch, about 1% of an update.
+  - **Memory per GPU, 16-GPU run.** Weights, averaged copy and encoder sizes were measured at start-up of the
+    profiling run; the other rows are computed from parameter counts.
+
+    | item | GB |
+    |---|---|
+    | fp32 weights, whole model (15.17B parameters) | 7.6 |
+    | fp32 averaged copy (EMA) | 7.6 |
+    | Adam states (6.98B trainable) | 7.0 |
+    | sharded fp32 gradients | 3.5 |
+    | bf16 partial gradients (2 nodes only) | 1.75 |
+    | video encoder, bf16 (705M parameters) | 1.4 |
+    | fixed total | ~29 |
+    | logged peak allocated / reserved | 34.4–34.7 / 41.9–42.3 |
+
+    So activations and buffers take ~6 GB.
+- **Found (one devbox GPU, the encoder alone, 32 clips):**
+  - Called as training calls it (one clip per call), it takes 0.54 s.
+  - Batched as one call, it takes 0.46 s.
+  - In training the same work logs 0.90 s per micro-batch (16-GPU run) and 1.09 s (local run). That's 1.7–2× the
+    isolated time.
+- **Open:** why the encoder takes twice as long inside training, how much of the backward is recomputation, the
+  text's share of GPU time, and how much communication isn't hidden. A 1-node profiling run (20 updates, profiler
+  on one update) is queued.
+
 ---
 
 ## Lessons
