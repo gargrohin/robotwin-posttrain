@@ -480,6 +480,24 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found (all exact pieces at once, cluster, 4 per GPU, 5 updates):** overlap + no padding + gradient sharding +
   tiling against its own reference. DiT inputs bitwise in 80/80 micro-batches; update-1 loss bitwise; later
   differences within noise. Combined, the exact pieces leave training unchanged.
+- **Q: does the held-out arm error (open-loop, 1,200 demo moments) predict full-eval success?**
+
+  | update | arm error train rand / train clean / unseen rand | success rand / clean |
+  |---|---|---|
+  | 3,000 (first run) | 0.0294 / 0.0214 / 0.0234 | 71.0% / 71.1% |
+  | 4,000 | 0.0299 / 0.0216 / 0.0231 | not evaluated |
+  | 5,000 | 0.0503 / 0.0441 / 0.0433 | 64.0% / 61.9% |
+  | 5,500 | 0.0392 / 0.0314 / 0.0323 | 66.3% / 67.1% |
+  | 6,000 | 0.0345 / 0.0272 / 0.0289 | 71.8% / 71.3% |
+  | 6,500 | 0.0306 / 0.0237 / 0.0259 | 74.1% / 76.0% |
+  | 7,000 | 0.0297 / 0.0220 / 0.0245 | eval running |
+
+  - **Found:** within the continuation (5,000 → 6,500), arm error falls and success rises at every step.
+  - **Found:** across runs they don't line up. Step 3,000 has lower arm error than 6,000 and 6,500 on all three
+    sets, yet the same success as 6,000 and less than 6,500.
+  - **So far:** the check orders checkpoints within one run, but it can't stand in for the eval when comparing
+    across runs or recipes. That rests on 6 points, and nothing explains the cross-run mismatch yet. 7,000's
+    eval adds a point.
 
 ---
 
