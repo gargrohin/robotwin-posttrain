@@ -48,6 +48,9 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - `notes/eval_analysis.md`: the eval analysis, written with the user. Keep its "Conclusions so
   far" and model sections updated as the analysis goes (user's request, 2026-11-05); the user's
   viewer notes (`analysis/tags/notes.sqlite`) feed it.
+- `notes/investigations.md`: every question asked about the runs, what checking showed, and which
+  assumptions it corrected. Add to it as questions come up, and don't state a claim about a run as fact
+  until it has been checked.
 - `patches/`: our upstream edits, one patch per commit: XPolicyLab adapters for Cosmos and Flux,
   GR00T data-loading speedups, RoboTwin episode records, the cuRobo fix.
 - Local notes outside this repo. They hold internal cluster names, storage paths and job IDs, so
