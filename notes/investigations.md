@@ -280,6 +280,11 @@ earlier belief that was wrong. **Open** = not yet answered.
     - dropping the padding frames (exact, ~5 s/update less);
     - making the overlap actually work (up to ~22 s/update less if fully hidden);
     - encoding the video once ahead of time (removes the encoder entirely, but changes how augmentation works).
+- **Your decisions (Nov 7, 23:00):**
+  - Top priority: make the encoder/backward overlap actually work, as a side experiment now, proven to leave
+    training unchanged (equivalence run against the reference).
+  - Also important: drop the padding frames (exact), measured alone and with the overlap fix.
+  - Tiling is adopted only if it pays off, likely only on top of a working overlap.
 
 ---
 
