@@ -498,6 +498,24 @@ earlier belief that was wrong. **Open** = not yet answered.
   - **So far:** the check orders checkpoints within one run, but it can't stand in for the eval when comparing
     across runs or recipes. That rests on 6 points, and nothing explains the cross-run mismatch yet. 7,000's
     eval adds a point.
+- **Found (cluster, 8 GPUs, 20 updates; reference 52.4 s at 4 per GPU):**
+
+  | setup | per GPU | s/update | speedup |
+  |---|---|---|---|
+  | no padding | 4 | 47.2 | 1.11× |
+  | overlap | 4 | 50.0 | 1.05× |
+  | overlap + graph | 4 | 52.4 | 1.00× (38 allocator retries) |
+  | overlap + graph + no padding | 4 | 44.8 | 1.17× |
+  | gradient sharding | 16 | 45.7 | 1.15× |
+  | overlap + no padding + gradient sharding + tiling, no graph | 16 | 46.9 | 1.12× |
+
+  - Overlap + graph + no padding: forward 9.3 s, backward 35.4 s, no gap. The encoder's work now runs fully
+    alongside the backward, and both stretch while they share the GPU.
+  - At 16 per GPU without the graph, the main thread waits 21.6 s per update for the worker thread. The worker
+    can't queue the eager encoder's kernels fast enough for 16 windows, so the launches are CPU-bound. The graph
+    removes that cost but can't be combined with tiling. The Cosmos encoder is also launch-bound (see above).
+- **Corrected (relayed by me):** "gradient sharding at 16 per GPU is 1.20×". That was against the stage-2 job's
+  own baseline. Against the stage-1 reference (52.4 s) it's 1.15×.
 
 ---
 
