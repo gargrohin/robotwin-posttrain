@@ -2299,3 +2299,21 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
   same saved state). Then each run switches after a complete save.
 - Rough estimate: ~1.2–1.3× faster, training done ~03:00–05:00 ET Mon instead of ~09:45.
 - Compile goes into the 0–9,000 run.
+
+**02:20 EST (Sun Nov 8)** **Where Flux eval time goes (update 6,500 eval, from its logs).**
+- 1,514 episodes, 12 jobs x 2 GPUs (one eval stream per GPU): 72.9 GPU-hours in total.
+  - Episodes: 65.3 h (90%). Start-up, model loading per queue line, and idle tails when one
+    stream finishes before the other: 7.6 h (10%).
+- Inside episodes:
+  - The policy returns 32 actions per call, so an episode makes ceil(actions / 32) calls:
+    15,833 calls for 486,933 executed actions.
+  - A call takes 786 ms (median; mean 814 ms) on the policy server, so policy calls add up to
+    ~3.5 h, 5.3% of episode time.
+  - The rest, ~0.46 s per executed action (~62 h), is simulator stepping, rendering and client
+    work; the logs do not split these further.
+- Typical episodes:
+  - Success: 5 policy calls, 152 actions, 83 s (medians; 1,131 episodes).
+  - Failure: 16 calls, 500 actions, 252 s (medians; 383 episodes); every failure ran to the
+    task's step limit.
+- Compiling the eval policy: even a 2x faster call would save ~1.7 GPU-hours per eval (~2.4%); a
+  call that took no time at all would save ~3.5 h (~4.7%).
