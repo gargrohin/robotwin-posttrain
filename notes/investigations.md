@@ -771,6 +771,23 @@ earlier belief that was wrong. **Open** = not yet answered.
      - Fixing the "fmha" setting would only save the attention part of the recomputation (~0.05 s per update).
   5. **Prefetch weights earlier in the forward.**
      - Gain: at most the ~0.45 s per update of unhidden communication.
+- **Found (compiled stack, cluster, 1 node, 20 updates; reference 52.4 s):** overlap + no padding + no autocast +
+  compiled VAE and text encoder + deterministic Inductor + gradient sharding.
+  - 16 per GPU: **31.8 s, 1.645×**, peak 64.0/67.5 GB, 0 retries.
+  - 8 per GPU: 32.8 s (1.60×).
+  - With compile the VAE graph makes no difference (32.1 vs 31.8 s).
+  - Compile alone, with no other speedups: 43.2 s (1.21×).
+  - Equivalence: latents and text contexts differ, and the loss is off ≤9.7e-5, about 4× the noise. Grad norm is
+    at noise level.
+  - Recompiles: all during warm-up, none after update 1. Warm-up takes 61–63 s cold, 17–18 s with a warm cache.
+- **Found (longrun, first admission, before its pre-emption):**
+  - Steady 32.0 s per update over 150 updates, then 31.8 s after a resume from the 150 save.
+  - Memory flat (61–62 GB allocated), no recompiles after the resume.
+  - Resume start-up ~2.7 min.
+  - The export step wasn't reached.
+- **Found:** every 24th update takes ~120 s: the data loader restarts at each epoch boundary, adding 40–50 s of data
+  wait. That's ~3.7 s per update on average, ~11% at the compiled speed. It's the same pattern the head-native runs
+  show (~18 s at their speed); it grows in relative terms as training gets faster.
 
 ---
 
