@@ -2268,7 +2268,7 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 | 5,500 | 0.0392 | 0.0314 | 0.0323 | 66.3% | 67.1% |
 | 6,000 | 0.0345 | 0.0272 | 0.0289 | 71.8% | 71.3% |
 | 6,500 | 0.0306 | 0.0237 | 0.0259 | 74.1% | 76.0% |
-| 7,000 | 0.0297 | 0.0220 | 0.0245 | running | running |
+| 7,000 | 0.0297 | 0.0220 | 0.0245 | 74.8% | 77.0% |
 
 - Within the continuation (5,000 → 6,500), arm error falls at every step and success rises at
   every step.
@@ -2363,3 +2363,24 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
 - Rewrote the 78 unpushed commits to remove another team's name from older log lines and two commit messages. The
   final files are unchanged, and nothing is pushed. Commit hashes after the last push have changed.
 - Queued: a full eval of update 4,000, run with 2 sim streams per GPU (also a test of eval cost).
+
+**04:35 EST (Sun Nov 8)** **Flux continuation, update 7,000: 74.8% / 77.0%.**
+
+| | randomized, all GR00T seeds (1,015) | clean, GR00T's first 10 per task (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 5,000 | 64.0% | 61.9% |
+| Flux update 5,500 | 66.3% | 67.1% |
+| Flux update 6,000 | 71.8% | 71.3% |
+| Flux update 6,500 | 74.1% | 76.0% |
+| Flux update 7,000 | 74.8% | 77.0% |
+| Cosmos 5,000 | 81.9% | 84.4% |
+
+- 7,000 vs 6,500, paired by seed: randomized 108 vs 101 scenes (p = 0.68), clean 47 vs 42
+  (p = 0.67): no difference.
+- 7,000 vs step 3,000: randomized 135 vs 97 (p = 0.015), clean 77 vs 48 (p = 0.012); better on
+  25-26 tasks, worse on 11-15.
+- Cosmos 5,000 still leads by ~7 points (p <= 0.001). Held-out arm error at 7,000: 0.0297 /
+  0.0220 / 0.0245 (the step-3,000 level).
+- Next: a full eval of update 4,000 (before the 4,790 spike), run with two eval streams per GPU
+  to measure whether that packing saves GPU time.
