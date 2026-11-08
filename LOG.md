@@ -2172,3 +2172,21 @@ instability at peak learning rate without gradient clipping (moderate confidence
 **19:50 EST (Sat Nov 7)** **Cleanup (your OK):** deleted the 2-node test's cloud-storage folder (104 objects,
 138 GB) and its wandb run, plus the spike investigation's 78 GB of local copies. The investigation's
 scripts, CSVs and report stay.
+
+**20:40 EST (Sat Nov 7)** **Flux speed experiment: findings and proposal (nothing launched yet).**
+Goal: find out whether recomputing activations and tiling the video encoder let Flux train faster
+with the same recipe, and add timing logs showing where each update's time goes.
+- Activation recomputation is already on for every transformer block (BFL's default), so today's
+  ~53 s/update on one node already includes it. What is left is the reverse: recompute fewer
+  blocks to save time, if memory allows.
+- The video encoder has no tiling. Its decoder has an exact frame-by-frame tiling that can be
+  switched on for the encoder with a few lines.
+- The largest memory item is a full fp32 copy of the gradients (~28 GB per GPU) that the
+  sharding library keeps during gradient accumulation. Reducing gradients after every
+  micro-batch would free ~24 GB per GPU.
+- 8 windows per GPU ran out of memory only with the old encoder setting (8 windows per encoder
+  call); with today's setting it was never tried, and it probably fits.
+- Proposed: timing logs, a benchmark mode (several 20-update runs per job, same weights and seed,
+  no checkpoint uploads) and correctness checks (identical losses update by update; encoder
+  outputs with and without tiling). About 23 GPU-hours on one borrowed node. Waiting for your
+  decisions on each code change.
