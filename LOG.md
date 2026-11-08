@@ -2255,7 +2255,7 @@ runs for the speed experiments.
   solves (p = 0.049), clean 69 vs 45 (p = 0.03); better on 24 tasks, worse on 12-13.
 - Cosmos 5,000 is still ahead by 8 points on both (p < 0.001).
 
-**01:40 EST (Sun Nov 8)** **Flux: held-out arm error next to the full-eval success, per checkpoint.**
+**01:35 EST (Sun Nov 8)** **Flux: held-out arm error next to the full-eval success, per checkpoint.**
 Arm error is the open-loop check on demo moments (rad, mean absolute arm-joint difference over the
 first 16 actions; 400 moments per set, same moments for every checkpoint). Success is the 50-task
 eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the continuation.
@@ -2300,7 +2300,7 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 - Rough estimate: ~1.2–1.3× faster, training done ~03:00–05:00 ET Mon instead of ~09:45.
 - Compile goes into the 0–9,000 run.
 
-**02:20 EST (Sun Nov 8)** **Where Flux eval time goes (update 6,500 eval, from its logs).**
+**02:05 EST (Sun Nov 8)** **Where Flux eval time goes (update 6,500 eval, from its logs).**
 - 1,514 episodes, 12 jobs x 2 GPUs (one eval stream per GPU): 72.9 GPU-hours in total.
   - Episodes: 65.3 h (90%). Start-up, model loading per queue line, and idle tails when one
     stream finishes before the other: 7.6 h (10%).
