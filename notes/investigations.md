@@ -600,6 +600,14 @@ earlier belief that was wrong. **Open** = not yet answered.
   issue the encoder's kernels fast enough at 16 per GPU (main thread waited 21.6 s)". Without tiling, the no-graph
   stack at 16 per GPU runs 39.5 s, against 38.6 s with graph + no autocast + RoPE cache. So the 21.6 s wait came
   from tiling's extra kernel launches, not from 16 per GPU itself, and the graph adds only ~0.8 s.
+- **Corrected (mine): "at 8 per GPU the switch keeps the same data per update".** Every resume reseeds anyway.
+  All our Flux configs set `reseed_on_resume: true`. On resume the trainer appends a new seed, reseeds the RNGs and
+  starts a fresh data position (flux-action trainer.py:598-620), whatever the windows per GPU. Pre-emption resumes
+  already did this, and the head-native test's resume showed "new data seed".
+  - So the head-native switch draws a new data order and new noise, exactly as any pre-emption resume does. What
+    has to hold is that the speed flags compute the same thing at the same layout (E1: bitwise inputs and update-1
+    loss at 8 per GPU).
+  - Same for the main run: each of its resumes since 3,000 reseeded the data order.
 
 ---
 
