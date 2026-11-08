@@ -472,6 +472,14 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Corrected:** "compile adds at most ~7% once the overlap works" (the speed agent's earlier estimate, quoted in
   the compile report). Measured on top of exact v2, compile cuts update time a further 14% locally (5.72 → 4.91 s).
   The cluster numbers (v2exact vs v2cmp) are still to come.
+- **Found (cluster, 8 GPUs, 4 per GPU, 20 updates):**
+  - Overlap alone: 50.0 s per update (1.047×). That fits the ~6 s idle-time ceiling measured earlier.
+  - Overlap + VAE graph without gradient sharding: 52.4 s, no gain. The graph keeps an ~8 GB memory pool between
+    updates, which leaves no headroom at 4 per GPU; the allocator retried 38 times (reserved 77.4 GB).
+  - So the graph only pays together with gradient sharding (which frees ~22 GB), and they'll be adopted together.
+- **Found (all exact pieces at once, cluster, 4 per GPU, 5 updates):** overlap + no padding + gradient sharding +
+  tiling against its own reference. DiT inputs bitwise in 80/80 micro-batches; update-1 loss bitwise; later
+  differences within noise. Combined, the exact pieces leave training unchanged.
 
 ---
 
