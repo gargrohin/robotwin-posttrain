@@ -843,6 +843,14 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found (second silent no-op):** `freeze_und` never took effect. The text model's live config is rebuilt from a
   copy that drops the override, so freeze_und + skip-16 gave the same numbers as skip-16 alone. Fixed and checked
   that the flag reaches the live config; the affected jobs were resubmitted.
+- **Answered (why Cosmos's encoder launches are 1.7× slower in training):** the data loader's worker processes,
+  measured on the cluster.
+  - With 8 workers per GPU (64 per node), launching takes 6.87 s wall against 5.42 s of the main thread's CPU.
+  - With 2 workers per GPU, it takes 4.39 s wall / 4.25 s CPU, about standalone. But 2 workers can't keep up: data
+    wait rises to 11.7 s and the update to 30.2 s.
+  - With the CUDA graph the encoder's CPU cost is 0.07 s per update, so this no longer matters for speed.
+  - Also measured: the speed noise floor is ~0.3% (reference repeat 19.96 vs 20.01 s). No recomputation in the last
+    24 layers runs out of memory.
 
 ---
 
