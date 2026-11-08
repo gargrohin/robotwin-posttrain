@@ -2356,3 +2356,10 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   - compile each DiT block (default mode, deterministic Inductor), so it works with sharding and recomputation;
   - check locally first, then a borrowed cluster job with and without it, on the exact and the compiled stacks
     at 16 per GPU.
+
+**04:45 EST (Sun Nov 8)** **Housekeeping, user OK.**
+- Deleted the head-native test run's leftovers from cloud storage: its checkpoints, exports and eval files, ~305 GB.
+  A dry run matched the approved list exactly, and the two live head-native runs are untouched.
+- Rewrote the 78 unpushed commits to remove another team's name from older log lines and two commit messages. The
+  final files are unchanged, and nothing is pushed. Commit hashes after the last push have changed.
+- Queued: a full eval of update 4,000, run with 2 sim streams per GPU (also a test of eval cost).
