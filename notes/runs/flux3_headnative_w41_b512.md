@@ -47,7 +47,7 @@ dropout 0.1; augmentation on; power EMAs 0.10 and 0.05.
 | hardware | 2 nodes, 16 GPUs × 4 windows × 8 accumulation | 1 node, 8 GPUs × 4 windows × 16 accumulation | **assumed not to matter, not tested.** Same batch 512 and same math; which windows share an update differs |
 | data order | seed 42, one uninterrupted job | seed 42; the shared pool can pre-empt, and each restart draws a new data order from the run seed (BFL's resume default) | statistically equivalent; restarts are counted in LOG.md |
 | logging and saving | metrics every 10 updates; full state every 150 | metrics every update; full state every 50 into two slots overwritten in turn | no effect on training math |
-| speedups | none | none at launch | if validated speedups are adopted later, the update where they start and their equivalence check go here |
+| speedups | none | none, for the whole run | a switch to the exact speedups at 8 per GPU was planned on 2026-11-08 and called off at 11:05 ET: restarting means re-queuing for a whole borrowed node, and none had come free for ~9 h, so the restart could cost more than the ~5–6 h saved. The run finishes on its launch settings. |
 | eval input | simulator frames resized to 360×640 at eval (torch), training frames resized by ffmpeg | frames pass unchanged; the adapter's canvas is bit-identical to the training canvas for the same frames (CPU check, 150 checks) | eval inputs closer to training |
 
 ## Checks before launch

@@ -2392,3 +2392,9 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
 - Cordoning only stops new placements; it's undone with `kubectl uncordon`. The infra team still has to replace the
   GPU or node.
 - Our queued evals go back to small slices. None of our rejected jobs had started, so no results were lost or mixed.
+
+**11:05 EST (Sun Nov 8)** **Head-native speedup switch called off (user agreed).**
+- Switching means cancelling each run's job and re-queuing it for a whole borrowed node. None had come free for ~9 h,
+  so the restart could cost more than the ~5–6 h it would save.
+- Both runs finish on their launch settings, ETA ~09:45 ET Mon. Their two queued check jobs are cancelled (never
+  started), so the speed jobs for the 0–9,000 run are next in line.
