@@ -2419,7 +2419,7 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
 - Checked in code: the RoboTwin data path has no image augmentation today, so encoding videos ahead of time would also
   be exact. It's not pursued now, since adding augmentation later would break it.
 
-**17:55 EST (Sun Nov 8)** **Flux continuation finished training (update 9,000); update 8,000: 75.0% / 76.8%.**
+**17:25 EST (Sun Nov 8)** **Flux continuation finished training (update 9,000); update 8,000: 75.0% / 76.8%.**
 - The run reached 9,000 at 16:48 (learning rate down to ~0 at the end of the cool-down; loss 0.061
   at 8,000, 0.053 at 9,000). Its weights export landed at 16:47; the full eval of 9,000 (the
   verdict for the run) is running. Training compute in total: ~786 GPU-hours.
@@ -2427,7 +2427,7 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   104 vs 102 and 47 vs 48 scenes); above step 3,000 (randomized 132 vs 92, p = 0.009; clean 77 vs
   49, p = 0.016). Cosmos 5,000 leads by ~7 points (p <= 0.001).
 
-**18:50 EST (Sun Nov 8)** **Flux continuation, update 8,500: 74.9% / 78.8%.**
+**17:55 EST (Sun Nov 8)** **Flux continuation, update 8,500: 74.9% / 78.8%.**
 - Halfway through the cool-down. Against 8,000, paired by seed: randomized 83 vs 84 scenes
   (p = 1.0), clean 49 vs 39 (p = 0.34). Against step 3,000: randomized 134 vs 95 (p = 0.012),
   clean 76 vs 38 (p < 0.001). Cosmos 5,000 leads by 7.2 (randomized) and 5.6 (clean) points.
