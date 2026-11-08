@@ -2254,3 +2254,23 @@ runs for the speed experiments.
 - Paired by seed against step 3,000: randomized 132 scenes only 6,500 solves vs 101 only 3,000
   solves (p = 0.049), clean 69 vs 45 (p = 0.03); better on 24 tasks, worse on 12-13.
 - Cosmos 5,000 is still ahead by 8 points on both (p < 0.001).
+
+**01:40 EST (Sun Nov 8)** **Flux: held-out arm error next to the full-eval success, per checkpoint.**
+Arm error is the open-loop check on demo moments (rad, mean absolute arm-joint difference over the
+first 16 actions; 400 moments per set, same moments for every checkpoint). Success is the 50-task
+eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the continuation.
+
+| update | arm error, train randomized | train clean | unseen randomized | success randomized (1,015) | success clean (499) |
+|---|---|---|---|---|---|
+| 3,000 | 0.0294 | 0.0214 | 0.0234 | 71.0% | 71.1% |
+| 4,000 | 0.0299 | 0.0216 | 0.0231 | not evaluated | not evaluated |
+| 5,000 | 0.0503 | 0.0441 | 0.0433 | 64.0% | 61.9% |
+| 5,500 | 0.0392 | 0.0314 | 0.0323 | 66.3% | 67.1% |
+| 6,000 | 0.0345 | 0.0272 | 0.0289 | 71.8% | 71.3% |
+| 6,500 | 0.0306 | 0.0237 | 0.0259 | 74.1% | 76.0% |
+| 7,000 | 0.0297 | 0.0220 | 0.0245 | running | running |
+
+- Within the continuation (5,000 → 6,500), arm error falls at every step and success rises at
+  every step.
+- Across runs it does not line up the same way: 3,000 has lower arm error than 6,000 and 6,500 on
+  all three sets, with about the same success as 6,000 and lower success than 6,500.
