@@ -2347,3 +2347,12 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   ~1e-4 relative, about 4 times the run-to-run noise). The user chose to use it for the next full Flux run; its
   final configuration (16 or 8 windows per GPU, with or without the CUDA graph) and a 200-update check with a save,
   resume and export are queued.
+
+**02:45 EST (Sun Nov 8)** **New speed experiment: compile the DiT in training (user OK).**
+- The GPU is now busy 38.7 of 38.9 s per update at 16 per GPU, so the remaining gains have to come from less GPU
+  work.
+- A CUDA graph of the DiT wouldn't help: it only removes CPU launch time, and the GPU no longer waits on the CPU.
+- Plan:
+  - compile each DiT block (default mode, deterministic Inductor), so it works with sharding and recomputation;
+  - check locally first, then a borrowed cluster job with and without it, on the exact and the compiled stacks
+    at 16 per GPU.
