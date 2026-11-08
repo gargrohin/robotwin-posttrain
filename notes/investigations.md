@@ -802,6 +802,18 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Verified on CPU, including the real RoboTwin index with real worker processes over 3 epochs, from an epoch
     start and after a resume skip: the same windows in the same order. The cluster measurement (27 updates, input
     digests across the boundary) is queued.
+- **Found (Cosmos, devbox GPU, real encoder, 128 real clips):**
+  - With the run's `cudnn.benchmark=on`, the plain encoder gives different latents in different processes (2 of
+    2 repeats; max abs diff 0.031 and 0.0625). cuDNN picks convolution algorithms by timing them, per process and
+    per thread. With benchmark off it's bitwise reproducible. So two runs of today's Cosmos recipe already differ
+    at that level.
+  - A CUDA graph of the per-clip encode is bitwise identical to the plain encoder.
+  - Overlap with the graph replayed from the main thread is bitwise identical (3 of 3).
+  - Overlap through a worker thread is bitwise identical with benchmark off. With benchmark on it matched 3 of 4
+    times; the miss came from the worker's own cuDNN algorithm choice, the same kind of difference as between two
+    runs today.
+  - 8 clips per call isn't exact (relative L2 5–7e-3).
+  - Cluster speed and equivalence jobs (23 conditions) are queued.
 
 ---
 
