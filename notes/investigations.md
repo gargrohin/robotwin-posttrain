@@ -545,6 +545,12 @@ earlier belief that was wrong. **Open** = not yet answered.
     ~46% of episode time.
   - **Open:** with one stream per GPU, how busy is the GPU during an episode? Not measured for Flux. If the
     GPU is mostly idle, two streams per GPU could cut eval GPU-hours.
+- **Found (v2eq, cluster, 8 GPUs, 4 per GPU, 5 updates, 80 micro-batches hashed; timing from 2 updates, rough):**
+  - Exact v2 (overlap + graph + no padding + no autocast + RoPE cache): DiT inputs bitwise 80/80, update-1 loss
+    bitwise, later within noise; ~43.8 s (≈1.20×).
+  - With gradient sharding added: also exact; ~44.5 s, so at 4 per GPU sharding doesn't help.
+  - Compiled stack: loss 6.5e-5 at update 1 and ≤9.1e-5 later, about 4× the noise; ~38.7 s (≈1.35×).
+  - Proper 20-update timings come from v2exact and cmpmain.
 
 ---
 
