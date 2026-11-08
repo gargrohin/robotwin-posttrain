@@ -2317,3 +2317,11 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
     task's step limit.
 - Compiling the eval policy: even a 2x faster call would save ~1.7 GPU-hours per eval (~2.4%); a
   call that took no time at all would save ~3.5 h (~4.7%).
+
+**02:20 EST (Sun Nov 8)** **Head-native switch: 8 per GPU approved, noise redraw included.**
+- Going from 4 to 8 per GPU keeps the same windows per update but redraws the diffusion noise and timesteps (one draw
+  per micro-batch per rank).
+- The user accepted that ("random noise is random noise").
+- Switch criteria:
+  - the speed flags are bitwise identical to the old flags at 8 per GPU;
+  - the same windows per update at 4 and 8 per GPU.
