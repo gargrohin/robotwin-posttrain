@@ -146,8 +146,12 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found:** no. The whole wrist image is there, at lower resolution (180×320 against the native 240×320).
 - **Q:** would Cosmos do better at Flux's resolution?
 - **Found:**
-  - Probably not much. Its input is already close to the cameras' native size, so upscaling adds no
-    information.
+  - My first answer, "probably not much; its input is already close to the cameras' native size", was wrong.
+  - **Corrected (Nov 7, from the code):** Cosmos composes the three cameras into a 360×320 canvas, head on top
+    and wrists below. Its 256 setting then *downscales* that to 256×228, adding 28 columns of padding. So the
+    head camera reaches the model at ~0.7× native size per side, about half its pixels.
+  - Upscaling to Flux's size would still add no information. Native size for Cosmos would mean a larger
+    setting than 256, which is untested.
   - Each maker chose its resolution for its own reference data: LIBERO's small images for NVIDIA, DROID's HD
     cameras for BFL.
 
