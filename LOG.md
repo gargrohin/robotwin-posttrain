@@ -2290,3 +2290,12 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
   2. benchmark the compiled stack on the head-native config at 16 and 8 per GPU, with a save and a resume;
   3. switch each run right after a complete save.
 - Run cards will record the update where the recipe changed.
+
+**02:30 EST (Sun Nov 8)** **Head-native runs: exact speedups at 8 per GPU, no compile (user's choice).**
+- This replaces the 02:00 plan. Compiling partway through would add a second difference to the canvas comparison
+  with the baseline. At 8 per GPU each update sees the same data as today, and the exact pieces leave the encoder
+  output bitwise identical.
+- Before switching: a benchmark plus an equivalence check on the head-native config (same DiT inputs from the
+  same saved state). Then each run switches after a complete save.
+- Rough estimate: ~1.2–1.3× faster, training done ~03:00–05:00 ET Mon instead of ~09:45.
+- Compile goes into the 0–9,000 run.

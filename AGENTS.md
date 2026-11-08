@@ -273,9 +273,10 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 ## Decisions
 - Flux training speedups (user, 2026-11-08):
   - The main continuation keeps its settings (no speedups without the user's OK).
-  - The head-native runs switch to the full stack, compile included, after a benchmark on their config and a
-    complete save. The user accepted the recipe change partway (2026-11-08 ~02:00 ET). If quality drops, it
-    gets checked with a separate Flux run.
+  - The head-native runs switch to the exact speedups only, at 8 per GPU, with no compile (user, 2026-11-08
+    ~02:30 ET). At 8 per GPU each update sees the same data as today, and the encoder output is bitwise
+    identical, so training stays equivalent and the canvas comparison with the baseline stays clean. The switch
+    happens after a benchmark plus an equivalence check on their config and a complete save.
   - The next end-to-end Flux run (0–9,000 from scratch) trains with compile from update 0: video and text
     encoders, both recompile fixes, deterministic Inductor.
   - Compile changes the loss ~1e-4 (rounding, closer to fp32 than eager); see notes/investigations.md.
