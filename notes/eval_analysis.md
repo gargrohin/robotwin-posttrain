@@ -358,6 +358,7 @@ plus the 500s; the run is going to 9,000.
 | 6,000 | 71.8% | 71.3% |
 | 6,500 | 74.1% | 76.0% |
 | 7,000 | 74.8% | 77.0% |
+| 7,500 | 75.4% | 74.5% |
 | Cosmos 5,000 (same eval) | 81.9% | 84.4% |
 
 Paired by seed ("only A solves" vs "only B solves"):
@@ -369,12 +370,17 @@ Paired by seed ("only A solves" vs "only B solves"):
 - 7,000 vs 3,000: randomized 135 vs 97 (p = 0.015; by task 25 better, 15 worse); clean 77 vs 48 (p = 0.012; by task
   26 better, 11 worse).
 - 7,000 vs Cosmos 5,000: Cosmos ahead by 7.3 points randomized (p = 3e-6) and 7.4 clean (p = 0.001).
+- 7,500 vs 7,000: randomized 105 vs 99 (p = 0.73); clean 40 vs 52 (p = 0.25). No significant difference.
+- 7,500 vs 3,000: randomized 136 vs 92 (p = 0.004; by task 26 better, 15 worse); clean 69 vs 52 (p = 0.15).
+- 7,500 vs Cosmos 5,000: Cosmos ahead by 6.7 points randomized (p = 1e-5) and 9.8 clean (p = 2e-5).
 
 Reading:
 - The dip at 5,000 followed a loss spike near 4,790 that the averaged (EMA) weights carried into the export.
   The spike investigation is in notes/investigations.md.
 - At 6,500 the weights from before that spike are ~9% of the EMA, and those after a smaller spike at 6,460
   are ~5%.
+- **6,500, 7,000 and 7,500 sit on a plateau** (randomized 74.1–75.4%, clean 74.5–77.0%); the differences between
+  them are within noise. The learning-rate ramp-down (8,000 → 9,000) is the last chance for a step up.
 - **The gain over step 3,000 holds at 7,000** (p ≈ 0.01 on both settings, two checkpoints in a row above
   3,000). 6,500 → 7,000 is flat, within noise. Several checkpoints have been compared against 3,000, so read
   single p-values with that in mind.
