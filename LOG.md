@@ -2398,3 +2398,11 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   so the restart could cost more than the ~5–6 h it would save.
 - Both runs finish on their launch settings, ETA ~09:45 ET Mon. Their two queued check jobs are cancelled (never
   started), so the speed jobs for the 0–9,000 run are next in line.
+
+**15:30 EST (Sun Nov 8)** **Flux continuation, update 7,500: 75.4% / 74.5% (flat since 7,000).**
+- Randomized 765/1,015 = 75.4%, clean 372/499 = 74.5%. Against 7,000, paired by seed:
+  randomized 105 vs 99 scenes (p = 0.73), clean 40 vs 52 (p = 0.25): no difference.
+- Against step 3,000: randomized 136 vs 92 (p = 0.004), clean 69 vs 52 (p = 0.15).
+- Cosmos 5,000 leads by 7-10 points (p < 0.001).
+- This eval took longer because of a broken GPU on one cluster node (fixed by taking the node out of
+  scheduling at 11:00); every affected job was rejected before it started, so nothing ran twice.
