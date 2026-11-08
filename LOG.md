@@ -2269,6 +2269,7 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 | 6,000 | 0.0345 | 0.0272 | 0.0289 | 71.8% | 71.3% |
 | 6,500 | 0.0306 | 0.0237 | 0.0259 | 74.1% | 76.0% |
 | 7,000 | 0.0297 | 0.0220 | 0.0245 | 74.8% | 77.0% |
+| 8,000 | 0.0289 | 0.0216 | 0.0238 | running | running |
 
 - Within the continuation (5,000 → 6,500), arm error falls at every step and success rises at
   every step.
@@ -2384,3 +2385,10 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   0.0220 / 0.0245 (the step-3,000 level).
 - Next: a full eval of update 4,000 (before the 4,790 spike), run with two eval streams per GPU
   to measure whether that packing saves GPU time.
+
+**11:00 EST (Sun Nov 8)** **Cordoned a broken cluster node (user OK).**
+- One GPU on a shared cluster node died at 04:12 ET, but the node kept accepting jobs. Every job of up to 7 GPUs
+  placed there was rejected before starting: 133 pods across several teams, including our eval slices.
+- Cordoning only stops new placements; it's undone with `kubectl uncordon`. The infra team still has to replace the
+  GPU or node.
+- Our queued evals go back to small slices. None of our rejected jobs had started, so no results were lost or mixed.
