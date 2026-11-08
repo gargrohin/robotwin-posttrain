@@ -288,6 +288,11 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found (checked in code):** nothing is compiled during Flux training. `compile_model` defaults to False and
   would only compile the video encoder and text encoder; the DiT is never compiled. That fits the ~23 s per
   update of small non-matmul kernels. Compiling the encoders is now a candidate in the overlap work.
+- **Your decisions (Nov 7, ~23:20):**
+  - Quantify the overlap fix and compiling, alone and together, and prove whether they change training.
+  - If they don't, adopt them in the head-native runs (both runs at once, switched right after a save) and in
+    future Flux runs.
+  - The ongoing main run only with your explicit permission.
 
 ---
 
