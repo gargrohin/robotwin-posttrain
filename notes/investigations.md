@@ -580,6 +580,17 @@ earlier belief that was wrong. **Open** = not yet answered.
     come from doing less work (compile).
   - 16 per GPU also changes which windows each rank sees (speed NOTES); the equivalence was checked at 4 per GPU.
     The 8-per-GPU timing is still running.
+- **Found (v2exact, 8 per GPU):** exact v2 + gradient sharding at 8 per GPU × 8 rounds is 39.5 s per update (1.33×,
+  peak 47.8/57.1 GB), close to 16 per GPU (38.6 s, 1.355×) with 12 GB more headroom. That's the setting the
+  head-native runs will use; their own canvas is measured by the head-native speed job.
+- **DiT compile, first check (1 GPU, tiny DiT with the real block classes, checkpointing on, no FSDP):**
+  - All 38 blocks compile, with attention kept eager: its packed token counts change with caption length, and
+    the attention kernel is already fused.
+  - 8 recompiles, all in update 1, none after.
+  - Update-1 loss 5.4e-6 relative to eager (rounding level).
+  - Wrapping order: compile, then checkpointing, then FSDP.
+  - The 7B model with FSDP couldn't be tested locally (not enough free devbox GPUs), so the cluster job is the
+    first real test.
 
 ---
 
