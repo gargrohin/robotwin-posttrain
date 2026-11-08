@@ -410,6 +410,35 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found (compile agent):** the thread-count mismatch has a race behind it. The DataLoader's pin-memory thread
   calls `torch.set_num_threads(1)`. A thread created after that starts with 1 thread, while the main thread keeps 96,
   so the outcome depends on thread start order. Setting the count in the worker's initializer removes the race.
+- **Q (user): why does compiling the video encoder change the numbers? Is it harmful? Why doesn't BFL compile
+  in training, and why did their compile crash?** (compile investigation, devbox, local report.)
+  - **Cause, measured op by op:** Inductor fuses RoPE and the GLU gate and rounds once in fp32, where eager rounds
+    every step to bf16 (~27% of those outputs move by one bf16 step). Norms change a few values per million
+    from a different summation order. Matmuls, the attention kernel and the conv are bitwise.
+  - **Magnification:** the encoder magnifies any rounding change. Moving ~29 of 288 M stage-0 values by one bf16
+    step changes the final latents by 0.4%.
+  - **Yardstick:** compiled is closer to fp32 (1.00%) than eager bf16 is (1.19%); compiled vs eager is 1.10%.
+    The eager encoder is deterministic, so there's no run-to-run noise to compare against. The nearest equal
+    is swapping NATTEN's kernel (0.65%).
+  - **Harm:** nothing measurable without a training run. In a zero-noise mini trainer, an fp32 encoder moves the
+    loss 2× more than compiling. Action-loss changes are ≤3e-5 for all variants.
+  - **Eval path:** eval encodes the single observed frame eagerly. That's already 0.59% from training's frame
+    0, and compiling training would make it 1.19%.
+  - **BFL:** documents `compile_model` as a training-speed option but never enables it. Their training never
+    compiles the DiT. No reason is written anywhere.
+  - **Crash:** each encoder layer is compiled separately in reduce-overhead mode, and with no step mark CUDA
+    Graph Trees free layer i's output when layer i+1 runs. Serving survives because it calls
+    `cudagraph_mark_step_begin()` per request. Fixed, it's no faster than default mode.
+  - **New exact options:**
+    - no autocast around the encode: −8%, bitwise;
+    - with no padding and cached RoPE tables: −33% encoder time, bitwise.
+    - Compile + no padding: −64% encoder time, 1.10% off eager.
+    - `TORCHINDUCTOR_DETERMINISTIC=1` makes compile reproducible across processes.
+  - **Side finding:** BFL's `F3_NATTEN_BACKEND` override has no effect on the encoder (NATTEN 0.21 ignores the
+    backend passed that way).
+- **Corrected (mine):** "VAE compile changes the loss ~20× the noise". That compared a mini-trainer change with the
+  cluster runs' noise, two different setups. Measured on the same setup, compile moves the loss less than
+  switching to an fp32 encoder does.
 
 ---
 
