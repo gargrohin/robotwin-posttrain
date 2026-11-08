@@ -216,3 +216,38 @@ earlier belief that was wrong. **Open** = not yet answered.
   eval startup), wrong beliefs (recomputation, wrist size, overfitting) and real causes (the spike, EMA
   mixing).
 - **Keep one change per experiment,** and one recipe per run, so results can be traced to a cause.
+
+## Checklist before any long training run (Flux, Cosmos, or any other model)
+Built from the findings above. Check each item and write down the answer before launching.
+1. **Inputs vs cameras:** does the input canvas or resolution upscale or stretch the camera images? How many
+   pixels carry real information?
+2. **Loss balance:** how is the loss combined (per token or per modality)? How do the weights depend on token
+   counts? What share does each part get?
+3. **Memory:**
+   - What actually uses it: weights, optimizer, full gradient copies during accumulation, activations, encoders.
+   - Is activation recomputation on?
+   - Is gradient sharding (ZeRO-2) used?
+   - What is the encoders' peak?
+4. **Speed:**
+   - Run a ~20-update benchmark with per-phase timing (encoder, forward, backward, communication, optimizer,
+     data wait) on the target hardware.
+   - Find the bottleneck before choosing examples per GPU and node count.
+   - Note padding or recomputation that does no useful work (e.g. black frames padded before the video encoder).
+5. **Stability:**
+   - Clip gradients or not.
+   - Peak learning rate vs batch size compared with the reference recipe, and the re-warm peak when continuing
+     from a cooled-down checkpoint.
+   - Log every update.
+   - Keep a spare full save when a spike shows up, so it can be replayed.
+6. **Exports and evals:**
+   - Which weights get evaluated (averaged vs trained).
+   - How long the averaging window is, and how a spike inside it shows up in an eval.
+7. **Storage and restarts:**
+   - What the job can and can't delete.
+   - Save slots; a resume test and an in-job restart test on the real cluster topology.
+8. **Records:** the exact commit, config, data fingerprint, seeds and topology for every segment of the run.
+
+**Mid-run changes:**
+- Recipe changes: never.
+- Exact or equivalent computation changes: only if the gain is worth a restart. Then test on a copy, switch
+  right after a complete save while keeping the previous one, and check the first updates' loss.
