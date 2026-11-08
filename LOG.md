@@ -2426,3 +2426,9 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
 - Update 8,000: randomized 761/1,015 = 75.0%, clean 383/499 = 76.8%; level with 7,000 (paired
   104 vs 102 and 47 vs 48 scenes); above step 3,000 (randomized 132 vs 92, p = 0.009; clean 77 vs
   49, p = 0.016). Cosmos 5,000 leads by ~7 points (p <= 0.001).
+
+**18:50 EST (Sun Nov 8)** **Flux continuation, update 8,500: 74.9% / 78.8%.**
+- Halfway through the cool-down. Against 8,000, paired by seed: randomized 83 vs 84 scenes
+  (p = 1.0), clean 49 vs 39 (p = 0.34). Against step 3,000: randomized 134 vs 95 (p = 0.012),
+  clean 76 vs 38 (p < 0.001). Cosmos 5,000 leads by 7.2 (randomized) and 5.6 (clean) points.
+- The 9,000 eval and the 4,000 eval (two streams per GPU) are running.
