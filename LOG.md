@@ -2269,7 +2269,7 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 | 6,000 | 0.0345 | 0.0272 | 0.0289 | 71.8% | 71.3% |
 | 6,500 | 0.0306 | 0.0237 | 0.0259 | 74.1% | 76.0% |
 | 7,000 | 0.0297 | 0.0220 | 0.0245 | 74.8% | 77.0% |
-| 8,000 | 0.0289 | 0.0216 | 0.0238 | running | running |
+| 8,000 | 0.0289 | 0.0216 | 0.0238 | 75.0% | 76.8% |
 
 - Within the continuation (5,000 → 6,500), arm error falls at every step and success rises at
   every step.
@@ -2418,3 +2418,11 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   - combinations.
 - Checked in code: the RoboTwin data path has no image augmentation today, so encoding videos ahead of time would also
   be exact. It's not pursued now, since adding augmentation later would break it.
+
+**17:55 EST (Sun Nov 8)** **Flux continuation finished training (update 9,000); update 8,000: 75.0% / 76.8%.**
+- The run reached 9,000 at 16:48 (learning rate down to ~0 at the end of the cool-down; loss 0.061
+  at 8,000, 0.053 at 9,000). Its weights export landed at 16:47; the full eval of 9,000 (the
+  verdict for the run) is running. Training compute in total: ~786 GPU-hours.
+- Update 8,000: randomized 761/1,015 = 75.0%, clean 383/499 = 76.8%; level with 7,000 (paired
+  104 vs 102 and 47 vs 48 scenes); above step 3,000 (randomized 132 vs 92, p = 0.009; clean 77 vs
+  49, p = 0.016). Cosmos 5,000 leads by ~7 points (p <= 0.001).
