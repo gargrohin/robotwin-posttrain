@@ -231,6 +231,19 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Recommendation (review):** 41.18, the cleanest control, but with low confidence that 50 vs 41.18 changes
   results measurably. The spread across BFL's own recipes (0.5–0.78) is wider than the shift from keeping 50.
 
+## 9c. Head-native canvas: decisions (Nov 7)
+- **Two runs, one change each:**
+  - **Run 1:** head-native canvas, action weight 50. Versus the first run, only the canvas changes.
+  - **Run 2:** the same with weight 41.18. Versus run 1, only the weight changes. This is your choice, so we
+    learn whether the balance matters even if the review expects no difference.
+- **Accepted differences, to be listed exactly in each run card:**
+  - **Wrists:** made through the baseline's resize steps inside the new layout. ~1.1/255 mean pixel difference
+    from the baseline's training bytes. Crop and jitter now come before the wrist resize.
+  - **Head:** augmentation acts on native frames, which is inherent to removing the upscale.
+  - **Hardware:** 1 node vs 2. *Assumed* not to change training noticeably; not tested.
+- **Speedups:** only ones whose training math is unchanged and that measurably help (exact time-tiling; more
+  examples per GPU and gradient sharding, checked equivalent). The same on both runs. Never the padding drop.
+
 ---
 
 ## Lessons
