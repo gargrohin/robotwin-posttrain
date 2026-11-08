@@ -9,9 +9,9 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
   the same data (`mix200`).
-- **FLUX 3 Action's continuation is past its step-3,000 level at update 6,500:** 74.1% randomized,
-  76.0% clean (step 3,000: 71.0% / 71.1%). The run dipped at 5,000 after a loss spike and recovered by 6,000
-  (part 3). It's still 8 points behind Cosmos 5,000 on both settings.
+- **FLUX 3 Action's continuation is past its step-3,000 level:** 74.8% randomized, 77.0% clean at update
+  7,000 (step 3,000: 71.0% / 71.1%; 6,500 was 74.1% / 76.0%). The run dipped at 5,000 after a loss spike and recovered by 6,000
+  (part 3). It's still ~7 points behind Cosmos 5,000 on both settings.
 - **No Cosmos task is at 0%.** 14 tasks are under 80% on randomized; the lowest is hanging_mug
   (30%).
 - **For Cosmos, task length matters little; using both arms is the weak spot** (80% vs 89%
@@ -357,6 +357,7 @@ plus the 500s; the run is going to 9,000.
 | 5,500 | 66.3% | 67.1% |
 | 6,000 | 71.8% | 71.3% |
 | 6,500 | 74.1% | 76.0% |
+| 7,000 | 74.8% | 77.0% |
 | Cosmos 5,000 (same eval) | 81.9% | 84.4% |
 
 Paired by seed ("only A solves" vs "only B solves"):
@@ -364,14 +365,22 @@ Paired by seed ("only A solves" vs "only B solves"):
 - 6,500 vs 3,000: randomized 132 vs 101 (p = 0.049; by task 24 better, 13 worse); clean 69 vs 45 (p = 0.031;
   by task 24 better, 12 worse).
 - 6,500 vs Cosmos 5,000: Cosmos ahead by 8.0 points randomized (p = 3e-7) and 8.4 clean (p = 4e-4).
+- 7,000 vs 6,500: randomized 108 vs 101 (p = 0.68); clean 47 vs 42 (p = 0.67). No significant difference.
+- 7,000 vs 3,000: randomized 135 vs 97 (p = 0.015; by task 25 better, 15 worse); clean 77 vs 48 (p = 0.012; by task
+  26 better, 11 worse).
+- 7,000 vs Cosmos 5,000: Cosmos ahead by 7.3 points randomized (p = 3e-6) and 7.4 clean (p = 0.001).
 
 Reading:
 - The dip at 5,000 followed a loss spike near 4,790 that the averaged (EMA) weights carried into the export.
   The spike investigation is in notes/investigations.md.
 - At 6,500 the weights from before that spike are ~9% of the EMA, and those after a smaller spike at 6,460
   are ~5%.
-- **Caution:** p ≈ 0.03–0.05 against step 3,000 is weak evidence on its own, since several checkpoints have now
-  been compared against it. The coming checkpoints (7,000–9,000) will show whether the gain holds.
+- **The gain over step 3,000 holds at 7,000** (p ≈ 0.01 on both settings, two checkpoints in a row above
+  3,000). 6,500 → 7,000 is flat, within noise. Several checkpoints have been compared against 3,000, so read
+  single p-values with that in mind.
+- Held-out arm error at 7,000 is back at the 3,000–4,000 level (0.0297 / 0.0220 / 0.0245).
+- Update 4,000 (before the spike) is being evaluated, to see where the run stood then. The learning rate ramps
+  down from 8,000 to 9,000.
 
 ## Appendix A: is the median a fair summary of a task's length?
 
