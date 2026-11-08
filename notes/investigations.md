@@ -390,6 +390,17 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Open (compile):** the local compiled stack ran 63, 16.5, 8.4, 5.9, 10.1, 5.5 s per update. That's start-up
   compile, then spikes. The speed agent's guess: recompiles from new caption shapes in the text encoder. Not
   verified yet; the cluster's 20-update compile runs and the compile investigation should settle it.
+- **Found (speed, cluster equivalence, 8 GPUs, 5 updates):** overlap, overlap + VAE graph and padding drop each
+  gave the DiT bitwise-identical inputs in 80/80 hashed micro-batches and a bitwise-identical update-1 loss. Later
+  differences (≤2.4e-5 loss, ≤1.4e-4 grad norm) are the size of reference-vs-reference noise. With gradient
+  sharding and tiling also passed, all five exact pieces leave training unchanged.
+- **Found:** CUDA-graph capture of the VAE can't be combined with tiling. Each tiled block copies a CPU value
+  (the window start) to the GPU, which capture forbids ("operation not permitted when stream is capturing").
+  The trainer now refuses that combination.
+- **Corrected (the speed agent's guess, relayed by me):** "compile spikes come from new caption shapes". The
+  verified cause: the worker thread's intra-op thread count differed from the main thread's, where the encoders
+  were compiled. Compiled code guards on that count, so everything recompiled once in the worker. That's fixed.
+  The 10.1 s at the 4-GPU run's fifth update is still unexplained and being checked.
 
 ---
 
