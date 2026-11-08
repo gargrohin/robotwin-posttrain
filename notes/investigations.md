@@ -788,6 +788,20 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Found:** every 24th update takes ~120 s: the data loader restarts at each epoch boundary, adding 40–50 s of data
   wait. That's ~3.7 s per update on average, ~11% at the compiled speed. It's the same pattern the head-native runs
   show (~18 s at their speed); it grows in relative terms as training gets faster.
+- **Found (cause of the epoch-boundary stall, code + longrun timing):**
+  - An epoch is one window per episode: 12,500 / 512 = 24 updates.
+  - The trainer builds a new dataset and DataLoader every epoch, with 8 fresh, non-persistent workers per rank.
+  - At each boundary, ~50 s of data wait: the next update needs 5 batches, each decoded by a single fresh worker
+    from an empty buffer.
+  - The boundary update's GPU phases then stretch too (forward 6.4 → 17.9 s, backward 25.6 → 43.9 s). That fits
+    CPU contention: 64 new workers fill their buffers at once while training resumes.
+  - Total ~88 s per boundary, ~3.7 s per update on average.
+  - **Fix (speed branch, option `loader_spans_epochs`):** one loader whose workers stream epoch after epoch, so
+    nothing restarts. It's identical to one loader per epoch when an epoch is a whole number of rounds over the
+    workers (true for our 1- and 2-node layouts), and refused otherwise.
+  - Verified on CPU, including the real RoboTwin index with real worker processes over 3 epochs, from an epoch
+    start and after a resume skip: the same windows in the same order. The cluster measurement (27 updates, input
+    digests across the boundary) is queued.
 
 ---
 
