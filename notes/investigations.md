@@ -572,6 +572,14 @@ earlier belief that was wrong. **Open** = not yet answered.
   same windows per GPU (stay at 4 per GPU).
   - The head-native equivalence job checks the two parts separately: the speed flags at 8 per GPU (bitwise
     expected), and the 4→8 split (same windows per update; the loss differs by the noise redraw).
+- **Found (v2exact, cluster, 1 node, 20 updates; reference 52.4 s):**
+  - Exact v2 at 4 per GPU × 16 rounds: 43.9 s (1.19×), 0 retries.
+  - Exact v2 + gradient sharding at 16 per GPU × 4 rounds: **38.6 s (1.355×)**, peak 60.1/71.3 GB, 0 retries.
+    Forward 6.0 s, backward 32.6 s, no gap. The encoders (VAE + canvas 28.8 s, text 4.5 s) run during the backward.
+  - The GPU is busy 38.7 of 38.9 s, with 0.4 s of unhidden communication. It's saturated, so further gains must
+    come from doing less work (compile).
+  - 16 per GPU also changes which windows each rank sees (speed NOTES); the equivalence was checked at 4 per GPU.
+    The 8-per-GPU timing is still running.
 
 ---
 
