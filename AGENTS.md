@@ -8,7 +8,7 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-05)
+## Start here: current state (2026-11-08)
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -23,12 +23,19 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - All three trained on `mix200`: 50 clean + 200 randomized demos per task.
 - GR00T trained on the 50 clean demos per task only (`50task_60k`): 42.6% clean, 9.7% randomized.
 
-**Running now:** `flux3_mix200_b512_cont6k`, 6,000 more updates from Flux step 3,000.
-- 16 cluster GPUs; started 2026-11-05 06:06 ET, ETA ~03:25 ET Sat Nov 7.
-- It tests whether Flux's gap to Cosmos comes from its short first schedule (2.5% of BFL's DROID
-  recipe).
-- 10-task check at update 6,000 (~05:00 ET Fri). The user decides then whether it continues.
-- Full 50-task eval at 9,000.
+**State on 2026-11-08 ~17:00 ET:**
+- `flux3_mix200_b512_cont6k` (6,000 more updates from Flux step 3,000) **finished at 9,000** (16:48 ET Nov 8,
+  ~786 GPU-h).
+  - Full evals at 6,500 / 7,000 / 7,500: 74.1–75.4% randomized, 74.5–77.0% clean. That's above step 3,000 and
+    flat across those three.
+  - The 8,000, 8,500 and 9,000 evals are running, and 4,000 comes after them. Results go in
+    `notes/eval_analysis.md` part 3.
+- Running: the two head-native canvas runs (`notes/runs/flux3_headnative_*`), on launch settings, ETA ~09:45 ET
+  Mon Nov 9.
+- Speed work (`notes/investigations.md`, sections 8–10):
+  - Flux: the exact stack is 1.355× with identical training; the compiled stack is 1.645×, chosen for the next
+    end-to-end Flux run. A data-loader fix, a 2-node test and DiT compile are queued.
+  - Cosmos: profiled, with overlap and other speedups under test.
 
 **Next: hill climbing.** Not started; the user picks.
 - Failure analysis is in `notes/eval_analysis.md` (conclusions at the top). Cosmos: the first
