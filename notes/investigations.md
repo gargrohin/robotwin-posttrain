@@ -591,6 +591,15 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Wrapping order: compile, then checkpointing, then FSDP.
   - The 7B model with FSDP couldn't be tested locally (not enough free devbox GPUs), so the cluster job is the
     first real test.
+- **Found (tilestack, 1 node, 16 per GPU):**
+  - Overlap + no padding + gradient sharding, no graph, no tiling: 39.5 s (1.33×).
+  - Compiled encoders + overlap + no padding + gradient sharding + tiling, no graph (image from before the
+    recompile fixes): 36.9 s (1.42×), the fastest so far.
+  - 32 per GPU ran out of memory in every stack.
+- **Corrected (the speed agent's earlier explanation, relayed by me):** "without the graph, the worker thread can't
+  issue the encoder's kernels fast enough at 16 per GPU (main thread waited 21.6 s)". Without tiling, the no-graph
+  stack at 16 per GPU runs 39.5 s, against 38.6 s with graph + no autocast + RoPE cache. So the 21.6 s wait came
+  from tiling's extra kernel launches, not from 16 per GPU itself, and the graph adds only ~0.8 s.
 
 ---
 
