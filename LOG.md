@@ -2239,3 +2239,18 @@ runs for the speed experiments.
   pre-emptions.
 - Evals per run: 10-task check at 1,500; full 50-task eval at 3,000 (its logs also give the 3,000 10-task
   check, same seeds); held-out arm error at both.
+
+**00:30 EST (Sun Nov 8)** **Flux continuation, update 6,500: above step 3,000 (74.1% / 76.0%).**
+
+| | randomized, all GR00T seeds (1,015) | clean, GR00T's first 10 per task (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 5,000 | 64.0% | 61.9% |
+| Flux update 5,500 | 66.3% | 67.1% |
+| Flux update 6,000 | 71.8% | 71.3% |
+| Flux update 6,500 | 74.1% | 76.0% |
+| Cosmos 5,000 | 81.9% | 84.4% |
+
+- Paired by seed against step 3,000: randomized 132 scenes only 6,500 solves vs 101 only 3,000
+  solves (p = 0.049), clean 69 vs 45 (p = 0.03); better on 24 tasks, worse on 12-13.
+- Cosmos 5,000 is still ahead by 8 points on both (p < 0.001).
