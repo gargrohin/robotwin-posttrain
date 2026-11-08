@@ -207,6 +207,30 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Dropping the padding would cut encoder time by 24% with identical output. Not changed (your decision).
 - **Open:** how much of an update the encoder takes. Stage 1's timing logs measure it.
 
+## 9b. How the action loss weight of 50 was chosen (Nov 7, literature review)
+- **Q:** what does BFL say about 50, and what do others do when the number of video tokens changes?
+- **Found:** the full review, with sources, is in the Flux experiment's local notes (loss_weight_review.md).
+  - **BFL's only explanation is a code comment** in packing.py. A base of 100 "undoes the dilution of 32
+    action tokens among 2752 (2720/32 = 85, rounded up to tilt toward actions)", then divided by the action
+    scale 2, giving 50. No public doc, blog, model card or report explains it or ablates it. The tech report's
+    1/s² reweighting doesn't match the code's single division by s.
+  - **BFL's own recipes don't rescale it.**
+    - Games and drone: a 512×512 canvas (2,048 video tokens) with weight 50 kept, so actions get 0.78 of the
+      video weight, against DROID's 0.588.
+    - SO-101: per-modality averaging, weights 1.0 / 0.5.
+  - **Other models:** none adjusts the weight when resolution or token count changes, and none ablates it. Most
+    average each modality separately with fixed weights, so the balance doesn't depend on token count (Cosmos3
+    10/10, UVA, Motus, LingBot-VA, UWM, Genie Envisioner). WorldVLA picked its weight because image tokens
+    outnumber action tokens, then kept it when the image token count quadrupled.
+  - **In our logs,** the action term is only ~5% of the logged loss value (4–8%), because per-token action
+    errors are much smaller than video errors.
+    - The "37% share" is the share of the weights, not of the loss value.
+    - The logged `loss` isn't comparable across canvases. Compare `video_mse` and `action_mse` instead.
+  - **Corrected:** the trainer's default is gradient clipping at 1.0. The baseline config explicitly sets it off
+    (`max_grad_norm: null`). Any new config must set that explicitly, or it silently clips.
+- **Recommendation (review):** 41.18, the cleanest control, but with low confidence that 50 vs 41.18 changes
+  results measurably. The spread across BFL's own recipes (0.5–0.78) is wider than the shift from keeping 50.
+
 ---
 
 ## Lessons
