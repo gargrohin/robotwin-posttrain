@@ -551,6 +551,19 @@ earlier belief that was wrong. **Open** = not yet answered.
   - With gradient sharding added: also exact; ~44.5 s, so at 4 per GPU sharding doesn't help.
   - Compiled stack: loss 6.5e-5 at update 1 and ≤9.1e-5 later, about 4× the noise; ~38.7 s (≈1.35×).
   - Proper 20-update timings come from v2exact and cmpmain.
+- **Q (user): without the 4,790 spike, would the main run be much better by now?** Not known; evidence so far:
+  - Held-out arm error at 4,000 (before the spike) is the same as at 7,000 (0.0299/0.0216/0.0231 vs
+    0.0297/0.0220/0.0245). Within this run the check has tracked eval success (5,000 → 6,500). If that holds for
+    4,000, the run was at about today's level then, and spent ~2,500 updates recovering. That's an inference: 4,000
+    never had a full eval, and the check rests on 6 points.
+  - Direct test: a full eval of the 4,000 export, which exists.
+  - Smaller spikes also hit at 3,360, 4,350 and 6,460. The spike investigation's most likely cause (moderate
+    confidence): instability at constant peak LR with gradient clipping off.
+  - Our configs follow BFL's DROID config (`max_grad_norm: null`). Their SO-101 config clips at 1.0, which is also
+    the trainer default. Our ordinary grad norms sit around 0.7–1.5, so clipping at 1.0 would also clip ordinary
+    updates. Look at the grad-norm distribution before choosing a threshold for a new run.
+  - Schedule (`train_b512_cont6k.json`): constant peak LR until 8,000, then a 1,000-update cooldown to 9,000.
+    Cosmos gained most from its decay, so 9,000 is the main run's verdict.
 
 ---
 
