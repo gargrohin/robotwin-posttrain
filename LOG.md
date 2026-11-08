@@ -2282,3 +2282,11 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 - The speed experiments now centre on the compiled stack:
   - pick 16 vs 8 per GPU, with or without the VAE graph;
   - a longer check of ~150–200 updates with a save, a resume and an export.
+
+**02:00 EST (Sun Nov 8)** **Head-native runs: switch to the full speedup stack, compile included.**
+- The user accepted the recipe change partway through.
+- Plan:
+  1. merge the speed options into the head-native branch;
+  2. benchmark the compiled stack on the head-native config at 16 and 8 per GPU, with a save and a resume;
+  3. switch each run right after a complete save.
+- Run cards will record the update where the recipe changed.
