@@ -814,6 +814,18 @@ earlier belief that was wrong. **Open** = not yet answered.
     runs today.
   - 8 clips per call isn't exact (relative L2 5–7e-3).
   - Cluster speed and equivalence jobs (23 conditions) are queued.
+- **Found (Cosmos overlap, first cluster runs):** the overlap never happened. The loader hands each sample's video as a
+  one-element list, and the overlap callback silently fell back to encoding inside the step, so it ran like the
+  reference (20.16 vs 20.01 s). Fixed: the callback matches the model's input normalization and warns on any batch it
+  skips. The overlap jobs were resubmitted.
+  - Lesson: an optional speedup that can fall back must count and report its fallbacks. Otherwise "no gain" looks
+    like a result.
+- **Found (why Cosmos's kernel launches are slower in training, about half explained):** around the encoder, the main
+  thread's CPU time is 5.42 s against 6.87 s of wall time per update. So ~1.45 s (21%) it isn't running at all
+  (waiting or descheduled), and the rest of the gap (~1.25 s against 4.17 s standalone) is the thread running slower.
+  A devbox test with the 8 loader workers in the same process slowed launches by 17%: CPU contention from the
+  loader's worker processes, not a lock (noisy shared box). The cluster run with 2 loader workers will measure it
+  cleanly.
 
 ---
 
