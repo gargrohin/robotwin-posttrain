@@ -187,6 +187,26 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Open:** keep 50 or rescale. A literature review of how BFL chose 50 and how others handle a changed video
   token count is running. Your view: possibly worth its own experiment.
 
+## 8b. Video encoder measurements (Nov 7, 20:50, one devbox GPU, 64 real training windows)
+- **Q:** is time-tiling exact, and what do the black padding frames do?
+- **Found:** every variant below gives encoder output bitwise identical to today's (max difference exactly 0).
+
+  | variant | time per window | peak memory per window |
+  |---|---|---|
+  | today's encode | 0.307 s | 8.44 GiB |
+  | time-tiled, 8 frames | 0.408 s (+33%) | 3.58 GiB (−58%) |
+  | time-tiled, 16 frames | 0.348 s (+14%) | 4.23 GiB (−50%) |
+  | no black padding (33 frames) | 0.232 s (−24%) | 5.98 GiB (−29%) |
+
+- **Found (padding):**
+  - The encoder's chunked mode only accepts 45 + n×44 frames, so every 33-frame window is padded to 45 to fit
+    that rule.
+  - The encoder looks only backward in time, so the 12 padding frames can't change the 9 compressed frames kept.
+    The measurement confirms it.
+  - The code's stated reason is that training and deployment see the same latent distribution.
+  - Dropping the padding would cut encoder time by 24% with identical output. Not changed (your decision).
+- **Open:** how much of an update the encoder takes. Stage 1's timing logs measure it.
+
 ---
 
 ## Lessons
