@@ -2214,3 +2214,28 @@ and 3).** Checked first: both at 0% GPU use over 30 s, no client connections, up
 gracefully (a normal stop signal); both GPUs freed within 25 s. Their exact launch commands are saved locally
 (git-ignored) in `scratch/stopped_servers/` so they can be restarted. GPUs 0–6 now go to short profiling and test
 runs for the speed experiments.
+
+**23:15 EST (Sat Nov 7)** **Head-native Flux runs: checks and test passed; both runs submitted, the first one is training.**
+- What they test: the first Flux run (`flux3_mix200_b512`) upscaled the 240×320 head camera to 360×640 and
+  stretched it from 4:3 to 16:9. These two runs put the head camera on the canvas at its native size and
+  change nothing else in the recipe (3,000 updates at batch 512, same learning rates, no gradient clipping).
+  The wrists go through the same resize steps as before. The canvas is 448×640 instead of 544×736.
+  - `flux3_headnative_b512`: action loss weight 50, as the baseline. The canvas is the only intended change.
+  - `flux3_headnative_w41_b512`: weight 41.18. The canvas has fewer video tokens, so this weight keeps the
+    baseline's balance between the video and action losses. Against the first, the weight is the only change.
+  - Every difference from the baseline, with its measured size, is in each run card
+    (`notes/runs/flux3_headnative_b512.md`, `..._w41_b512.md`). One is an assumption: 1 node instead of 2
+    (same batch and math) is assumed not to matter; it was not tested.
+- Checks (CPU): the new layout's tests and BFL's test suite pass. The eval adapter builds a canvas that is
+  bit-identical to the training canvas for the same frames, and recorded demos through the full eval path
+  come within 0.7-1.2/255 of training (codec noise).
+- Cluster test (1 node, 20 updates, 22:05-22:36): 37.9-39.8 s per update (the old canvas on 1 node: ~53 s),
+  no waiting for data, peak 62.7 GB allocated (74 GB of 80 in use). Saves ~70 s; exports of the averaged
+  weights landed ~2.5 min after each save. A restart from the saved copy continued the run correctly.
+  An eval smoke test on the test's export ran 9 episodes end to end (~0.7 s per policy call).
+- Launch: both runs on the shared borrowed pool (1 node each; it can pre-empt them; each restart is
+  counted). `flux3_headnative_b512` started at 23:02, and its first updates match the test's exactly
+  (same seed). `flux3_headnative_w41_b512` is still queued. Each needs ~34 h of training without
+  pre-emptions.
+- Evals per run: 10-task check at 1,500; full 50-task eval at 3,000 (its logs also give the 3,000 10-task
+  check, same seeds); held-out arm error at both.
