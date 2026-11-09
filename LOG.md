@@ -2532,3 +2532,35 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Not yet measured with DiT compile on 2 nodes: the 2-node rehearsal (submitted 21:11 ET) measures it.
 - The head-native 1,500 checks started ~21:13 ET. They should have started when the 1,500 exports landed (~16:30 ET),
   but no agent was assigned to watch for them.
+
+**21:45 EST (Sun Nov 8)** **Flux update 4,000 (before the 4,790 spike): 72.1% / 72.9%; two streams per GPU save no GPU time.**
+
+| | randomized (1,015) | clean (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| Flux update 4,000 | 72.1% | 72.9% |
+| Flux update 6,500 | 74.1% | 76.0% |
+| Flux update 7,000 | 74.8% | 77.0% |
+| Flux update 9,000 | 75.6% | 77.8% |
+
+- Paired by seed, 4,000 vs 3,000: randomized 127 vs 116 scenes (p = 0.52), clean 57 vs 48
+  (p = 0.44): no difference. 4,000 vs 6,500: 111 vs 131 (p = 0.22) and 48 vs 63 (p = 0.18);
+  vs 7,000: 105 vs 132 (p = 0.09) and 53 vs 73 (p = 0.09); vs 9,000: 105 vs 140 (p = 0.03) and
+  42 vs 66 (p = 0.03). The run was still at the step-3,000 level at 4,000; the later gain came
+  after the spike.
+- Same seeds, and the same instruction sentence for every one of the 1,514 episodes as in the
+  6,500 and 7,000 evals (checked seed by seed).
+- Two eval streams per GPU (this eval) vs one (the others):
+
+| | 4,000 (2 per GPU) | 6,500 / 7,000 / 9,000 (1 per GPU) |
+|---|---|---|
+| GPU-hours | 75.7 | 72.9 / 72.6 / 72.7 |
+| stream time per executed action | 0.96 s | 0.48 s |
+| GPU time per executed action | 0.54 s | 0.54 s |
+| policy call (median) | 2.4 s | 0.79 s |
+| episode wall time (median; success / failure) | 232 s (166 / 492) | 111-115 s (82-84 / 252-263) |
+
+  Each stream runs twice as slowly when two share a GPU, so the GPU time per episode is the same;
+  the GPU is the limit (the simulator renders on it, and it was ~90% busy with one stream). The
+  4,000 eval cost 4% more, mostly because it executed 3% more actions (lower success, longer
+  failed episodes). Keep one stream per GPU.

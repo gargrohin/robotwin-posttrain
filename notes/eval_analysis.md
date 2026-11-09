@@ -353,6 +353,7 @@ plus the 500s; the run is going to 9,000.
 | checkpoint | randomized | clean |
 |---|---|---|
 | step 3,000 (first run) | 71.0% | 71.1% |
+| 4,000 (before the spike) | 72.1% | 72.9% |
 | 5,000 | 64.0% | 61.9% |
 | 5,500 | 66.3% | 67.1% |
 | 6,000 | 71.8% | 71.3% |
@@ -404,8 +405,14 @@ Reading:
   3,000). 6,500 → 7,000 is flat, within noise. Several checkpoints have been compared against 3,000, so read
   single p-values with that in mind.
 - Held-out arm error at 7,000 is back at the 3,000–4,000 level (0.0297 / 0.0220 / 0.0245).
-- Update 4,000 (before the spike) is being evaluated, to see where the run stood then. The learning rate ramps
-  down from 8,000 to 9,000.
+- **Update 4,000 (before the spike) was still at the step-3,000 level:** randomized 72.1% (127 vs 116 seeds
+  against 3,000, p = 0.52), clean 72.9% (57 vs 48, p = 0.44). Against 9,000 it is lower on both (randomized 105
+  vs 140, p = 0.03; clean 42 vs 66, p = 0.03); against 6,500 and 7,000 the gaps (2–4 points) are not
+  significant (p 0.09–0.22). So the gain over 3,000 arrived between 4,000 and 6,500, after the spike, not before
+  it. Same seeds and the same instruction sentence per episode as the 6,500 and 7,000 evals.
+- The 4,000 eval ran two eval streams per GPU: each stream ran 2.0x slower (0.96 vs 0.48 s per executed action;
+  policy calls 2.4 s vs 0.79 s), so GPU time per action was unchanged (0.54 s) and the eval cost 75.7 GPU-hours
+  vs 72.6–72.9 for the 1-stream evals. Packing two streams per GPU does not save GPU time.
 
 ## Appendix A: is the median a fair summary of a task's length?
 
