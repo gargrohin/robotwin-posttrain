@@ -180,9 +180,14 @@ Two reviews: 13 failures I looked at frame by frame (one randomized failure per 
 **Goal:** make success less random on scenes Cosmos can already do, and teach it to recover after
 a mistake. Nothing below is running; most of it waits for GPUs.
 
-**Needed first by everything below:** the eval has to save, for every step, the moves Cosmos chose
-and the robot's joint positions. Today each episode saves only the head-camera video and a
-one-line summary (success, steps, seed, instruction).
+**Recording Cosmos's runs:** to train on its own runs, they must be saved in the same form as the
+training demos: at every step, the images from all three cameras Cosmos sees (head and both
+wrists), the robot's joint positions, and the moves Cosmos chose. Today each episode saves only
+the head-camera video and a one-line summary (success, steps, seed, instruction).
+- Option 1 needs this added to the eval.
+- Experiment 2b needs it, or a saved simulator state, to restart from the middle of a Cosmos run.
+- RL code records this itself while it runs.
+- Experiment 2a doesn't need it.
 
 **1. Training on its own successes** (you want to try this; blocked on GPUs)
 - What: run Cosmos many times on scenes outside the test set (e.g. training seeds), keep the
