@@ -2581,3 +2581,10 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   preempts strictly lower priority. So our high-priority job waits in line and can't preempt anyone.
 - The run goes to both our quota queue and the borrowed pool. Whichever starts first runs, and the other is cancelled at
   once (one run, one checkpoint set). Saves every 250 iterations, in case the borrowed copy is pre-empted.
+
+**22:40 EST (Sun Nov 8)** **Cosmos mix500 run started on the team quota.**
+- Of the two copies submitted at 22:24 (team quota and shared pool), the team-quota copy started at 22:40. The
+  shared-pool copy was still queued and was cancelled within a minute; it never ran.
+- So one run, one set of checkpoints, on our own quota (no pre-emption risk from the shared pool).
+- Next: first-update speed and memory, then the resume test from the iteration-100 save and a short eval check of
+  the iteration-100 copy (checks that the eval reads the new mix500 stats file).

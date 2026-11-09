@@ -95,3 +95,10 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
 - 2026-11-08/09: data checked; stats and index built; data uploaded for the cluster (109,008 files, 81.8 GB, counts and bytes equal to the local copy); config pre-flight on CPU (the
   only differences from the mix200 config are the intended ones: data, stats, schedule, iterations, save interval,
   2-node layout, speedup flags); launcher save-slot and multi-node logic tested locally.
+- 2026-11-08 22:24 ET: two copies of the same run (same name, config and save location) submitted at once: one to
+  our team quota (priority high, no borrowing), one to the shared borrowed pool (priority high). Rule: the first to
+  start runs and the other is cancelled while still queued, so only one copy ever trains (one checkpoint set).
+- 22:40 ET: the **team-quota copy started**; the shared-pool copy was still queued and was cancelled at once (it never
+  ran or wrote anything). The run is on our own quota, so it is not pre-empted by our priority.
+- Eval preparation: the eval launcher now ships the mix500 stats file with the eval inputs (the eval image predates
+  it); eval queues for 4,000/5,000/5,500/6,000 are the decay run's exact seed lists.
