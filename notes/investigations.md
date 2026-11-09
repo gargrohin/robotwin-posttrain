@@ -1020,6 +1020,27 @@ earlier belief that was wrong. **Open** = not yet answered.
 
 ---
 
+## 11. Handoff job and eval audit (Nov 9, 11:34 ET)
+- **Q:** which jobs finished or changed state while agent monitoring was interrupted?
+- **Found (cluster status query for every job in the local handoff):** both head-native training jobs completed;
+  both Cosmos replacement submissions and all six pending test jobs remain queued. The original Cosmos pair is
+  cancelled; its iteration-100 eval test completed.
+- **Found (cloud object contents):** Cosmos's latest-checkpoint and latest-slot pointers both name iteration 1,500;
+  the slot completion markers contain 1,500 and 1,250. Both head-native update-3,000 export manifests exist and
+  specify EMA 0.10. A manifest's timestamp is an upload time, not a training completion time.
+- **Found (submission records, cluster listing, host processes):** the head-native eval launcher survived the
+  handoff. All 12 weight-41.18 slices and 9 weight-50 slices were queued; the remaining weight-50 submissions
+  were still in progress. No duplicate jobs were submitted during this audit.
+- **Found (queue files and per-stream seed lists):** the head-native full eval and each of the four Cosmos mix500
+  evals cover all 50 tasks, exactly 1,017 planned randomized seeds and 500 planned clean seeds. These match
+  GR00T's full randomized set and first 10 clean seeds per task. Each Cosmos queue line and seed-list file is
+  byte-identical to the corresponding decay-6,000 eval input. The head-native launcher uses the baseline Flux
+  update-3,000 input files directly.
+- **Clarification:** 1,015 randomized and 499 clean are previous completed-episode counts after simulator expert
+  checks failed on some seeds. The submitted protocol still includes 1,017 and 500; check completed seeds before
+  computing each paired comparison.
+- **Open:** admission times, resume-test results, head-native full-eval results, and the Cosmos milestone evals.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

@@ -2620,3 +2620,19 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Resubmitted to both our team quota and the shared pool. Whichever starts first resumes from 1,500 (~9.3 h left);
   the other is cancelled while queued.
 - Our quota was full (140/144) with 3 teammates' jobs waiting, so the start time is unknown.
+
+
+**11:34 EST (Mon Nov 9)** **Handoff audit: head-native training complete; Cosmos replacements queued.**
+- Checked every job in the local handoff against the cluster. Both head-native training jobs completed; their
+  update-3,000 EMA export manifests exist. All 12 weight-41.18 eval slices and 9 weight-50 slices are queued;
+  the existing weight-50 launcher is still submitting the final three.
+- Both Cosmos mix500 replacements remain queued. Cloud pointers and completion markers confirm iteration 1,500
+  is the latest complete save; the other slot contains 1,250. The admission watcher is alive. No revised finish
+  time is available before admission.
+- Both Flux rehearsals, the 16-vs-32-per-GPU test, both Cosmos speed tests, and the Cosmos resume test are queued.
+  The iteration-100 eval test is complete; the original Cosmos submissions remain cancelled.
+- Verified full-eval inputs: all 50 tasks, GR00T's exact 1,017 planned randomized seeds and first 10 clean seeds
+  per task (500 planned). Cosmos milestone inputs preserve every decay-eval stream's count and seed list;
+  head-native uses the baseline Flux update-3,000 files directly. Completed counts will be checked after eval.
+- A local Cosmos milestone watcher is prepared to submit the four approved evals after complete saves. It is
+  not running yet; the existing admission watcher and head-native submission process are active.

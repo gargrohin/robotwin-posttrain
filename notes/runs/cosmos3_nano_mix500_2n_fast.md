@@ -110,4 +110,7 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
     out-of-memory errors.
 - 2026-11-08 23:36 ET: eval path check on the iteration-100 copy passed (stats file loaded, 9/9 test episodes ran).
 - 2026-11-09 ~02:20 ET: the job was cancelled at iteration ~1,748 (no reason given; our tools did not cancel it). The
-  last full state is 1,500; waiting for a decision on resubmitting (a resubmission resumes from 1,500).
+  last full state is 1,500.
+- 2026-11-09: resubmitted with the user's approval to our quota and the borrowed pool. At 11:34 ET both copies
+  remain queued, with the admission watcher alive. The cloud pointers and completion markers confirm the latest
+  complete state is still 1,500. There is no measured admission time or revised finish time yet.

@@ -8,7 +8,7 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-08, late)
+## Start here: current state (2026-11-09, 11:34 ET)
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -23,14 +23,18 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - All three trained on `mix200`: 50 clean + 200 randomized demos per task.
 - GR00T trained on the 50 clean demos per task only (`50task_60k`): 42.6% clean, 9.7% randomized.
 
-**State on 2026-11-08 ~23:00 ET** (full handoff, with running jobs and next steps: the local, uncommitted
+**State checked on 2026-11-09 at 11:34 ET** (full handoff, with running jobs and next steps: the local, uncommitted
 `/mnt/efs/rohingarg/cri/HANDOFF.md`):
 - **Training data from now on: mix500** (50 clean + 495 randomized per task), as most public RoboTwin papers use.
 - **Running:**
-  - Cosmos3-Nano on mix500: 2 nodes of our quota, with the Cosmos speedups and the best run's 6,000-iteration
-    schedule. Started ~22:40 ET Nov 8, ETA ~10:30–11:00 ET Nov 9. Evals at 4,000 / 5,000 / 5,500 / 6,000.
-  - The two head-native Flux runs, ETA ~09:45 ET Nov 9. At 1,500 the head-native canvas ties the DROID canvas
-    (74/100 vs 74/100). Full evals at 3,000 decide the canvas.
+  - Cosmos3-Nano on mix500: both replacement submissions are queued after the earlier cancellation. The latest
+    complete save remains iteration 1,500 (verified from the cloud markers); admission and finish times are unknown.
+    The admission watcher is alive. Evals at 4,000 / 5,000 / 5,500 / 6,000 remain authorized.
+  - Both head-native Flux training jobs are complete, with update-3,000 EMA exports present. Full evals: all 12
+    weight-41.18 slices and 9 of 12 weight-50 slices are queued; the existing weight-50 launcher is still submitting.
+    At 1,500 both canvases scored 74/100. The full evals at 3,000 decide the canvas.
+  - Both Flux rehearsals, its 16-vs-32-per-GPU test, both pending Cosmos speed tests, and the Cosmos resume test
+    remain queued. The Cosmos iteration-100 eval test is complete.
 - **Finished:** the Flux continuation, 3,000 → 9,000. The final 75.6% / 77.8% is +4.5 / +6.6 over step 3,000;
   success plateaued from 6,500, and the cool-down added nothing.
 - **Next, the user decides after the speed tests:** a Flux run on mix500 with the compiled speed stack (~2× faster).
