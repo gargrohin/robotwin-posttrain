@@ -2614,3 +2614,9 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   9/9 test episodes ran. Full evals at 4,000/5,000/5,500/6,000 are ready to submit.
 - The resume test (a short separate job from the iteration-100 save) is still queued on the shared pool.
 
+
+**11:17 EST (Mon Nov 9)** **Cosmos mix500 resubmitted (user OK).**
+- The run was cancelled at ~02:20 ET at iteration ~1,748, cause unknown (not by us). The last complete save is 1,500.
+- Resubmitted to both our team quota and the shared pool. Whichever starts first resumes from 1,500 (~9.3 h left);
+  the other is cancelled while queued.
+- Our quota was full (140/144) with 3 teammates' jobs waiting, so the start time is unknown.
