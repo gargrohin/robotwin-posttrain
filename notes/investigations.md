@@ -1014,7 +1014,9 @@ earlier belief that was wrong. **Open** = not yet answered.
   w50 74/100, baseline (DROID canvas) 74/100. Seed by seed 13 vs 13 (p = 1.0); every per-task gap is 1–3 of 10.
   - Held-out arm error is about equal too (0.0300 vs 0.0296 on unseen episodes).
   - So far, dropping the head-camera upscaling (448×640 canvas, ~18% fewer video tokens, ~28% faster per update)
-    doesn't change the result. w41 pending; the full 50-task evals at 3,000 decide.
+    doesn't change the result. The full 50-task evals at 3,000 decide.
+  - w41.18: 72/100 (vs baseline p = 0.85; vs w50 p = 0.82). The loss weight makes no measurable difference at
+    1,500 either.
 
 ---
 
