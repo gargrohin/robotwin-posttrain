@@ -2270,6 +2270,7 @@ eval on GR00T's seeds. 3,000 is the first run's final step; the rest are the con
 | 6,500 | 0.0306 | 0.0237 | 0.0259 | 74.1% | 76.0% |
 | 7,000 | 0.0297 | 0.0220 | 0.0245 | 74.8% | 77.0% |
 | 8,000 | 0.0289 | 0.0216 | 0.0238 | 75.0% | 76.8% |
+| 9,000 | 0.0285 | 0.0204 | 0.0233 | 75.6% | 77.8% |
 
 - Within the continuation (5,000 → 6,500), arm error falls at every step and success rises at
   every step.
@@ -2432,3 +2433,94 @@ new per-update timing logs. Reference: 52.4 s per update at 4 windows per GPU.
   (p = 1.0), clean 49 vs 39 (p = 0.34). Against step 3,000: randomized 134 vs 95 (p = 0.012),
   clean 76 vs 38 (p < 0.001). Cosmos 5,000 leads by 7.2 (randomized) and 5.6 (clean) points.
 - The 9,000 eval and the 4,000 eval (two streams per GPU) are running.
+
+**20:50 EST (Sun Nov 8)** **Flux continuation, final result at update 9,000: 75.6% randomized, 77.8% clean.**
+Same 50 tasks and exact seeds as every other eval (randomized: all GR00T seeds; clean: GR00T's
+first 10 per task); every episode got the same instruction sentence as in the 7,000 eval.
+
+| checkpoint | randomized (1,015) | clean (499) |
+|---|---|---|
+| Flux step 3,000 (first run) | 71.0% | 71.1% |
+| 5,000 (after the loss spike) | 64.0% | 61.9% |
+| 5,500 | 66.3% | 67.1% |
+| 6,000 | 71.8% | 71.3% |
+| 6,500 | 74.1% | 76.0% |
+| 7,000 | 74.8% | 77.0% |
+| 7,500 | 75.4% | 74.5% |
+| 8,000 (cool-down starts) | 75.0% | 76.8% |
+| 8,500 | 74.9% | 78.8% |
+| **9,000 (end of cool-down)** | **75.6%** | **77.8%** |
+| Cosmos 5,000 | 81.9% | 84.4% |
+| GR00T mix200_150k | 45.2% | 45.5% |
+
+- **9,000 vs step 3,000** (paired by seed): randomized 149 scenes only 9,000 solves vs 103 only
+  3,000 solves (p = 0.004), clean 81 vs 48 (p = 0.005). By task: better on 29 / worse on 13
+  (randomized, p = 0.02) and 27 / 9 (clean, p = 0.004). The continuation adds ~4.5-6.6 points.
+- **9,000 vs Cosmos 5,000:** Cosmos still leads by 6.6 points on both: randomized 87 vs 154
+  (p < 0.0001; Cosmos better on 33 tasks, Flux on 8), clean 40 vs 73 (p = 0.002; 25 vs 12 tasks).
+- From 6,500 on the curve is flat: 9,000 vs 7,000 and vs 8,500 are within noise (p > 0.6); the
+  cool-down did not add a measurable gain.
+- Largest gains over 3,000: place_cans_plasticbox (+11 of 30), put_bottles_dustbin (+8), and
+  +7 on pick_dual_bottles, place_fan, place_object_basket, stamp_seal. Losses: open_microwave
+  (-8 of 29), stack_bowls_three (-7), turn_switch (-5).
+- Largest gaps to Cosmos: place_mouse_pad (11 vs 19 of 30), turn_switch (12 vs 19),
+  stack_blocks_three, move_stapler_pad (-7 each). Flux 9,000 is ahead of Cosmos on 11 tasks, most
+  by 1-3 scenes; pick_dual_bottles by 6 (25 vs 19).
+- Held-out arm error at 9,000: 0.0285 / 0.0204 / 0.0233 (the lowest of all checkpoints).
+- Cost: training ~786 GPU-hours in total (both runs); each full eval ~73-84 GPU-hours.
+
+Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10 per task):
+
+| task | rand Flux 9000 | rand Flux 3000 | rand Cosmos 5000 | clean Flux 9000 | clean Flux 3000 | clean Cosmos 5000 |
+|---|---|---|---|---|---|---|
+| adjust_bottle | 19/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| beat_block_hammer | 20/20 | 20/20 | 19/20 | 9/10 | 10/10 | 10/10 |
+| blocks_ranking_rgb | 19/21 | 20/21 | 19/21 | 10/10 | 9/10 | 9/10 |
+| blocks_ranking_size | 13/21 | 14/21 | 17/21 | 10/10 | 7/10 | 7/10 |
+| click_alarmclock | 21/21 | 21/21 | 20/21 | 10/10 | 10/10 | 10/10 |
+| click_bell | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| dump_bin_bigbin | 15/20 | 14/20 | 19/20 | 10/10 | 8/10 | 10/10 |
+| grab_roller | 21/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| handover_block | 8/20 | 5/20 | 4/20 | 5/10 | 3/10 | 6/10 |
+| handover_mic | 18/20 | 18/20 | 19/20 | 7/10 | 9/10 | 10/10 |
+| hanging_mug | 2/20 | 2/20 | 1/20 | 0/10 | 1/10 | 3/10 |
+| lift_pot | 16/20 | 14/20 | 15/20 | 7/10 | 7/10 | 10/10 |
+| move_can_pot | 11/20 | 7/20 | 15/20 | 6/10 | 5/10 | 8/10 |
+| move_pillbottle_pad | 15/20 | 16/20 | 16/20 | 9/10 | 7/10 | 7/10 |
+| move_playingcard_away | 18/20 | 16/20 | 20/20 | 9/10 | 7/10 | 10/10 |
+| move_stapler_pad | 11/21 | 6/21 | 15/21 | 4/10 | 2/10 | 7/10 |
+| open_laptop | 20/21 | 19/21 | 20/21 | 10/10 | 9/10 | 7/10 |
+| open_microwave | 11/19 | 14/19 | 14/19 | 5/10 | 10/10 | 7/10 |
+| pick_diverse_bottles | 11/21 | 9/21 | 11/21 | 7/10 | 2/10 | 6/10 |
+| pick_dual_bottles | 16/20 | 11/20 | 14/20 | 9/10 | 7/10 | 5/10 |
+| place_a2b_left | 20/20 | 18/20 | 20/20 | 8/10 | 8/10 | 9/10 |
+| place_a2b_right | 16/20 | 19/20 | 18/20 | 9/10 | 8/10 | 9/10 |
+| place_bread_basket | 18/21 | 15/21 | 20/21 | 9/10 | 7/10 | 10/10 |
+| place_bread_skillet | 14/20 | 16/20 | 17/20 | 7/10 | 6/10 | 9/10 |
+| place_burger_fries | 18/20 | 17/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| place_can_basket | 9/20 | 7/20 | 12/20 | 5/10 | 4/10 | 7/10 |
+| place_cans_plasticbox | 16/20 | 9/20 | 20/20 | 8/10 | 4/10 | 10/10 |
+| place_container_plate | 19/20 | 17/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| place_dual_shoes | 14/22 | 15/22 | 17/22 | 7/10 | 7/10 | 7/10 |
+| place_empty_cup | 19/20 | 18/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| place_fan | 16/20 | 10/20 | 14/20 | 9/10 | 8/10 | 10/10 |
+| place_mouse_pad | 7/20 | 5/20 | 12/20 | 4/10 | 3/10 | 7/10 |
+| place_object_basket | 17/21 | 11/21 | 18/21 | 7/9 | 6/9 | 8/9 |
+| place_object_scale | 12/20 | 10/20 | 14/20 | 7/10 | 5/10 | 9/10 |
+| place_object_stand | 16/20 | 18/20 | 17/20 | 10/10 | 10/10 | 8/10 |
+| place_phone_stand | 12/20 | 13/20 | 16/20 | 7/10 | 8/10 | 9/10 |
+| place_shoe | 17/20 | 16/20 | 19/20 | 7/10 | 9/10 | 9/10 |
+| press_stapler | 21/21 | 20/21 | 21/21 | 10/10 | 9/10 | 10/10 |
+| put_bottles_dustbin | 11/19 | 6/19 | 11/19 | 6/10 | 3/10 | 9/10 |
+| put_object_cabinet | 11/20 | 11/20 | 13/20 | 7/10 | 7/10 | 6/10 |
+| rotate_qrcode | 16/20 | 15/20 | 17/20 | 9/10 | 6/10 | 8/10 |
+| scan_object | 14/20 | 13/20 | 17/20 | 4/10 | 8/10 | 7/10 |
+| shake_bottle | 19/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 9/10 |
+| stack_blocks_three | 13/20 | 11/20 | 17/20 | 6/10 | 7/10 | 9/10 |
+| stack_blocks_two | 19/20 | 18/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| stack_bowls_three | 13/21 | 18/21 | 12/21 | 4/10 | 6/10 | 9/10 |
+| stack_bowls_two | 20/21 | 19/21 | 21/21 | 10/10 | 10/10 | 8/10 |
+| stamp_seal | 16/21 | 14/21 | 18/21 | 7/10 | 2/10 | 6/10 |
+| turn_switch | 8/20 | 13/20 | 12/20 | 4/10 | 4/10 | 7/10 |
+| **total** | **766/1014 = 75.5%** | **720/1014 = 71.0%** | **833/1014 = 82.1%** | **388/499 = 77.8%** | **355/499 = 71.1%** | **421/499 = 84.4%** |
