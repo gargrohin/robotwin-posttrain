@@ -102,3 +102,12 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
   ran or wrote anything). The run is on our own quota, so it is not pre-empted by our priority.
 - Eval preparation: the eval launcher now ships the mix500 stats file with the eval inputs (the eval image predates
   it); eval queues for 4,000/5,000/5,500/6,000 are the decay run's exact seed lists.
+- Measured on the cluster:
+  - 6.83 s per iteration (median, iterations 52–210), 6.85 s at ~680, against 10.0 s for the mix200 2-node run at the
+    same iterations;
+  - full saves 113 s, two uploads of 49 s each;
+  - peak GPU memory at 200: 55.4 GB allocated, 64.8 GB reserved, 71.2 GB in use (mix200: 34.8 / 42.2 / 47.5), no
+    out-of-memory errors.
+- 2026-11-08 23:36 ET: eval path check on the iteration-100 copy passed (stats file loaded, 9/9 test episodes ran).
+- 2026-11-09 ~02:20 ET: the job was cancelled at iteration ~1,748 (no reason given; our tools did not cancel it). The
+  last full state is 1,500; waiting for a decision on resubmitting (a resubmission resumes from 1,500).

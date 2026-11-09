@@ -2600,3 +2600,17 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - One eval share was pre-empted at 21:45 (11 of 50 episodes done) and rerun its unfinished lines after re-admission
   at ~22:01; the training runs had no pre-emptions (both near update 1,900 at 21:12).
 - Next: the 50-task eval at update 3,000 (~ +12 h).
+
+**~02:20 EST (Mon Nov 9)** **Cosmos mix500 run stopped by a cancel at iteration ~1,750; last full save is 1,500.**
+- Before the stop the run was healthy:
+  - 6.8–7.1 s per iteration, 1.48× faster than the mix200 run (10.0 s);
+  - peak GPU memory 55 GB allocated, 71 GB in use of 80, no out-of-memory errors;
+  - loss 0.80 at 1,748.
+- The cluster shows the job as cancelled, with no reason given. Our tools did not cancel it.
+- Saved state: full training state at 1,500 (and at 1,250 in the other slot), plus the permanent iteration-100 copy.
+  A resubmission under the same name resumes from 1,500 on its own; about 9.3 h remain.
+- Nothing resubmitted yet: waiting for a decision.
+- The eval path for mix500 was checked on the cluster with the iteration-100 copy: the new stats file is loaded and
+  9/9 test episodes ran. Full evals at 4,000/5,000/5,500/6,000 are ready to submit.
+- The resume test (a short separate job from the iteration-100 save) is still queued on the shared pool.
+
