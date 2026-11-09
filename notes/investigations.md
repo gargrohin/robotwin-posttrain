@@ -931,6 +931,14 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Export: 13 GB, checksums verified.
   - Not covered: DiT compile and the spanning loader. A 2-node rehearsal with the exact final flags is prepared,
     pending the user's yes on DiT compile.
+- **Partly answered (Cosmos's own encoder compile changes the loss 5–8%):** the encoder's output changes only
+  0.67–0.97% relative (devbox, 32 real clips), the same size as 8 clips per call, which moved the loss ~1e-4.
+  - Losses are bitwise until the compile kicks in at step 4, then differ 0.35–3.1%.
+  - In the code, the compile step draws random tensors from the default CUDA generator (wan2pt2_vae_4x16x16.py:1455,
+    :1876). Training draws its flow-matching noise from that same generator when deterministic mode is off, which
+    it is in our runs (omni_mot_model.py:2622–2632).
+  - **Inference, not tested:** the noise samples after the compile shift, which would explain most of the loss
+    change. The test: save and restore the CUDA random state around the compile. Not used, so low priority.
 
 ---
 
