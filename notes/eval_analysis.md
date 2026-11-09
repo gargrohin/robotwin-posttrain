@@ -9,9 +9,9 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
   the same data (`mix200`).
-- **FLUX 3 Action's continuation is past its step-3,000 level:** 74.8% randomized, 77.0% clean at update
-  7,000 (step 3,000: 71.0% / 71.1%; 6,500 was 74.1% / 76.0%). The run dipped at 5,000 after a loss spike and recovered by 6,000
-  (part 3). It's still ~7 points behind Cosmos 5,000 on both settings.
+- **FLUX 3 Action's continuation ended at 75.6% randomized, 77.8% clean (update 9,000)**, +4.5 / +6.6 over
+  step 3,000 (p ≈ 0.005). It plateaued from 6,500, and the cool-down added nothing measurable. The run dipped at 5,000 after a loss spike and recovered by 6,000
+  (part 3). It's still 6.6 points behind Cosmos 5,000 on both settings.
 - **No Cosmos task is at 0%.** 14 tasks are under 80% on randomized; the lowest is hanging_mug
   (30%).
 - **For Cosmos, task length matters little; using both arms is the weak spot** (80% vs 89%
@@ -361,6 +361,7 @@ plus the 500s; the run is going to 9,000.
 | 7,500 | 75.4% | 74.5% |
 | 8,000 | 75.0% | 76.8% |
 | 8,500 | 74.9% | 78.8% |
+| **9,000 (end of cool-down)** | **75.6%** | **77.8%** |
 | Cosmos 5,000 (same eval) | 81.9% | 84.4% |
 
 Paired by seed ("only A solves" vs "only B solves"):
@@ -383,14 +384,22 @@ Paired by seed ("only A solves" vs "only B solves"):
 - 8,500 vs 3,000: randomized 134 vs 95 (p = 0.012; by task 24 better, 12 worse); clean 76 vs 38 (p = 5e-4; by task
   26 better, 8 worse).
 - 8,500 vs Cosmos 5,000: Cosmos ahead by 7.2 points randomized (p = 4e-6) and 5.6 clean (p = 0.013).
+- **9,000 (final) vs 3,000:** randomized 149 vs 103 (p = 0.004; 29 tasks better, 13 worse); clean 81 vs 48
+  (p = 0.005; 27 better, 9 worse). The continuation adds +4.5 / +6.6 points.
+- 9,000 vs Cosmos 5,000: Cosmos ahead by 6.6 points on both settings (randomized p = 2e-5, Cosmos better on 33 tasks,
+  Flux on 8; clean p = 0.002).
+- Per task: the biggest gains over 3,000 are place_cans_plasticbox (+11 of 30) and put_bottles_dustbin (+8). The
+  losses are open_microwave (−8 of 29), stack_bowls_three (−7) and turn_switch (−5). Flux leads Cosmos on 11 tasks,
+  mostly by 1–3 (pick_dual_bottles 25 vs 19). The per-task table is in notes/results.md.
+- Held-out arm error at 9,000: 0.0285 / 0.0204 / 0.0233, the lowest of all checkpoints.
 
 Reading:
 - The dip at 5,000 followed a loss spike near 4,790 that the averaged (EMA) weights carried into the export.
   The spike investigation is in notes/investigations.md.
 - At 6,500 the weights from before that spike are ~9% of the EMA, and those after a smaller spike at 6,460
   are ~5%.
-- **6,500 through 8,500 sit on a plateau** (randomized 74.1–75.4%, clean 74.5–78.8%); the differences between
-  them are within noise. The learning-rate ramp-down (8,000 → 9,000) is the last chance for a step up.
+- **6,500 through 9,000 sit on a plateau** (randomized 74.1–75.6%, clean 74.5–78.8%); the differences between
+  them are within noise. The cool-down (8,000 → 9,000) added no measurable gain.
 - **The gain over step 3,000 holds at 7,000** (p ≈ 0.01 on both settings, two checkpoints in a row above
   3,000). 6,500 → 7,000 is flat, within noise. Several checkpoints have been compared against 3,000, so read
   single p-values with that in mind.

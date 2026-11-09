@@ -5,6 +5,87 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
+## FLUX 3 Action continuation (flux3_mix200_b512_cont6k), update 9,000, vs step 3,000 and Cosmos 5,000 (same seeds)
+
+6,000 more updates from step 3,000 (constant LR, then a cool-down from 8,000 to 9,000). Evaluated 2026-11-08 on
+cluster GPUs, one stream per GPU, exact GR00T seed lists. Every episode got the same instruction sentence as in the
+earlier Flux evals. EMA 0.10 export.
+
+| checkpoint | randomized (1,015) | clean (499) |
+|---|---|---|
+| Flux step 3,000 | 71.0% | 71.1% |
+| 5,000 / 5,500 | 64.0% / 66.3% | 61.9% / 67.1% |
+| 6,000 / 6,500 | 71.8% / 74.1% | 71.3% / 76.0% |
+| 7,000 / 7,500 | 74.8% / 75.4% | 77.0% / 74.5% |
+| 8,000 / 8,500 | 75.0% / 74.9% | 76.8% / 78.8% |
+| **9,000** | **75.6%** | **77.8%** |
+| Cosmos 5,000 | 81.9% | 84.4% |
+| GR00T mix200_150k | 45.2% | 45.5% |
+
+Sign tests (scenes only one model solves):
+- 9,000 vs step 3,000: randomized 149 vs 103 (p = 0.004; by task 29 better, 13 worse); clean 81 vs 48 (p = 0.005;
+  by task 27 better, 9 worse). The continuation adds +4.5 / +6.6 points.
+- 9,000 vs Cosmos 5,000: randomized 87 vs 154 (p = 2e-5; Cosmos better on 33 tasks, Flux on 8); clean 40 vs 73
+  (p = 0.002). Cosmos still leads by 6.6 points on both settings.
+- 6,500 through 9,000 are a plateau: 9,000 vs 8,500 and vs 7,000 are within noise (p > 0.6). The cool-down added no
+  measurable gain.
+
+Per task (successes / episodes):
+
+| task | rand Flux 9000 | rand Flux 3000 | rand Cosmos 5000 | clean Flux 9000 | clean Flux 3000 | clean Cosmos 5000 |
+|---|---|---|---|---|---|---|
+| adjust_bottle | 19/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| beat_block_hammer | 20/20 | 20/20 | 19/20 | 9/10 | 10/10 | 10/10 |
+| blocks_ranking_rgb | 19/21 | 20/21 | 19/21 | 10/10 | 9/10 | 9/10 |
+| blocks_ranking_size | 13/21 | 14/21 | 17/21 | 10/10 | 7/10 | 7/10 |
+| click_alarmclock | 21/21 | 21/21 | 20/21 | 10/10 | 10/10 | 10/10 |
+| click_bell | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| dump_bin_bigbin | 15/20 | 14/20 | 19/20 | 10/10 | 8/10 | 10/10 |
+| grab_roller | 21/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| handover_block | 8/20 | 5/20 | 4/20 | 5/10 | 3/10 | 6/10 |
+| handover_mic | 18/20 | 18/20 | 19/20 | 7/10 | 9/10 | 10/10 |
+| hanging_mug | 2/20 | 2/20 | 1/20 | 0/10 | 1/10 | 3/10 |
+| lift_pot | 16/20 | 14/20 | 15/20 | 7/10 | 7/10 | 10/10 |
+| move_can_pot | 11/20 | 7/20 | 15/20 | 6/10 | 5/10 | 8/10 |
+| move_pillbottle_pad | 15/20 | 16/20 | 16/20 | 9/10 | 7/10 | 7/10 |
+| move_playingcard_away | 18/20 | 16/20 | 20/20 | 9/10 | 7/10 | 10/10 |
+| move_stapler_pad | 11/21 | 6/21 | 15/21 | 4/10 | 2/10 | 7/10 |
+| open_laptop | 20/21 | 19/21 | 20/21 | 10/10 | 9/10 | 7/10 |
+| open_microwave | 11/19 | 14/19 | 14/19 | 5/10 | 10/10 | 7/10 |
+| pick_diverse_bottles | 11/21 | 9/21 | 11/21 | 7/10 | 2/10 | 6/10 |
+| pick_dual_bottles | 16/20 | 11/20 | 14/20 | 9/10 | 7/10 | 5/10 |
+| place_a2b_left | 20/20 | 18/20 | 20/20 | 8/10 | 8/10 | 9/10 |
+| place_a2b_right | 16/20 | 19/20 | 18/20 | 9/10 | 8/10 | 9/10 |
+| place_bread_basket | 18/21 | 15/21 | 20/21 | 9/10 | 7/10 | 10/10 |
+| place_bread_skillet | 14/20 | 16/20 | 17/20 | 7/10 | 6/10 | 9/10 |
+| place_burger_fries | 18/20 | 17/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| place_can_basket | 9/20 | 7/20 | 12/20 | 5/10 | 4/10 | 7/10 |
+| place_cans_plasticbox | 16/20 | 9/20 | 20/20 | 8/10 | 4/10 | 10/10 |
+| place_container_plate | 19/20 | 17/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| place_dual_shoes | 14/22 | 15/22 | 17/22 | 7/10 | 7/10 | 7/10 |
+| place_empty_cup | 19/20 | 18/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| place_fan | 16/20 | 10/20 | 14/20 | 9/10 | 8/10 | 10/10 |
+| place_mouse_pad | 7/20 | 5/20 | 12/20 | 4/10 | 3/10 | 7/10 |
+| place_object_basket | 17/21 | 11/21 | 18/21 | 7/9 | 6/9 | 8/9 |
+| place_object_scale | 12/20 | 10/20 | 14/20 | 7/10 | 5/10 | 9/10 |
+| place_object_stand | 16/20 | 18/20 | 17/20 | 10/10 | 10/10 | 8/10 |
+| place_phone_stand | 12/20 | 13/20 | 16/20 | 7/10 | 8/10 | 9/10 |
+| place_shoe | 17/20 | 16/20 | 19/20 | 7/10 | 9/10 | 9/10 |
+| press_stapler | 21/21 | 20/21 | 21/21 | 10/10 | 9/10 | 10/10 |
+| put_bottles_dustbin | 11/19 | 6/19 | 11/19 | 6/10 | 3/10 | 9/10 |
+| put_object_cabinet | 11/20 | 11/20 | 13/20 | 7/10 | 7/10 | 6/10 |
+| rotate_qrcode | 16/20 | 15/20 | 17/20 | 9/10 | 6/10 | 8/10 |
+| scan_object | 14/20 | 13/20 | 17/20 | 4/10 | 8/10 | 7/10 |
+| shake_bottle | 19/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 9/10 |
+| stack_blocks_three | 13/20 | 11/20 | 17/20 | 6/10 | 7/10 | 9/10 |
+| stack_blocks_two | 19/20 | 18/20 | 20/20 | 10/10 | 9/10 | 10/10 |
+| stack_bowls_three | 13/21 | 18/21 | 12/21 | 4/10 | 6/10 | 9/10 |
+| stack_bowls_two | 20/21 | 19/21 | 21/21 | 10/10 | 10/10 | 8/10 |
+| stamp_seal | 16/21 | 14/21 | 18/21 | 7/10 | 2/10 | 6/10 |
+| turn_switch | 8/20 | 13/20 | 12/20 | 4/10 | 4/10 | 7/10 |
+| **total** | **766/1014 = 75.5%** | **720/1014 = 71.0%** | **833/1014 = 82.1%** | **388/499 = 77.8%** | **355/499 = 71.1%** | **421/499 = 84.4%** |
+
 ## FLUX 3 Action (flux3_mix200_b512), step 3,000, vs Cosmos 5,000 and GR00T mix200_150k (same seeds)
 
 BFL's `flux-3-action-base` (7B), fine-tuned with BFL's flux-action trainer on mix200 (same data as

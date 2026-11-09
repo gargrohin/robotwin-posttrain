@@ -8,7 +8,7 @@ Best results so far (all 50 tasks, every model on GR00T's exact eval scenes):
 | model | randomized scenes | clean scenes |
 |---|---|---|
 | Cosmos3-Nano, iteration 5,500 | 85.0% | 88.6% |
-| FLUX 3 Action, step 3,000 | 71.0% | 71.1% |
+| FLUX 3 Action, update 9,000 (continuation) | 75.6% | 77.8% |
 | GR00T N1.7, checkpoint-150000 | 45.3% | 45.5% |
 
 - Current state, how things work and the rules for agents: [AGENTS.md](AGENTS.md) (start with

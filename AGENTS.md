@@ -17,7 +17,7 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 | model | run, checkpoint | randomized | clean |
 |---|---|---|---|
 | Cosmos3-Nano (16B) | `cosmos3_nano_mix200_2n_decay1k` iteration 5,500 (6,000 is the same within noise) | 85.0% | 88.6% |
-| FLUX 3 Action (7B) | `flux3_mix200_b512` step 3,000 | 71.0% | 71.1% |
+| FLUX 3 Action (7B) | `flux3_mix200_b512_cont6k` update 9,000 (step 3,000: 71.0% / 71.1%) | 75.6% | 77.8% |
 | GR00T N1.7 (3B) | `mix200_150k` checkpoint-150000 | 45.3% | 45.5% |
 
 - All three trained on `mix200`: 50 clean + 200 randomized demos per task.
