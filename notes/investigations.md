@@ -952,6 +952,25 @@ earlier belief that was wrong. **Open** = not yet answered.
     to each other.
   - This is training error on different random batches and noise, not task success. It doesn't say which canvas
     evaluates better; the 1,500 10-task checks will.
+- **Q: what clipping threshold would fit Flux training?** Gradient norms from both Flux runs (wandb; logged every
+  10th update, 909 points):
+
+  | updates | median | p90 | p99 | p99.9 | max |
+  |---|---|---|---|---|---|
+  | 0–499 | 0.945 | 1.83 | 4.40 | 6.10 | 6.29 |
+  | 500–2,999 | 0.328 | 0.58 | 0.90 | 1.30 | 1.42 |
+  | 3,000–4,999 | 0.172 | 0.30 | 0.99 | 3.47 | 3.91 (update 4,790) |
+  | 5,000–7,999 | 0.119 | 0.17 | 0.23 | 1.07 | 1.18 |
+  | 8,000–9,000 (cool-down) | 0.058 | 0.10 | 0.14 | 0.14 | 0.14 |
+
+  - **Found:** the typical gradient norm shrinks ~15× over training, so no fixed threshold fits. A fixed threshold
+    low enough to catch the 4,790 spike (3.91, ~23× the median around it) would also clip many ordinary early updates
+    (median ~0.9, up to 6 in the first 100). A threshold high enough for early training would never touch later
+    spikes.
+  - **Gap:** logging every 10th update missed the damaging updates 4,780–4,789. A new run should log every update.
+  - **Note (reasoning, not measured):** under Adam, scaling one huge gradient down changes the update less than it
+    seems, because the second-moment estimate shrinks with it. Clipping helps only to the extent that the
+    accumulated history still dominates the second moment. Skipping the update avoids that.
 
 ---
 
