@@ -74,4 +74,26 @@ dropout 0.1; augmentation on; power EMAs 0.10 and 0.05.
 
 ## Results
 
-(pending)
+### Update 1,500 (EMA 0.10 export; checked 2026-11-08 21:19–22:56 EST)
+
+10-task check, randomized, on the baseline's exact seeds (GR00T's first 10 randomized seeds per task; seed lists
+verified 10/10 tasks):
+
+| | `flux3_headnative_b512` (w50) | `flux3_headnative_w41_b512` (w41) | baseline `flux3_mix200_b512` |
+|---|---|---|---|
+| first 10 seeds per task | **74/100** | **72/100** | 74/100 |
+| paired set (decay-run seeds, as `gr00t/paired_compare.py`) | 73/99 | 71/99 | 73/99 |
+| seed by seed vs baseline (only this one solves / only the baseline solves) | +13 / −13, sign test p = 1.0 | +12 / −14, p = 0.85 | |
+
+w41 vs w50 seed by seed: +9 / −11, p = 0.82. Per task (w50 / w41 / baseline): pick_dual_bottles 6/6/3,
+place_object_stand 7/7/8, move_pillbottle_pad 6/6/8, place_empty_cup 10/10/8, place_phone_stand 8/6/9, move_can_pot
+2/1/3, dump_bin_bigbin 8/9/7, handover_mic 7/7/8, grab_roller 10/10/10, click_bell 10/10/10.
+
+**At 1,500, removing the head camera's upscaling changes nothing measurable**, and neither does the loss weight
+(41.18 vs 50). Per-task gaps are 1–3 seeds of 10, within noise.
+
+Held-out arm error at 1,500 (train randomized / train clean / unseen randomized; ranks checkpoints within a run but
+does not line up across runs, so information only): w50 0.0365 / 0.0290 / 0.0300, w41 0.0368 / 0.0286 / 0.0306,
+baseline 0.0366 / 0.0274 / 0.0296. Policy calls 0.83–1.05 s on the devbox GPU (baseline canvas: 1.95 s).
+
+The 50-task eval at 3,000 is next (its logs also give the 3,000 10-task check).

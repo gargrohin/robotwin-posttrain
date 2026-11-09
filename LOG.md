@@ -2588,3 +2588,15 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - So one run, one set of checkpoints, on our own quota (no pre-emption risk from the shared pool).
 - Next: first-update speed and memory, then the resume test from the iteration-100 save and a short eval check of
   the iteration-100 copy (checks that the eval reads the new mix500 stats file).
+
+**23:05 EST (Sun Nov 8)** **Head-native Flux runs at update 1,500: the same 10-task score as the baseline.**
+- 10-task check (randomized, the baseline's exact seeds, verified): `flux3_headnative_b512` (action weight 50)
+  74/100, `flux3_headnative_w41_b512` (weight 41.18) 72/100, baseline `flux3_mix200_b512` 74/100 at the same
+  update. Seed by seed: w50 vs baseline +13 / −13 (p = 1.0), w41 vs baseline +12 / −14 (p = 0.85), w41 vs w50
+  +9 / −11 (p = 0.82). So at 1,500, putting the head camera on the canvas at its native size instead of
+  upscaling it made no measurable difference, and neither did the loss weight. Per-task numbers in the run cards.
+- Held-out arm error (information only; it doesn't compare across runs): w50 0.0365 / 0.0290 / 0.0300, w41
+  0.0368 / 0.0286 / 0.0306, baseline 0.0366 / 0.0274 / 0.0296.
+- One eval share was pre-empted at 21:45 (11 of 50 episodes done) and rerun its unfinished lines after re-admission
+  at ~22:01; the training runs had no pre-emptions (both near update 1,900 at 21:12).
+- Next: the 50-task eval at update 3,000 (~ +12 h).
