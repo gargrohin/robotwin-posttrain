@@ -177,6 +177,15 @@ Two reviews: 13 failures I looked at frame by frame (one randomized failure per 
 
 ### 1.8 What this points to for hill climbing
 
+- **Discussion 2026-11-09 (your calls):**
+  - Dropped: changing Cosmos's settings at test time (moves per plan, refining rounds), since it
+    departs from training with no failure it targets. Also dropped: sampling several plans and
+    picking with a scoring model. It leaves the model's randomness in place, and the scoring model
+    is its own hard training problem.
+  - Goal: make success less random.
+  - Kept: training on its own successes (for the 127 scenes it sometimes solves), recovery data,
+    RL. Open for recovery data: can the scripted program finish from any state, and how to find the
+    moment an episode goes wrong (no deterministic way yet).
 - **Failures that succeed on a retry, and near misses:** methods that sharpen what Cosmos already
   does: training on its own successful attempts ("Advantage-weighted & filtered BC" on Climbing
   the Nines), RL in simulation ("On-policy policy gradients", with its notes on flow and

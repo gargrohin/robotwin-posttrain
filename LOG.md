@@ -2650,3 +2650,8 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Of the 209 scenes Cosmos decay 5,500 failed, 82 failed all three tries (original, same-checkpoint rerun,
   checkpoint 6,000); 127 succeeded at least once. Any-try score: 94.6% of 1,514 scenes. hanging_mug holds 16
   of the 82. New script `analysis/retry_split.py`; `notes/eval_analysis.md` 1.4 and conclusions updated.
+
+**15:20 EST (Mon Nov 9)** **Hill-climbing options narrowed (discussion, no runs).**
+- You dropped test-time setting changes and best-of-N with a scoring model. Goal: make success less random.
+  Kept: training on own successes, recovery data, RL. Open for recovery data: can the scripted program finish
+  from any state; how to find when an episode goes wrong. Recorded in `notes/eval_analysis.md` 1.8.
