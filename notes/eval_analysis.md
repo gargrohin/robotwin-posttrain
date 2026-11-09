@@ -26,6 +26,10 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 - **43% of Cosmos's failed scenes succeed on a second try** with the same checkpoint, scene and
   instruction sentence (89 of 209). Counting a scene as solved if either try worked: randomized
   91.4%, clean 93.4%. The repeat failures concentrate in hanging_mug and handover_block.
+- **82 failed scenes (5.4% of 1,514) failed all three tries** (5,500 twice, 6,000 once); 16 of
+  them are hanging_mug. The other 127 failed scenes succeeded at least once, so picking better
+  among the model's own attempts could add up to ~8 points. The 82 need behavior the model doesn't
+  show yet.
 - **Some failures come from the success check or the simulator:**
   place_mouse_pad's check allows 1.5 × 1.2 cm and one direction; 30 of the 50 tasks require
   both grippers open at the end; stack_bowls_three seed 100007 looks like a physics glitch.
@@ -117,6 +121,17 @@ Checkpoints 5,500 and 6,000 on the 1,514 scenes both ran:
     place_mouse_pad randomized 6/8, place_fan randomized 5/6, move_stapler_pad 6/7,
     put_object_cabinet 6/7.
   - Source: LOG.md 2026-11-05 20:45 EST; the cluster eval package's `per_scene.csv`.
+- **Three tries per failed scene** (2026-11-09): 5,500's original try, its rerun, and checkpoint
+  6,000. 6,000 is a different checkpoint, but the rerun showed the two differ about as much as a
+  plain retry.
+  - Of the 209 scenes 5,500 failed, **82 failed all three tries** (clean 24, randomized 58), 72
+    succeeded once, 55 succeeded twice.
+  - The 82 are 5.4% of the 1,514 scenes, spread over 24 tasks: hanging_mug 16, handover_block 7,
+    put_object_cabinet, pick_diverse_bottles and rotate_qrcode 5 each.
+  - Counting a scene as solved if any of the three tries worked: 1,432 of 1,514 = 94.6%. That is
+    the most that choosing the best of the three attempts could reach.
+  - Reproduce: `analysis/.venv/bin/python analysis/retry_split.py cosmos3_nano_mix200_2n_decay:5500
+    cosmos3_nano_mix200_2n_decay_rerun1:5500 cosmos3_nano_mix200_2n_decay:6000`
 
 ### 1.5 What the failures look like
 

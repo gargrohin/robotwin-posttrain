@@ -2645,3 +2645,8 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - The admission watcher polls once per minute, so both copies can start between checks. The user explicitly
   allows cancellation of that duplicate even if both are training. Existing watcher retained.
 - No new scores, training launches, job cancellations or pushes. Result collection remains a follow-up task.
+
+**14:52 EST (Mon Nov 9)** **Cosmos failures split by retry outcome (no GPUs used).**
+- Of the 209 scenes Cosmos decay 5,500 failed, 82 failed all three tries (original, same-checkpoint rerun,
+  checkpoint 6,000); 127 succeeded at least once. Any-try score: 94.6% of 1,514 scenes. hanging_mug holds 16
+  of the 82. New script `analysis/retry_split.py`; `notes/eval_analysis.md` 1.4 and conclusions updated.
