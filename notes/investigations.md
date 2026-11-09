@@ -939,6 +939,19 @@ earlier belief that was wrong. **Open** = not yet answered.
     it is in our runs (omni_mot_model.py:2622–2632).
   - **Inference, not tested:** the noise samples after the compile shift, which would explain most of the loss
     change. The test: save and restore the CUDA random state around the compile. Not used, so low priority.
+- **Found (head-native vs baseline, training action error, mean per 250 updates, wandb):**
+
+  | updates | baseline (DROID canvas) | head-native w50 | head-native w41.18 |
+  |---|---|---|---|
+  | 1,000–1,249 | 0.0139 | 0.0151 | 0.0143 |
+  | 1,250–1,499 | 0.0120 | 0.0134 | 0.0131 |
+  | 1,500–1,749 | 0.0113 | 0.0119 | 0.0120 |
+  | 1,750– | 0.0095 | 0.0110 | 0.0109 (to ~1,890 only) |
+
+  - The head-native runs sit ~5–15% above the baseline at matched updates. The two loss weights are nearly identical
+    to each other.
+  - This is training error on different random batches and noise, not task success. It doesn't say which canvas
+    evaluates better; the 1,500 10-task checks will.
 
 ---
 
