@@ -278,6 +278,12 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     metric as GR00T's and Cosmos's.
 
 ## Decisions
+- Training data (user, 2026-11-09): **mix500 from now on** for both Flux and Cosmos. That's 50 clean + 495 randomized demos
+  per task (27,250 episodes; 5 per task held out), close to "protocol B", which most 2026 RoboTwin papers use (see
+  notes/robotwin_public_results.md).
+  - First run: Cosmos3-Nano on mix500, 2 nodes of our quota, all exact and rounding-level speedups, the same schedule
+    as our best Cosmos run (6,000 iterations), launched as soon as possible.
+  - The Flux mix500 run is decided after the pending speed tests.
 - Flux training speedups (user, 2026-11-08):
   - The main continuation keeps its settings (no speedups without the user's OK).
   - The head-native runs keep their launch settings to the end (user, 2026-11-08 11:05 ET). A switch to the exact

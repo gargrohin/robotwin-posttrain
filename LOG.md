@@ -2564,3 +2564,14 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   the GPU is the limit (the simulator renders on it, and it was ~90% busy with one stream). The
   4,000 eval cost 4% more, mostly because it executed 3% more actions (lower success, longer
   failed episodes). Keep one stream per GPU.
+
+**~22:00 EST (Sun Nov 8)** **Decision: mix500 from now on; Cosmos on mix500 first (user).**
+- Public RoboTwin papers mostly train on 50 clean + 500 randomized demos per task. Our mix500 (50 + 495; 5 per task
+  held out) was built on Nov 2 but never used. mix200 was chosen for comparability and download size.
+- Cosmos3-Nano on mix500 now:
+  - 2 nodes of our quota, with the speedups (overlap + CUDA graph, text detach, less recomputation);
+  - the same 6,000-iteration schedule as the best Cosmos run, in one run;
+  - estimated ~12 h.
+  - Prep: data stats, upload, run card, then launch. An early save plus a separate resume test on borrowed GPUs
+    checks save/resume with the speedups, since that hasn't been tested yet.
+- The Flux mix500 run (length; whether 2 nodes) is decided after the rehearsal and the 2-node tests.
