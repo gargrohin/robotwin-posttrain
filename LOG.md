@@ -2524,3 +2524,11 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 | stamp_seal | 16/21 | 14/21 | 18/21 | 7/10 | 2/10 | 6/10 |
 | turn_switch | 8/20 | 13/20 | 12/20 | 4/10 | 4/10 | 7/10 |
 | **total** | **766/1014 = 75.5%** | **720/1014 = 71.0%** | **833/1014 = 82.1%** | **388/499 = 77.8%** | **355/499 = 71.1%** | **421/499 = 84.4%** |
+
+**21:20 EST (Sun Nov 8)** **DiT compile approved for the 0–9,000 Flux run.**
+- Measured on 1 node, 16 per GPU, 20 updates:
+  - compiled encoders: 31.9 → 26.4 s per update with DiT compile (1.21×);
+  - exact stack: 38.6 → 32.6 s (1.18×).
+- Not yet measured with DiT compile on 2 nodes: the 2-node rehearsal (submitted 21:11 ET) measures it.
+- The head-native 1,500 checks started ~21:13 ET. They should have started when the 1,500 exports landed (~16:30 ET),
+  but no agent was assigned to watch for them.

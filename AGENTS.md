@@ -284,7 +284,8 @@ Commit every fine-tuning or bug-fix change so it can be reverted (user request).
     speedups was planned, then called off: restarting means re-queuing for a whole borrowed node, and none had come
     free for ~9 h, so the restart could cost more than it saves.
   - The next end-to-end Flux run (0–9,000 from scratch) trains with compile from update 0: video and text
-    encoders, both recompile fixes, deterministic Inductor.
+    encoders, both recompile fixes, deterministic Inductor, and the DiT itself (`dit_compile`, user OK 2026-11-08
+    ~21:20 ET).
   - Compile changes the loss ~1e-4 (rounding, closer to fp32 than eager); see notes/investigations.md.
 - Models: GR00T N1.7 (`nvidia/GR00T-N1.7-3B`) first, as the only assigned model with an
   XPolicyLab adapter. Since 2026-11-02, also Cosmos3-Nano and FLUX 3 Action, through our own
