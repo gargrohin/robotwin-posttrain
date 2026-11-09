@@ -2575,3 +2575,9 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   - Prep: data stats, upload, run card, then launch. An early save plus a separate resume test on borrowed GPUs
     checks save/resume with the speedups, since that hasn't been tested yet.
 - The Flux mix500 run (length; whether 2 nodes) is decided after the rehearsal and the 2-node tests.
+
+**21:55 EST (Sun Nov 8)** **Cosmos mix500: submit to both queues (user chose C).**
+- Our queue was full by 21:48 (142/144 GPUs, teammates' jobs). All admitted jobs on our queue are priority 100, and the queue only
+  preempts strictly lower priority. So our high-priority job waits in line and can't preempt anyone.
+- The run goes to both our quota queue and the borrowed pool. Whichever starts first runs, and the other is cancelled at
+  once (one run, one checkpoint set). Saves every 250 iterations, in case the borrowed copy is pre-empted.
