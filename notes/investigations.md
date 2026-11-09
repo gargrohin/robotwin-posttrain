@@ -978,6 +978,27 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Halving it needs shard_size=16 (FSDP over all 16 GPUs), ~10 GB less per GPU. The cost: parameter gathers and
     gradient reductions then cross the slower link between nodes.
   - Being tested (f3a-speedup-2n32): 16 vs 32 per GPU, each with shard 8 and shard 16, full final stack.
+- **Q (user): train to 9,000 or 18,000? What do the 3,000→9,000 logs say?** Training curves (wandb, mean per 500
+  updates; first run to 3,000, then the continuation), next to the held-out check and eval success:
+
+  | updates | train action MSE | train video MSE | held-out arm error, unseen episodes | eval randomized / clean |
+  |---|---|---|---|---|
+  | 2,500–2,999 (first run's cool-down) | 0.0061 | 0.070 | 0.0234 (3,000) | 71.0 / 71.1% (3,000) |
+  | 3,000–3,999 (restart warm-up, peak LR) | 0.0071 | 0.070 | 0.0231 (4,000) | — |
+  | 5,000–5,999 | 0.0053 | 0.065 | 0.0323 (5,500, after the spike) | 66.3 / 67.1% (5,500) |
+  | 6,500–7,999 | 0.0046 | 0.061 | 0.0245 (7,000) | 74.8 / 77.0% (7,000) |
+  | 8,000–8,999 (cool-down) | 0.0030 | 0.056 | 0.0238 (8,000) | 75.0 / 76.8% (8,000) |
+  | 9,000 | 0.0021 | 0.053 | 0.0233 | 75.6 / 77.8% |
+
+  - **Found:** training action error kept falling, about 3× from 3,000 to 9,000, and the cool-down alone halved it.
+    Held-out error on unseen episodes stayed flat from 3,000 to 9,000 (0.0234 → 0.0233), and eval success stopped
+    rising after ~6,500. Training error falling while held-out and eval stay flat is the usual sign that more updates
+    on the same data mostly fit the training set better.
+  - Data: the same mix200 index (12,500 episodes) throughout. 9,000 × 512 = 4.6 M windows, so each episode was
+    sampled ~370 times (as different windows).
+  - Caveats: the training loss is the denoising loss at random noise levels, not the sampled-action error. The
+    held-out check is open-loop. The plateau came after a restart. None of this tells us what one uninterrupted
+    schedule would do; that's what the next run tests.
 
 ---
 
