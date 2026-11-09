@@ -999,6 +999,17 @@ earlier belief that was wrong. **Open** = not yet answered.
   - Caveats: the training loss is the denoising loss at random noise levels, not the sampled-action error. The
     held-out check is open-loop. The plateau came after a restart. None of this tells us what one uninterrupted
     schedule would do; that's what the next run tests.
+- **Answered (did the 4,790 spike set the run back?): no.** Full eval of 4,000, from before the spike: 72.1% randomized,
+  72.9% clean, level with 3,000 (p ≈ 0.5). It's below 9,000 (p = 0.03 on both settings). So the gain over 3,000 came
+  between 4,000 and 6,500, after the spike.
+- **Corrected (mine):** "4,000's held-out arm error equals 7,000's, so the run was probably at today's level before
+  the spike". Wrong. The held-out arm error doesn't track eval success even within one run: 4,000 had 0.0231 on
+  unseen episodes and 72%, while 7,000 had 0.0245 and 75%. So "held-out error flat from 3,000 to 9,000" is weak
+  evidence of overfitting. Eval success is the only reliable signal here: 71% (3,000) → 72% (4,000) → 74–75%
+  (6,500–9,000).
+- **Answered (2 eval streams per GPU):** no saving. Each stream runs exactly 2× slower (0.96 vs 0.48 s per executed
+  action), and GPU time per action is the same (0.54 s): 75.7 vs 72.6–72.9 GPU-h. The simulator renders on the GPU,
+  which is already ~90% busy with one stream. Keep 1 stream per GPU.
 
 ---
 
