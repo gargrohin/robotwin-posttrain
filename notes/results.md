@@ -5,7 +5,7 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
-Pending at 2026-11-09 11:34 ET: both head-native Flux update-3,000 full evals (submissions in progress), and
+Pending at 2026-11-09 11:42 ET: both head-native Flux update-3,000 full evals (all 24 slices queued), and
 Cosmos mix500 iterations 4,000 / 5,000 / 5,500 / 6,000 after training resumes. No new scores from this audit.
 
 ## FLUX 3 Action continuation (flux3_mix200_b512_cont6k), update 9,000, vs step 3,000 and Cosmos 5,000 (same seeds)

@@ -96,9 +96,9 @@ Held-out arm error at 1,500 (train randomized / train clean / unseen randomized;
 does not line up across runs, so information only): w50 0.0365 / 0.0290 / 0.0300, w41 0.0368 / 0.0286 / 0.0306,
 baseline 0.0366 / 0.0274 / 0.0296. Policy calls 0.83–1.05 s on the devbox GPU (baseline canvas: 1.95 s).
 
-### Update 3,000 (status checked 2026-11-09 11:34 ET)
+### Update 3,000 (status checked 2026-11-09 11:42 ET)
 
-Training is complete; the EMA 0.10 export manifest is present in cloud storage. Nine of the 12 full-eval slices
-are queued, and the existing launcher is submitting the remaining three. It uses the baseline update-3,000
+Training is complete; the EMA 0.10 export manifest is present in cloud storage. All 12 full-eval slices were
+submitted by 11:41 ET and are queued. The launcher uses the baseline update-3,000
 queues and per-stream seed lists: all 50 tasks, 1,017 planned randomized episodes and 500 clean episodes.
 Results are pending; the same logs will provide the 10-task comparison.

@@ -1041,6 +1041,20 @@ earlier belief that was wrong. **Open** = not yet answered.
   computing each paired comparison.
 - **Open:** admission times, resume-test results, head-native full-eval results, and the Cosmos milestone evals.
 
+## 12. Detached monitoring and completed submissions (Nov 9, 11:42 ET)
+- **Q:** are the urgent eval submissions covered while the user is away?
+- **Found (submission records and cluster status):** all 24 head-native update-3,000 eval slices are submitted
+  and queued, 12 per run. The weight-50 launcher finished normally at 11:41 ET.
+- **Found (host process state and watcher logs):** the Cosmos milestone watcher runs detached after passing
+  submission-guard checks and a live read-only check. It submits the four approved full evals from complete
+  saves. A second detached process records job states every five minutes. Neither collects results.
+- **Found (admission watcher code):** its checks happen once per minute; both copies can start between checks.
+  The second copy is therefore not guaranteed to remain queued when cancellation happens.
+- **User clarification:** retain the existing policy that cancels the duplicate even if both are training; keep
+  one copy. No watcher replacement or training cancellation was performed during this audit.
+- **Open:** queue admission and eval results. The latest logged Cosmos poll at 11:45 ET still shows iteration
+  1,500 and both replacement copies queued.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

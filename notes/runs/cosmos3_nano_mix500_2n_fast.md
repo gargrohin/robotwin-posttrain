@@ -114,3 +114,7 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
 - 2026-11-09: resubmitted with the user's approval to our quota and the borrowed pool. At 11:34 ET both copies
   remain queued, with the admission watcher alive. The cloud pointers and completion markers confirm the latest
   complete state is still 1,500. There is no measured admission time or revised finish time yet.
+- 2026-11-09 11:40 ET: detached milestone watcher started after guard checks and a live read-only check. It
+  submits all 12 borrowed eval slices per complete milestone (4,000 / 5,000 / 5,500 / 6,000), using the exact
+  reference inputs. Submission ambiguity stops the watcher for inspection. It does not collect results.
+- User clarified that one duplicate may be cancelled even if both training copies start between watcher checks.

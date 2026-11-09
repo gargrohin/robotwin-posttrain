@@ -2636,3 +2636,12 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   head-native uses the baseline Flux update-3,000 files directly. Completed counts will be checked after eval.
 - A local Cosmos milestone watcher is prepared to submit the four approved evals after complete saves. It is
   not running yet; the existing admission watcher and head-native submission process are active.
+
+**11:45 EST (Mon Nov 9)** **All head-native full evals submitted; detached monitoring active.**
+- All 24 update-3,000 eval slices were queued at 11:42 ET. The weight-50 submissions finished at 11:41 ET.
+- The Cosmos milestone watcher is detached and active, submitting full evals at complete saves 4,000 / 5,000 /
+  5,500 / 6,000. Its guard checks and live read-only check passed. A detached logger records states every five
+  minutes. All three watcher processes, including admission, were alive at the health check.
+- The admission watcher polls once per minute, so both copies can start between checks. The user explicitly
+  allows cancellation of that duplicate even if both are training. Existing watcher retained.
+- No new scores, training launches, job cancellations or pushes. Result collection remains a follow-up task.
