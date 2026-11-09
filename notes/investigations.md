@@ -971,6 +971,13 @@ earlier belief that was wrong. **Open** = not yet answered.
   - **Note (reasoning, not measured):** under Adam, scaling one huge gradient down changes the update less than it
     seems, because the second-moment estimate shrinks with it. Clipping helps only to the extent that the
     accumulated history still dominates the second moment. Skipping the update avoids that.
+- **Corrected (mine): "on 2 nodes each GPU holds half the sharded state".** Our Flux config uses shard_size=8. On 2
+  nodes that's HSDP: each node shards the full model, optimizer and EMA state over its own 8 GPUs, and the two
+  nodes are replicas. So per-GPU state is the same as on 1 node. Measured: 42.9 vs 43.3 GB (gradient sharding,
+  4 per GPU) and 62.9 vs 64.0 GB (compiled stack, 16 per GPU).
+  - Halving it needs shard_size=16 (FSDP over all 16 GPUs), ~10 GB less per GPU. The cost: parameter gathers and
+    gradient reductions then cross the slower link between nodes.
+  - Being tested (f3a-speedup-2n32): 16 vs 32 per GPU, each with shard 8 and shard 16, full final stack.
 
 ---
 
