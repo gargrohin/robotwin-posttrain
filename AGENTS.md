@@ -8,7 +8,7 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-08)
+## Start here: current state (2026-11-08, late)
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -23,19 +23,22 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - All three trained on `mix200`: 50 clean + 200 randomized demos per task.
 - GR00T trained on the 50 clean demos per task only (`50task_60k`): 42.6% clean, 9.7% randomized.
 
-**State on 2026-11-08 ~17:00 ET:**
-- `flux3_mix200_b512_cont6k` (6,000 more updates from Flux step 3,000) **finished at 9,000** (16:48 ET Nov 8,
-  ~786 GPU-h).
-  - Full evals at 6,500 / 7,000 / 7,500: 74.1–75.4% randomized, 74.5–77.0% clean. That's above step 3,000 and
-    flat across those three.
-  - The 8,000, 8,500 and 9,000 evals are running, and 4,000 comes after them. Results go in
-    `notes/eval_analysis.md` part 3.
-- Running: the two head-native canvas runs (`notes/runs/flux3_headnative_*`), on launch settings, ETA ~09:45 ET
-  Mon Nov 9.
-- Speed work (`notes/investigations.md`, sections 8–10):
-  - Flux: the exact stack is 1.355× with identical training; the compiled stack is 1.645×, chosen for the next
-    end-to-end Flux run. A data-loader fix, a 2-node test and DiT compile are queued.
-  - Cosmos: profiled, with overlap and other speedups under test.
+**State on 2026-11-08 ~23:00 ET** (full handoff, with running jobs and next steps: the local, uncommitted
+`/mnt/efs/rohingarg/cri/HANDOFF.md`):
+- **Training data from now on: mix500** (50 clean + 495 randomized per task), as most public RoboTwin papers use.
+- **Running:**
+  - Cosmos3-Nano on mix500: 2 nodes of our quota, with the Cosmos speedups and the best run's 6,000-iteration
+    schedule. Started ~22:40 ET Nov 8, ETA ~10:30–11:00 ET Nov 9. Evals at 4,000 / 5,000 / 5,500 / 6,000.
+  - The two head-native Flux runs, ETA ~09:45 ET Nov 9. At 1,500 the head-native canvas ties the DROID canvas
+    (74/100 vs 74/100). Full evals at 3,000 decide the canvas.
+- **Finished:** the Flux continuation, 3,000 → 9,000. The final 75.6% / 77.8% is +4.5 / +6.6 over step 3,000;
+  success plateaued from 6,500, and the cool-down added nothing.
+- **Next, the user decides after the speed tests:** a Flux run on mix500 with the compiled speed stack (~2× faster).
+  Length 9k vs 18k (a branched schedule could answer both), 1 or 2 nodes, canvas. No gradient clipping; log every
+  update.
+- **Speed work** (`notes/investigations.md`, sections 8–10):
+  - Flux: exact stack 1.355×; compiled stack with DiT compile 1.98× on 1 node.
+  - Cosmos: −34% per update, with the overlap and CUDA graph exact.
 
 **Next: hill climbing.** Not started; the user picks.
 - Failure analysis is in `notes/eval_analysis.md` (conclusions at the top). Cosmos: the first
