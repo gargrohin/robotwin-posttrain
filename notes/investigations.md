@@ -1010,6 +1010,11 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Answered (2 eval streams per GPU):** no saving. Each stream runs exactly 2× slower (0.96 vs 0.48 s per executed
   action), and GPU time per action is the same (0.54 s): 75.7 vs 72.6–72.9 GPU-h. The simulator renders on the GPU,
   which is already ~90% busy with one stream. Keep 1 stream per GPU.
+- **Found (head-native canvas, update 1,500, 10-task check, GR00T's first 10 randomized seeds per task):** head-native
+  w50 74/100, baseline (DROID canvas) 74/100. Seed by seed 13 vs 13 (p = 1.0); every per-task gap is 1–3 of 10.
+  - Held-out arm error is about equal too (0.0300 vs 0.0296 on unseen episodes).
+  - So far, dropping the head-camera upscaling (448×640 canvas, ~18% fewer video tokens, ~28% faster per update)
+    doesn't change the result. w41 pending; the full 50-task evals at 3,000 decide.
 
 ---
 
