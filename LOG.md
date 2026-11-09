@@ -2655,3 +2655,9 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - You dropped test-time setting changes and best-of-N with a scoring model. Goal: make success less random.
   Kept: training on own successes, recovery data, RL. Open for recovery data: can the scripted program finish
   from any state; how to find when an episode goes wrong. Recorded in `notes/eval_analysis.md` 1.8.
+
+**15:40 EST (Mon Nov 9)** **Next-steps section rewritten (notes only, no runs).**
+- `notes/eval_analysis.md` 1.8 now lists: what every option needs first (per-step recording), 1. training on
+  own successes, 2. recovery-data experiments (a. scripted program from mid-episode states, b. hand over at
+  many points, c. open: finding when an episode goes wrong), 3. RL; plus what was set aside and why. Nothing
+  started: you asked not to run the experiments yet, and GPUs are scarce.

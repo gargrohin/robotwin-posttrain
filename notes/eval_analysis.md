@@ -175,26 +175,65 @@ Two reviews: 13 failures I looked at frame by frame (one randomized failure per 
   the head-camera video. Recording full rollouts (all cameras, joint positions, actions) would,
   and every hill-climbing method needs that data anyway.
 
-### 1.8 What this points to for hill climbing
+### 1.8 Next steps for hill climbing (updated 2026-11-09)
 
-- **Discussion 2026-11-09 (your calls):**
-  - Dropped: changing Cosmos's settings at test time (moves per plan, refining rounds), since it
-    departs from training with no failure it targets. Also dropped: sampling several plans and
-    picking with a scoring model. It leaves the model's randomness in place, and the scoring model
-    is its own hard training problem.
-  - Goal: make success less random.
-  - Kept: training on its own successes (for the 127 scenes it sometimes solves), recovery data,
-    RL. Open for recovery data: can the scripted program finish from any state, and how to find the
-    moment an episode goes wrong (no deterministic way yet).
-- **Failures that succeed on a retry, and near misses:** methods that sharpen what Cosmos already
-  does: training on its own successful attempts ("Advantage-weighted & filtered BC" on Climbing
-  the Nines), RL in simulation ("On-policy policy gradients", with its notes on flow and
-  diffusion policies), or trying several candidates and keeping the best ("Test-time search &
-  verifiers").
-- **No recovery after a drop:** data with corrections at the policy's own mistakes ("Human
-  corrections & DAgger"), or RL.
-- **The same mistake every time on a few tasks** (hanging_mug, handover_block,
-  pick_diverse_bottles): possibly a missing skill there, which may need targeted demos.
+**Goal:** make success less random on scenes Cosmos can already do, and teach it to recover after
+a mistake. Nothing below is running; most of it waits for GPUs.
+
+**Needed first by everything below:** the eval has to save, for every step, the moves Cosmos chose
+and the robot's joint positions. Today each episode saves only the head-camera video and a
+one-line summary (success, steps, seed, instruction).
+
+**1. Training on its own successes** (you want to try this; blocked on GPUs)
+- What: run Cosmos many times on scenes outside the test set (e.g. training seeds), keep the
+  episodes that succeeded, and train it a bit more on those.
+- Why: on one scene Cosmos acts differently from try to try, because each plan starts from random
+  numbers. Training on the tries that worked makes those moves more likely, so the scene succeeds
+  more often.
+- Aims at: the 127 failed scenes that succeeded in at least one of three tries (1.4). At most ~8
+  points, if all of them became reliable.
+- Can't do: teach behavior Cosmos never shows (the 82 scenes that failed every try, recovery).
+- Rough cost (estimate, not measured): 1,000 episodes × ~4 GPU-minutes ≈ 67 GPU-hours of runs,
+  plus a short fine-tune from decay 5,500.
+- Reading: "Advantage-weighted & filtered BC" on Climbing the Nines.
+
+**2. Recovery data** (experiments worth doing; not started)
+- Why: Cosmos never recovers after a mistake, and its training demos contain no mistakes. They
+  come from RoboTwin's scripted program, which reads exact object positions from the simulator.
+- Plan: let Cosmos run; when it goes wrong, give control to the scripted program from that exact
+  simulator state; record how it finishes; train Cosmos on those recordings; repeat.
+- Experiments, in order:
+  - a. Can the scripted program finish a task from a saved mid-episode state? Read its code,
+    then test from saved states, task by task. If it can't, the plan stops here.
+  - b. Hand over at many points: in a failed Cosmos episode, give control to the scripted program
+    at regular steps (e.g. every 20) and keep the handovers that succeed. This avoids having to
+    find the exact moment the episode went wrong, at the cost of more sim runs.
+  - c. Open question: there's no deterministic way yet to find when an episode goes wrong. The
+    simulator knows exact object positions, so a single failure kind can be checked by a rule
+    (e.g. "the bottle tilted more than 45°"), but each kind needs its own rule.
+- Reading: "Human corrections & DAgger" on Climbing the Nines; SimPT (arXiv 2610.29161), which
+  did this on RoboTwin with a scripted expert (67% → 82%) and had to add per-task code to
+  restart the expert mid-task.
+
+**3. RL** (blocked on GPUs; uncertain)
+- What: start from the current Cosmos and adjust it using whether each run succeeded.
+- Why: the only option that might discover recovery on its own. Uncertain, because it can only
+  reward behavior that shows up in its runs, and Cosmos has shown no recovery so far.
+- Cost: far more runs than option 1.
+- Reading: "On-policy policy gradients" on Climbing the Nines, with its notes on flow and
+  diffusion policies (Cosmos builds each plan from random numbers in 30 refining rounds).
+
+**Set aside, with your reasons:**
+- Changing Cosmos's settings at test time (how many moves it carries out before planning again,
+  how many refining rounds): it departs from training, with no failure it targets.
+- Sampling several plans at each moment and picking one with a scoring model: the model's own
+  randomness stays, and training the scoring model is a hard problem of its own.
+- Making mistakes on purpose in the scripted demos (knock or shift the object partway): easy to
+  describe, but there's no reliable way to make such mistakes match Cosmos's real ones.
+
+**Also:** the same mistake every time on a few tasks (hanging_mug, handover_block,
+pick_diverse_bottles) may mean a skill is missing there; more demos for those tasks may help.
+mix500 (500 randomized demos per task, training now) adds data for every task.
 
 **Reproduce part 1** (after `analysis/.venv/bin/python analysis/build_index.py`):
 - `analysis/.venv/bin/python analysis/task_report.py cosmos3_nano_mix200_2n_decay 5500`
