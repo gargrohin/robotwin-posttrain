@@ -1097,6 +1097,17 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Next:** finish the four full-eval submissions; collect and verify head-native results; analyze the Cosmos
   speed measurements; prepare the outstanding one-node validation jobs. The main training migration is moot.
 
+## 15. Head-native canvas verdict at update 3,000 (Nov 10, 13:15 ET)
+- **Q:** does dropping the ~3× head-camera upscaling (448×640 canvas instead of 544×736) change success?
+- **Measured (full 50-task evals, same seeds as Flux step 3,000; completed seed sets identical: randomized 48/50 tasks,
+  clean 49/50, the same expert-check skips):** weight 50 70.8 / 74.5, weight 41.18 72.7 / 71.3, baseline 71.0 / 71.1
+  (randomized / clean). Episode sign tests p = 0.16–0.95 in every pairing.
+- **Answer:** no measurable difference, while training is ~28% faster per update. Loss weight 50 vs 41.18: no measurable
+  difference either. Combined with the compile speedups this is not yet measured.
+- **Collection note:** a Claude session and Codex collected at the same moment; the safe collector refused the
+  existing folders, and Claude's run of the weight-41.18 randomized set stopped before copying (the script was edited
+  mid-run). Its 356 logs were then copied into `logs/` without overwriting (356 new, 0 replaced).
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

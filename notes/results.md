@@ -5,9 +5,30 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
-Status at 2026-11-10 12:51 ET: all 24 head-native Flux update-3,000 eval slices completed; collection and seed
-checks remain. Cosmos mix500 training finished at iteration 6,000; recovery of the missed
-4,000 / 5,000 / 5,500 / 6,000 evals resumed at 12:59 ET after refreshing registry credentials. No new scores.
+Status at 2026-11-10 13:15 ET: head-native Flux update-3,000 evals collected (below). Cosmos mix500 training finished at
+iteration 6,000; its 4,000 / 5,000 / 5,500 / 6,000 evals are being submitted (recovery after a missed watcher). No Cosmos
+mix500 scores yet.
+
+## FLUX 3 Action, head-native canvas (head camera at native 240×320, not upscaled), update 3,000, vs Flux step 3,000 (same seeds)
+
+Same recipe and data (mix200) as Flux step 3,000; only the camera canvas differs (448×640 instead of 544×736; head camera
+not upscaled ~3×), plus one run with action-loss weight 41.18 instead of 50 (to keep the video/action balance with
+~18% fewer video tokens). Evaluated 2026-11-09 on cluster GPUs, one stream per GPU, exact GR00T seed lists; completed
+seeds match the Flux step-3,000 eval exactly (randomized 48/50 tasks, clean 49/50, the same expert-check skips).
+
+| model | randomized (1,015) | clean (499) |
+|---|---|---|
+| Flux step 3,000 (DROID canvas) | 71.0% | 71.1% |
+| head-native, weight 50 | 70.8% | 74.5% |
+| head-native, weight 41.18 | 72.7% | 71.3% |
+
+Sign tests (scenes only one model solves):
+- weight 50 vs step 3,000: randomized 129 vs 131 (p = 0.95; by task 19 ahead, 23 behind); clean 72 vs 55 (p = 0.16;
+  by task 26 ahead, 13 behind, p = 0.053).
+- weight 41.18 vs step 3,000: randomized 133 vs 116 (p = 0.31); clean 63 vs 62 (p = 1.0).
+- weight 50 vs 41.18: randomized 103 vs 122 (p = 0.23); clean 64 vs 48 (p = 0.16).
+- Reading: no measurable difference anywhere. The smaller canvas trains ~28% faster per update (38.6 vs 52.4 s on one
+  node, no speedups) at equal success; the loss weight makes no measurable difference.
 
 ## FLUX 3 Action continuation (flux3_mix200_b512_cont6k), update 9,000, vs step 3,000 and Cosmos 5,000 (same seeds)
 

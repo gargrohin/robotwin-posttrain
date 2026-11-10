@@ -6,10 +6,9 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 
 ## Conclusions so far (updated 2026-11-09)
 
-- **Pending comparisons (Nov 10, 12:51 ET):** both head-native Flux runs and all 24 full-eval slices are complete;
-  results await collection and seed checks. Cosmos mix500 finished iteration 6,000. Its four milestone evals
-  were missed after the watcher stopped on a service error. Recovery resumed at 12:59 ET after refreshing
-  registry credentials and verifying base-image access. No new scores
+- **Head-native canvas (head camera not upscaled) matches the DROID canvas at Flux update 3,000** (Nov 10): 70.8 / 74.5
+  (weight 50) and 72.7 / 71.3 (weight 41.18) vs 71.0 / 71.1; no significant difference (p ≥ 0.16), while training ~28%
+  faster per update. Cosmos mix500 finished training; its evals are being submitted (no scores yet).
   have been established in this status audit, so the measured rankings below are unchanged.
 
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
@@ -487,6 +486,22 @@ Reading:
 - The 4,000 eval ran two eval streams per GPU: each stream ran 2.0x slower (0.96 vs 0.48 s per executed action;
   policy calls 2.4 s vs 0.79 s), so GPU time per action was unchanged (0.54 s) and the eval cost 75.7 GPU-hours
   vs 72.6–72.9 for the 1-stream evals. Packing two streams per GPU does not save GPU time.
+
+### Part 3b: head-native canvas at update 3,000 (Nov 10)
+
+Same recipe and data as Flux step 3,000; the head camera stays at its native 240×320 (canvas 448×640) instead of being
+upscaled ~3× into the DROID canvas. Two loss weights (50, 41.18). Full 50-task evals, same seeds.
+
+| model | randomized | clean |
+|---|---|---|
+| Flux step 3,000 (DROID canvas) | 71.0% | 71.1% |
+| head-native, weight 50 | 70.8% | 74.5% |
+| head-native, weight 41.18 | 72.7% | 71.3% |
+
+- No significant difference in any pairing (episode sign tests p = 0.16–0.95). At 1,500 the 10-task checks also tied.
+- So the upscaling buys nothing measurable, and dropping it makes training ~28% faster per update. A candidate default
+  for the next Flux run (mix500), together with the compile speedups (combined speed not yet measured).
+- Tables and sign tests: `notes/results.md`.
 
 ## Appendix A: is the median a fair summary of a task's length?
 
