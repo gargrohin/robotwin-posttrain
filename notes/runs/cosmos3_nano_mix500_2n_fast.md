@@ -1,12 +1,12 @@
 # Run card: `cosmos3_nano_mix500_2n_fast`
 
 Cosmos3-Nano trained on **mix500** with our measured training speedups. Everything else is our best Cosmos
-recipe (`cosmos3_nano_mix200_2n` + `cosmos3_nano_mix200_2n_decay1k`), now in one uninterrupted run of 6,000
+recipe (`cosmos3_nano_mix200_2n` + `cosmos3_nano_mix200_2n_decay1k`), now in one schedule of 6,000
 iterations. One change of data, plus the speedups; nothing else.
 
 | | |
 |---|---|
-| Purpose | does 2.2× more randomized data (495 instead of 200 per task) improve on Cosmos mix200 decay 5,500 (85.0% randomized / 88.6% clean)? |
+| Purpose | does 2.18× the total demo count (randomized 495 instead of 200 per task; clean stays 50) improve on Cosmos mix200 decay 5,500 (85.0% randomized / 88.6% clean)? |
 | Base model | `nvidia/Cosmos3-Nano`, the same DCP conversion as the mix200 runs |
 | GPUs | 16 H100 on 2 nodes, the training runs' layout: model sharded over a node's 8 GPUs, one copy per node |
 | Batch | 32 per GPU × 16 GPUs × 4 accumulation = 2,048 |
@@ -44,6 +44,13 @@ branches:
 | Seed / data order | 42; episode order seeded 42 (a resume reseeds it as before) |
 
 ### Learning-rate schedule, in one run
+
+The earlier mix200 model completed 5,000 updates plus a 1,000-update continuation, reaching 6,000 total.
+This run matches that total, batch 2,048 and learning-rate schedule: 12,288,000 sampled training examples.
+With 27,250 demos instead of 12,500, it repeats the larger dataset less. Whether mix500 benefits from more
+updates remains untested. The original configuration's 16,000 is the learning-rate cycle length; its
+initial training limit was 5,000.
+
 Two LambdaLinear cycles, `cycle_lengths=[5000,1000]`, `warm_up_steps=[500,0]`, `f_start=[1e-6, F]`,
 `f_max=[1.0, F]`, `f_min=[F, 0.0]`, with F = (16,000 − 5,000) / (16,000 − 500) = 0.70968.
 

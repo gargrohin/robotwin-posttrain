@@ -1130,6 +1130,24 @@ earlier belief that was wrong. **Open** = not yet answered.
   replacing it. Every completed stream was checked independently, since download-script exit codes alone
   do not establish completeness. No new GPU work for this analysis; hill climbing remains paused.
 
+## 17. Why did Cosmos mix500 run for 6,000 updates? (Nov 10, 13:10 ET)
+
+- **Q (user):** did Cosmos train for more updates on mix200?
+- **Checked (run lineage, launch command, training TOML and schedule overrides):** the completed mix200
+  model trained for 5,000 updates, then resumed for 1,000 more with the learning rate falling to zero.
+  Its final checkpoint was 6,000; its best reported checkpoint was 5,500. Mix500 starts from the same
+  pretrained base and combines these stages as `cycle_lengths=[5000,1000]`, with `max_iter=6000`.
+- **Clarification:** the original TOML has `cycle_lengths=[16000]` and `max_iter=5000`. The first number
+  controls the learning-rate slope; it does not mean the original model completed 16,000 updates.
+- **Matched training exposure:** both completed cluster runs use batch 2,048, so 6,000 retained updates
+  represent 12,288,000 sampled training examples each, excluding work lost before a resume. The recipe
+  matches update count and learning-rate schedule; it does not match repetitions through the dataset.
+- **Checked (both datasets' metadata):** mix200 has 12,500 demos / 2,759,740 frames; mix500 has 27,250
+  demos / 6,019,158 frames. The total demo count grows 2.18x; randomized demos alone grow 2.475x
+  (200 to 495 per task). Corrected the run card's wording that called the randomized increase 2.2x.
+- **Open:** whether the larger dataset benefits from a longer schedule. Keeping the previous 6,000-update
+  recipe does not establish that mix500 has converged. No training extension was submitted.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

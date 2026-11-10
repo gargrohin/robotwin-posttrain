@@ -2712,3 +2712,10 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Updated results, analysis, both run cards, registry and project guide. No GPU training launched and no
   running job stopped. Cosmos's recovered submitter has launched three iteration-4,000 slices; no full
   mix500 score yet. Hill-climbing experiments remain paused.
+
+**13:10 EST (Tue Nov 10)** **Clarified Cosmos training length against mix200.**
+- Checked the training TOML, mix500 launch overrides, run lineage and dataset metadata. Both completed
+  cluster runs reach 6,000 total updates at batch 2,048: mix200 used 5,000 plus a 1,000-update decay;
+  mix500 combines those stages. The original 16,000-cycle setting controls the learning-rate slope.
+- Same 12.288M sampled examples, with 27,250 demos instead of 12,500. Whether mix500 needs longer
+  training is open. Updated investigations and the run card; no new run submitted.
