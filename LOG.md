@@ -2661,3 +2661,11 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   own successes, 2. recovery-data experiments (a. scripted program from mid-episode states, b. hand over at
   many points, c. open: finding when an episode goes wrong), 3. RL; plus what was set aside and why. Nothing
   started: you asked not to run the experiments yet, and GPUs are scarce.
+
+**22:30 EST (Mon Nov 9)** **Read the updated handoff and hill-climbing analysis.**
+- Reproduced the retry split from the existing episode cache: 82 failed all observed attempts, 127 succeeded
+  on a comparison attempt, 94.6% succeeded on at least one observed attempt. No GPU use.
+- Updated AGENTS with the selected improvement order, the instruction to hold those experiments, recording
+  dependencies, and the one-node operational plan. Its earlier job snapshot remains explicitly historical.
+- The expert-resume feasibility check can precede adding Cosmos rollout recording. The combined gain from
+  Flux compilation and smaller images remains unmeasured. No cluster jobs were changed during this review.

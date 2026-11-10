@@ -8,7 +8,15 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-09, 11:42 ET)
+## Start here: current state (plan updated 2026-11-09, 22:30 ET)
+
+**Latest operational plan (from the Nov 9 evening handoff; execution not verified here):** move Cosmos mix500,
+the Flux reproducibility/resume rehearsals, and the Cosmos resume test to one node. First verify that Cosmos's
+16-rank checkpoint loads on 8 ranks, including optimizer and per-rank state. Preserve global batch 2,048 and
+the schedule when resuming from iteration 1,500. The user authorized replacing the still-queued two-node jobs
+and dropping the two-node-only speed tests; recheck their states before cancellation. Keep the one-node Cosmos
+speed test. Collect the head-native update-3,000 evals as they finish. The status snapshot below is historical;
+use the local handoff and fresh cluster checks before acting.
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -46,15 +54,24 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
   - Flux: exact stack 1.355×; compiled stack with DiT compile 1.98× on 1 node.
   - Cosmos: −34% per update, with the overlap and CUDA graph exact.
 
-**Next: hill climbing.** Not started; the user picks.
+**Next: hill climbing.** The user selected the order below, but asked not to run these experiments yet.
 - Failure analysis is in `notes/eval_analysis.md` (conclusions at the top). Cosmos: the first
   grasp often knocks the object over, two-arm tasks are its weak spot, no recovery after a
   mistake; task length matters little. GR00T: long tasks failed most.
-- Candidates discussed:
-  - start from Cosmos decay 5,500 (RL, or recovery data);
-  - more randomized data (`mix500` is built for GR00T);
-  - test GR00T with its vision-language backbone unfrozen;
-  - repeat an eval to measure noise.
+- Reproduced retry analysis: of 209 failed scenes, 127 succeeded on another attempt and 82 failed all three
+  observed attempts (5,500 twice, 6,000 once). Success on any observed attempt is 94.6% across 1,514 scenes;
+  this does not measure a trained policy's single-attempt success or establish a ceiling for further training.
+- Order from `notes/eval_analysis.md` section 1.8:
+  1. Train on Cosmos's own successful runs, collected outside the test seeds.
+  2. Recovery data: first check whether the scripted expert can finish from saved mid-episode states; then
+     try handovers at regular steps; identifying the exact failure time remains an open question.
+  3. Reinforcement learning from rollout success, with compute cost and exploration still uncertain.
+- Successful-rollout training needs per-step recording of all three cameras, joint positions and executed
+  actions. Recovery handovers need replayable trajectories or simulator state. The initial expert-resume
+  feasibility check does not require a Cosmos rollout recorder; RL supplies recording through its own code.
+- Set aside: test-time setting changes, choosing among sampled plans with a scorer, and synthetic mistake demos.
+- Speed measurements are separate: Flux's approximately 2x compiled speedup used the original image canvas;
+  the smaller head-native canvas was tested without those speedups. Their combined gain is unmeasured.
 
 **Where things are**
 - `LOG.md`: plain-language worklog with ET times, newest at the bottom. Read its last entries

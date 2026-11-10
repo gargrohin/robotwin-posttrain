@@ -1055,6 +1055,23 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Open:** queue admission and eval results. The latest logged Cosmos poll at 11:45 ET still shows iteration
   1,500 and both replacement copies queued.
 
+## 13. Updated handoff and hill-climbing plan (Nov 9, 22:30 ET)
+- **Q:** what supersedes the earlier open-ended list of improvement ideas?
+- **Found (updated handoff and eval analysis section 1.8):** the chosen order is training on successful
+  policy rollouts, scripted-expert recovery data, then RL. The user asked not to launch these experiments yet.
+  The operational plan separately moves queued two-node work to one node, with a checkpoint-load check first.
+- **Measured (reran `analysis/retry_split.py` against the existing episode cache):** all 209 original failed
+  scenes have both comparison attempts. Of those, 82 failed both comparisons, 72 succeeded once, and 55 twice.
+  Thus 127 have an observed success; 1,432 / 1,514 = 94.6% have a success across the observed attempts.
+- **Interpretation:** one comparison uses checkpoint 6,000, so these are not three repeats of one policy.
+  Three observed failures do not prove a scene is impossible for the policy. The approximately eight-point
+  difference is observed selection headroom, not a measured fine-tuning gain or a general training ceiling.
+- **Dependency correction:** the first scripted-expert resume check can use saved simulator states without
+  adding the Cosmos rollout recorder. Training on policy successes needs full per-step recording; recovery
+  handovers need replayable trajectories or saved simulator state. RL records through its own implementation.
+- **Records:** updated the project guide to reflect the chosen order, the experiment pause, the one-node plan,
+  and the distinction between measured Flux compilation and camera-resolution speedups. No GPU work launched.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.
