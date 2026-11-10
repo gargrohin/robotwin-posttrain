@@ -2685,3 +2685,17 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - 12:59 ET follow-up: refreshed the registry token with existing AWS credentials; base-image manifest access
   passed. Confirmed no matching eval jobs and preserved failure records before clearing the failed-build marker
   under the watcher lock. Restarted detached recovery; job IDs still need confirmation as submissions finish.
+
+**13:15 EST (Tue Nov 10)** **Head-native canvas at update 3,000: same success as the DROID canvas.**
+- Full 50-task evals, same seeds as Flux step 3,000 (completed seeds identical):
+
+  | model | randomized | clean |
+  |---|---|---|
+  | Flux step 3,000 (DROID canvas) | 71.0% | 71.1% |
+  | head-native, weight 50 | 70.8% | 74.5% |
+  | head-native, weight 41.18 | 72.7% | 71.3% |
+
+- No significant difference in any pairing (p = 0.16–0.95). Dropping the head-camera upscaling costs nothing measurable
+  and trains ~28% faster per update; the loss weight doesn't matter either. Tables: `notes/results.md`.
+- Also since yesterday (details in the 12:51 entry): Cosmos mix500 finished 6,000 iterations on two nodes (05:27 ET);
+  its evals are being submitted now. Four 2-node tests failed admission on a host with a GPU needing reset.
