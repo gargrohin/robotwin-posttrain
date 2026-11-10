@@ -6,9 +6,11 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 
 ## Conclusions so far (updated 2026-11-09)
 
-- **Pending comparisons (11:42 ET):** both head-native Flux runs finished at update 3,000; all 24 full-eval
-  slices are submitted and queued. Cosmos mix500 is queued to resume from iteration 1,500. Neither has new full
-  eval results yet, so the measured rankings below are unchanged.
+- **Pending comparisons (Nov 10, 12:51 ET):** both head-native Flux runs and all 24 full-eval slices are complete;
+  results await collection and seed checks. Cosmos mix500 finished iteration 6,000. Its four milestone evals
+  were missed after the watcher stopped on a service error. Recovery resumed at 12:59 ET after refreshing
+  registry credentials and verifying base-image access. No new scores
+  have been established in this status audit, so the measured rankings below are unchanged.
 
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on

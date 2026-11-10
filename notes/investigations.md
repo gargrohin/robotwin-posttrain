@@ -1072,6 +1072,31 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Records:** updated the project guide to reflect the chosen order, the experiment pause, the one-node plan,
   and the distinction between measured Flux compilation and camera-resolution speedups. No GPU work launched.
 
+## 14. Overnight jobs completed; missed evals and failed tests (Nov 10, 12:51 ET)
+- **Q:** what happened to the queued training, eval, and validation jobs?
+- **Measured (live cluster status and cloud objects):** Cosmos mix500 completed iteration 6,000 on two nodes;
+  its final pointer and completion marker were written at 05:27 ET. Both head-native training jobs and all
+  24 update-3,000 eval slices completed. Both Cosmos speed jobs completed; measurements await analysis.
+- **Measured (failed pod status):** the two Flux rehearsals, its two-node speed test, and the Cosmos resume
+  test all failed admission on one host. The GPU allocator could not query device links because a GPU requires
+  reset. Containers never started, so the resume failure is unrelated to its planned no-save exit code.
+- **Found (eval watcher log and state, process inspection, cluster listing):** the milestone watcher exited on
+  a service HTTP 503 at Nov 9 23:04 ET while the latest save was 2,750. No milestone eval jobs were submitted.
+  The SDK exits via SystemExit on this error, bypassing the previous Exception handler.
+- **Correction:** added bounded retries around read operations, including SDK SystemExit failures. Simulated
+  exception and SystemExit checks verified recovery and exhaustion after five attempts. Submissions are not
+  blindly retried; the existing partial, duplicate, and inflight guards remain in place. All four permanent
+  model metadata objects were verified, and the recovery submitter started at 12:49 ET for borrowed GPUs.
+- **Recovery blocker (build log, 12:52 ET):** Docker received HTTP 403 while reading the base-image manifest
+  from the private registry. The build failed before job creation; the submission record has no job ID.
+  Refreshed the registry token using existing AWS credentials and verified the exact base-image manifest.
+  A fresh listing confirmed no matching eval jobs. Preserved failure logs/state, cleared the failed build
+  marker under the watcher lock, and restarted recovery at 12:59 ET.
+- **Status-query correction:** the 200-job listing omitted the older head-native training job. Increased the
+  query limit and made missing handoff IDs an explicit error; documentation placeholders are excluded.
+- **Next:** finish the four full-eval submissions; collect and verify head-native results; analyze the Cosmos
+  speed measurements; prepare the outstanding one-node validation jobs. The main training migration is moot.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

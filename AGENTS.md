@@ -8,15 +8,11 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (plan updated 2026-11-09, 22:30 ET)
+## Start here: current state (2026-11-10, 12:51 ET)
 
-**Latest operational plan (from the Nov 9 evening handoff; execution not verified here):** move Cosmos mix500,
-the Flux reproducibility/resume rehearsals, and the Cosmos resume test to one node. First verify that Cosmos's
-16-rank checkpoint loads on 8 ranks, including optimizer and per-rank state. Preserve global batch 2,048 and
-the schedule when resuming from iteration 1,500. The user authorized replacing the still-queued two-node jobs
-and dropping the two-node-only speed tests; recheck their states before cancellation. Keep the one-node Cosmos
-speed test. Collect the head-native update-3,000 evals as they finish. The status snapshot below is historical;
-use the local handoff and fresh cluster checks before acting.
+Cosmos mix500 finished on two nodes; its proposed move to one node is superseded. The remaining one-node
+plan concerns failed validation jobs, after checking their failure evidence. Hill-climbing experiments remain
+paused under the user's instruction. Full head-native eval results are ready for collection and seed checks.
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -31,20 +27,24 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - All three trained on `mix200`: 50 clean + 200 randomized demos per task.
 - GR00T trained on the 50 clean demos per task only (`50task_60k`): 42.6% clean, 9.7% randomized.
 
-**State checked on 2026-11-09 at 11:42 ET** (full handoff, with running jobs and next steps: the local, uncommitted
+**State checked on 2026-11-10 at 12:51 ET** (internal IDs and paths are in the local, uncommitted
 `/mnt/efs/rohingarg/cri/HANDOFF.md`):
-- **Training data from now on: mix500** (50 clean + 495 randomized per task), as most public RoboTwin papers use.
-- **Running:**
-  - Cosmos3-Nano on mix500: both replacement submissions are queued after the earlier cancellation. The latest
-    complete save remains iteration 1,500 (verified from the cloud markers); admission and finish times are unknown.
-    The admission watcher is alive. A detached watcher now submits the authorized full evals at 4,000 / 5,000 /
-    5,500 / 6,000 after verifying each complete save. A separate read-only logger records job states every five minutes.
-    User clarification: cancel the duplicate Cosmos copy even if both start between checks; keep one training copy.
-  - Both head-native Flux training jobs are complete, with update-3,000 EMA exports present. All 24 full-eval
-    slices are submitted and queued: 12 per run. The full evals at 3,000 decide the canvas; earlier checks are
-    recorded in the run cards.
-  - Both Flux rehearsals, its 16-vs-32-per-GPU test, both pending Cosmos speed tests, and the Cosmos resume test
-    remain queued. The Cosmos iteration-100 eval test is complete.
+- **Training data from now on: mix500** (50 clean + 495 randomized per task).
+- **Cosmos mix500:** completed all 6,000 iterations on two nodes. The final cloud pointer and completion marker
+  were written at 05:27 ET; the status observer first saw completion at 05:31 ET. The borrowed duplicate was
+  cancelled while queued when the quota copy started on Nov 9 at 20:16 ET.
+- **Head-native Flux:** both training jobs and all 24 update-3,000 full-eval slices are complete. Collect the
+  results and verify completed seeds before reporting scores or choosing the canvas.
+- **Validation jobs:** both Cosmos speed jobs completed; their measurements still need analysis. Both Flux
+  rehearsals, its two-node 16-vs-32-per-GPU test, and the Cosmos resume test failed during GPU allocation on the
+  same host. The node reported that a GPU requires reset. The containers never started; these tests do not
+  validate resume or compilation. In particular, this was not the resume test's expected end-of-test exit.
+- **Missed Cosmos evals:** the milestone watcher stopped on a service HTTP 503 at Nov 9 23:04 ET, with no eval
+  submissions recorded. All four permanent checkpoints were verified. Recovery attempted Nov 10 at 12:49 ET
+  but stopped at 12:52 ET: the image registry returned HTTP 403 when Docker requested the base image. No eval
+  job was submitted by that attempt. Refreshed the registry token using existing AWS credentials and verified
+  access to the exact base image. At 12:59 ET, after confirming no matching jobs and preserving failure records,
+  restarted the guarded submitter. Read failures now have bounded retries; partial or ambiguous launches halt.
 - **Finished:** the Flux continuation, 3,000 → 9,000. The final 75.6% / 77.8% is +4.5 / +6.6 over step 3,000;
   success plateaued from 6,500, and the cool-down added nothing.
 - **Next, the user decides after the speed tests:** a Flux run on mix500 with the compiled speed stack (~2× faster).

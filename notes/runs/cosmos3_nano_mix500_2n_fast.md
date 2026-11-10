@@ -118,3 +118,19 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
   submits all 12 borrowed eval slices per complete milestone (4,000 / 5,000 / 5,500 / 6,000), using the exact
   reference inputs. Submission ambiguity stops the watcher for inspection. It does not collect results.
 - User clarified that one duplicate may be cancelled even if both training copies start between watcher checks.
+
+- 2026-11-09 20:16 ET: the replacement quota copy started on two nodes; its borrowed duplicate was cancelled
+  while still queued. The run continued from the iteration-1,500 save without changing the layout.
+- 2026-11-10 05:27 ET: the cloud pointers and completion marker reached iteration 6,000. Completion was first
+  observed by the status logger at 05:31 ET. The proposed one-node continuation is no longer needed.
+- The separate resume test failed before container startup: the GPU allocator reported a device requiring
+  reset. This was not its expected no-save exit after iteration 120; the dedicated resume check remains open.
+- The eval watcher stopped on a service HTTP 503 at Nov 9 23:04 ET, before any milestone eval was submitted.
+  All four permanent model metadata objects were checked on Nov 10; recovery submission started at 12:49 ET.
+  Read failures now retry up to five attempts; ambiguous submission outcomes still stop. Scores remain pending.
+- 2026-11-10 12:52 ET: the recovery build stopped before submitting its first eval job: the image registry
+  returned HTTP 403 for the Docker base image. No milestone eval has been launched. Resolve registry access,
+  then recheck live jobs and clear the verified pre-submission failure from watcher bookkeeping before retry.
+- 2026-11-10 12:59 ET: refreshed the registry token with the existing AWS credentials and verified the exact
+  base-image manifest. Confirmed no matching eval jobs, preserved the failure log/state, and cleared only the
+  failed build's inflight marker under the watcher lock. Detached recovery submissions resumed.

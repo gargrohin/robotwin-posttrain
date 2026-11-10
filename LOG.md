@@ -2669,3 +2669,19 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   dependencies, and the one-node operational plan. Its earlier job snapshot remains explicitly historical.
 - The expert-resume feasibility check can precede adding Cosmos rollout recording. The combined gain from
   Flux compilation and smaller images remains unmeasured. No cluster jobs were changed during this review.
+
+**12:51 EST (Tue Nov 10)** **Queued jobs resolved: training and evals complete; four tests failed admission.**
+- Cosmos mix500 finished on two nodes. Final cloud save: iteration 6,000 at 05:27 ET; completion first observed
+  05:31 ET. The borrowed duplicate was cancelled while queued at Nov 9 20:16 ET. No one-node migration needed.
+- All 24 head-native update-3,000 eval slices completed, as did both Cosmos speed jobs. Results need collection
+  and analysis; job completion alone does not establish scores or validate speed equivalence.
+- Both Flux rehearsals, the two-node speed test, and Cosmos resume test failed before container startup on
+  the same host: its GPU allocator reported a device requiring reset. The intended resume test did not run.
+- The Cosmos milestone watcher stopped on HTTP 503 at Nov 9 23:04 ET and missed all four submissions. Verified
+  the permanent checkpoints and started recovery at 12:49 ET. Added bounded read retries and checked their
+  behavior; the submission ambiguity guards remain. No new training was launched and no running job stopped.
+- 12:52 ET follow-up: recovery stopped before any job submission. Docker could not read the base image from
+  the private registry (HTTP 403). The four evals remain unsubmitted; registry login/access needs attention.
+- 12:59 ET follow-up: refreshed the registry token with existing AWS credentials; base-image manifest access
+  passed. Confirmed no matching eval jobs and preserved failure records before clearing the failed-build marker
+  under the watcher lock. Restarted detached recovery; job IDs still need confirmation as submissions finish.
