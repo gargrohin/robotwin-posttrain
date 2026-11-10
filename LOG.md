@@ -2695,7 +2695,20 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   | head-native, weight 50 | 70.8% | 74.5% |
   | head-native, weight 41.18 | 72.7% | 71.3% |
 
-- No significant difference in any pairing (p = 0.16–0.95). Dropping the head-camera upscaling costs nothing measurable
-  and trains ~28% faster per update; the loss weight doesn't matter either. Tables: `notes/results.md`.
+- No significant difference in any pairing (p = 0.155–1.000). Dropping the head-camera upscaling costs nothing measurable
+  and takes 26.3% less time per update in the earlier timing test; no loss-weight difference detected. Tables: `notes/results.md`.
 - Also since yesterday (details in the 12:51 entry): Cosmos mix500 finished 6,000 iterations on two nodes (05:27 ET);
   its evals are being submitted now. Four 2-node tests failed admission on a host with a GPU needing reset.
+
+**13:06 EST (Tue Nov 10)** **Native-resolution Flux full results: no detectable success change.**
+- Collected all 24 update-3,000 eval slices. Native w50: **70.8% randomized / 74.5% clean**;
+  native w41.18: **72.7% / 71.3%**; original: **71.0% / 71.1%**.
+- Both match the original's 1,015 randomized and 499 clean scenes exactly. Verified all submitted stream
+  counts and seed lists, no duplicates, and agreement between parsed outcomes and final log counts.
+  The same three simulator expert-check failures explain the skipped planned seeds.
+- Exact paired tests detect no difference (all p >= 0.155). The smaller canvas remains a speed option,
+  with no measured advantage from changing the action-loss weight. Equivalence is not established.
+- Ten-task subset from the same logs: 75/100 and 79/100 vs original 73/100; also no detected difference.
+- Updated results, analysis, both run cards, registry and project guide. No GPU training launched and no
+  running job stopped. Cosmos's recovered submitter has launched three iteration-4,000 slices; no full
+  mix500 score yet. Hill-climbing experiments remain paused.

@@ -1099,14 +1099,36 @@ earlier belief that was wrong. **Open** = not yet answered.
 
 ## 15. Head-native canvas verdict at update 3,000 (Nov 10, 13:15 ET)
 - **Q:** does dropping the ~3× head-camera upscaling (448×640 canvas instead of 544×736) change success?
-- **Measured (full 50-task evals, same seeds as Flux step 3,000; completed seed sets identical: randomized 48/50 tasks,
-  clean 49/50, the same expert-check skips):** weight 50 70.8 / 74.5, weight 41.18 72.7 / 71.3, baseline 71.0 / 71.1
-  (randomized / clean). Episode sign tests p = 0.16–0.95 in every pairing.
-- **Answer:** no measurable difference, while training is ~28% faster per update. Loss weight 50 vs 41.18: no measurable
+- **Measured (full 50-task evals, same seeds as Flux step 3,000; completed seed sets identical across all 50 tasks;
+  two randomized tasks and one clean task share the original expert-check skips):** weight 50 70.8 / 74.5, weight 41.18 72.7 / 71.3, baseline 71.0 / 71.1
+  (randomized / clean). Episode sign tests p = 0.155–1.000 across all pairings.
+- **Answer:** no measurable difference, while the earlier timing shows 26.3% less time per update (38.6 vs 52.4 seconds). Loss weight 50 vs 41.18: no measurable
   difference either. Combined with the compile speedups this is not yet measured.
 - **Collection note:** a Claude session and Codex collected at the same moment; the safe collector refused the
   existing folders, and Claude's run of the weight-41.18 randomized set stopped before copying (the script was edited
   mid-run). Its 356 logs were then copied into `logs/` without overwriting (356 new, 0 replaced).
+
+## 16. Does native head-camera resolution preserve Flux success? (Nov 10, 13:06 ET)
+
+- **Measured (all 24 completed eval slices):** original at update 3,000: 721/1015 randomized and 355/499
+  clean; native w50: 719/1015 and 372/499; native w41.18: 738/1015 and 356/499.
+- **Verified (downloaded queues, seed lists and completed client logs):** 540 stream inputs across the two
+  variants match the original byte for byte. Both planned all 50 tasks, 1,017 randomized and 500 clean
+  episodes. Completed seed sets equal the original, with no duplicates or extras; all final counts match
+  parsed outcomes. The same three expert-check exceptions account for the skipped seeds (listed in results).
+- **Measured (exact paired sign tests, independently reproduced from the logs):** w50 vs original p =
+  0.951/0.155 (randomized/clean); w41.18 vs original 0.311/1.000; w50 vs w41.18 0.230/0.156.
+  No comparison detects a success difference. Ten-task first-10 subsets: original 73/100, w50 75/100,
+  w41.18 79/100; these also do not detect a difference.
+- **Interpretation:** the smaller canvas remains a useful speed option; absence of a detected difference
+  does not prove equivalence. No action-weight winner established. The baseline used two training nodes
+  while both variants used one; the run cards retain this limitation.
+- **Arithmetic clarification:** 38.6 vs 52.4 seconds per update is 26.3% less time, or 1.36x throughput.
+  This timing was measured without compilation. The combined speed benefit remains unmeasured.
+- **Collection:** collected logs and inputs without deleting prior outputs or downloading videos. A collector
+  already running outside this session held the first destination; reused its completed output rather than
+  replacing it. Every completed stream was checked independently, since download-script exit codes alone
+  do not establish completeness. No new GPU work for this analysis; hill climbing remains paused.
 
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections

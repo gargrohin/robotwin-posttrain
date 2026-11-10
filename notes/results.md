@@ -9,26 +9,98 @@ Status at 2026-11-10 13:15 ET: head-native Flux update-3,000 evals collected (be
 iteration 6,000; its 4,000 / 5,000 / 5,500 / 6,000 evals are being submitted (recovery after a missed watcher). No Cosmos
 mix500 scores yet.
 
-## FLUX 3 Action, head-native canvas (head camera at native 240×320, not upscaled), update 3,000, vs Flux step 3,000 (same seeds)
+## FLUX 3 Action: native head-camera resolution, update 3,000
 
-Same recipe and data (mix200) as Flux step 3,000; only the camera canvas differs (448×640 instead of 544×736; head camera
-not upscaled ~3×), plus one run with action-loss weight 41.18 instead of 50 (to keep the video/action balance with
-~18% fewer video tokens). Evaluated 2026-11-09 on cluster GPUs, one stream per GPU, exact GR00T seed lists; completed
-seeds match the Flux step-3,000 eval exactly (randomized 48/50 tasks, clean 49/50, the same expert-check skips).
+Collected and checked Nov 10 at 13:06 ET. All 24 eval slices completed. Both variants trained on mix200
+and use EMA 0.10 exports. All 50 tasks and both settings were evaluated. All 540 submitted stream queues
+and seed lists across the two models match the original update-3,000 inputs byte for byte, including stream
+episode counts. Planned: 1,017 randomized and 500 clean scenes per model. Completed: 1,015 and 499,
+exactly the original model's completed seed sets, with no duplicate or extra scenes; every stream's parsed
+outcomes agree with its final success count.
 
-| model | randomized (1,015) | clean (499) |
+The same expert-check failures skipped randomized open_microwave seed 300004 and put_bottles_dustbin 300001,
+and clean place_object_basket 100006. The logs identify the two target-pose assertion failures and one
+list-index error. These were simulator setup failures before policy evaluation, not missing eval slices.
+
+| Flux at update 3,000 | randomized (1,015) | clean (499) |
 |---|---|---|
-| Flux step 3,000 (DROID canvas) | 71.0% | 71.1% |
-| head-native, weight 50 | 70.8% | 74.5% |
-| head-native, weight 41.18 | 72.7% | 71.3% |
+| Original canvas, action weight 50 | 721/1015 = **71.0%** | 355/499 = **71.1%** |
+| Native head-camera resolution, weight 50 | 719/1015 = **70.8%** | 372/499 = **74.5%** |
+| Native head-camera resolution, weight 41.18 | 738/1015 = **72.7%** | 356/499 = **71.3%** |
 
-Sign tests (scenes only one model solves):
-- weight 50 vs step 3,000: randomized 129 vs 131 (p = 0.95; by task 19 ahead, 23 behind); clean 72 vs 55 (p = 0.16;
-  by task 26 ahead, 13 behind, p = 0.053).
-- weight 41.18 vs step 3,000: randomized 133 vs 116 (p = 0.31); clean 63 vs 62 (p = 1.0).
-- weight 50 vs 41.18: randomized 103 vs 122 (p = 0.23); clean 64 vs 48 (p = 0.16).
-- Reading: no measurable difference anywhere. The smaller canvas trains ~28% faster per update (38.6 vs 52.4 s on one
-  node, no speedups) at equal success; the loss weight makes no measurable difference.
+Exact two-sided paired sign tests (scenes solved by only the first model / only the second):
+
+| comparison | randomized | clean |
+|---|---|---|
+| native w50 vs original | 129 / 131; p = 0.951 | 72 / 55; p = 0.155 |
+| native w41.18 vs original | 133 / 116; p = 0.311 | 63 / 62; p = 1.000 |
+| native w50 vs native w41.18 | 103 / 122; p = 0.230 | 64 / 48; p = 0.156 |
+
+No comparison detects a difference in success at the 5% significance level. This supports the smaller
+canvas as a speed option; it does not establish equivalence or show that either action weight is better.
+The earlier same-node timing was 38.6 vs 52.4 seconds per update (26.3% less time), without compilation.
+The smaller canvas and compiled speed stack have not been benchmarked together. The original trained on
+two nodes and the native-camera runs on one; the run cards document this remaining comparison limitation.
+
+The original 10-task randomized subset, read from the same full-eval logs: original 73/100, native w50
+75/100, native w41.18 79/100. Against the original, p = 0.824 and 0.286. On the older 99-scene paired
+subset the counts are 72/99, 74/99 and 78/99. No new GPU run was needed for these subsets.
+
+Per task (successes / episodes):
+
+| task | rand original | rand w50 | rand w41.18 | clean original | clean w50 | clean w41.18 |
+|---|---|---|---|---|---|---|
+| adjust_bottle | 21/21 | 20/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| beat_block_hammer | 20/20 | 18/20 | 19/20 | 10/10 | 10/10 | 10/10 |
+| blocks_ranking_rgb | 20/21 | 16/21 | 19/21 | 9/10 | 10/10 | 8/10 |
+| blocks_ranking_size | 14/21 | 14/21 | 9/21 | 7/10 | 5/10 | 2/10 |
+| click_alarmclock | 21/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| click_bell | 20/20 | 20/20 | 20/20 | 10/10 | 10/10 | 10/10 |
+| dump_bin_bigbin | 14/20 | 16/20 | 17/20 | 8/10 | 9/10 | 9/10 |
+| grab_roller | 21/21 | 21/21 | 21/21 | 10/10 | 10/10 | 10/10 |
+| handover_block | 5/20 | 6/20 | 5/20 | 3/10 | 5/10 | 5/10 |
+| handover_mic | 18/20 | 19/20 | 16/20 | 9/10 | 6/10 | 6/10 |
+| hanging_mug | 2/20 | 1/20 | 3/20 | 1/10 | 1/10 | 1/10 |
+| lift_pot | 14/20 | 14/20 | 18/20 | 7/10 | 5/10 | 7/10 |
+| move_can_pot | 7/20 | 6/20 | 10/20 | 5/10 | 6/10 | 6/10 |
+| move_pillbottle_pad | 16/20 | 14/20 | 15/20 | 7/10 | 7/10 | 6/10 |
+| move_playingcard_away | 16/20 | 19/20 | 19/20 | 7/10 | 9/10 | 9/10 |
+| move_stapler_pad | 6/21 | 5/21 | 13/21 | 2/10 | 4/10 | 6/10 |
+| open_laptop | 19/21 | 20/21 | 20/21 | 9/10 | 10/10 | 9/10 |
+| open_microwave | 14/19 | 11/19 | 14/19 | 10/10 | 5/10 | 4/10 |
+| pick_diverse_bottles | 9/21 | 17/21 | 13/21 | 2/10 | 6/10 | 7/10 |
+| pick_dual_bottles | 11/20 | 13/20 | 13/20 | 7/10 | 9/10 | 10/10 |
+| place_a2b_left | 18/20 | 17/20 | 18/20 | 8/10 | 9/10 | 10/10 |
+| place_a2b_right | 19/20 | 19/20 | 17/20 | 8/10 | 9/10 | 8/10 |
+| place_bread_basket | 15/21 | 16/21 | 14/21 | 7/10 | 9/10 | 7/10 |
+| place_bread_skillet | 16/20 | 14/20 | 15/20 | 6/10 | 7/10 | 6/10 |
+| place_burger_fries | 17/20 | 19/20 | 18/20 | 9/10 | 10/10 | 10/10 |
+| place_can_basket | 7/20 | 6/20 | 8/20 | 4/10 | 6/10 | 5/10 |
+| place_cans_plasticbox | 9/20 | 8/20 | 4/20 | 4/10 | 2/10 | 1/10 |
+| place_container_plate | 17/20 | 18/20 | 18/20 | 9/10 | 10/10 | 8/10 |
+| place_dual_shoes | 15/22 | 11/22 | 11/22 | 7/10 | 7/10 | 5/10 |
+| place_empty_cup | 18/20 | 20/20 | 19/20 | 10/10 | 8/10 | 9/10 |
+| place_fan | 10/20 | 14/20 | 15/20 | 8/10 | 9/10 | 10/10 |
+| place_mouse_pad | 5/20 | 5/20 | 9/20 | 3/10 | 2/10 | 3/10 |
+| place_object_basket | 11/21 | 13/21 | 19/21 | 6/9 | 7/9 | 6/9 |
+| place_object_scale | 10/20 | 12/20 | 11/20 | 5/10 | 8/10 | 6/10 |
+| place_object_stand | 18/20 | 16/20 | 16/20 | 10/10 | 10/10 | 10/10 |
+| place_phone_stand | 13/20 | 15/20 | 17/20 | 8/10 | 5/10 | 7/10 |
+| place_shoe | 16/20 | 14/20 | 14/20 | 9/10 | 8/10 | 7/10 |
+| press_stapler | 20/21 | 18/21 | 19/21 | 9/10 | 8/10 | 8/10 |
+| put_bottles_dustbin | 7/20 | 6/20 | 5/20 | 3/10 | 6/10 | 4/10 |
+| put_object_cabinet | 11/20 | 9/20 | 10/20 | 7/10 | 8/10 | 7/10 |
+| rotate_qrcode | 15/20 | 12/20 | 18/20 | 6/10 | 7/10 | 6/10 |
+| scan_object | 13/20 | 15/20 | 15/20 | 8/10 | 7/10 | 7/10 |
+| shake_bottle | 20/20 | 19/20 | 19/20 | 10/10 | 10/10 | 10/10 |
+| shake_bottle_horizontally | 20/20 | 20/20 | 19/20 | 10/10 | 10/10 | 10/10 |
+| stack_blocks_three | 11/20 | 13/20 | 11/20 | 7/10 | 9/10 | 10/10 |
+| stack_blocks_two | 18/20 | 17/20 | 18/20 | 9/10 | 10/10 | 8/10 |
+| stack_bowls_three | 18/21 | 14/21 | 11/21 | 6/10 | 5/10 | 5/10 |
+| stack_bowls_two | 19/21 | 20/21 | 19/21 | 10/10 | 8/10 | 9/10 |
+| stamp_seal | 14/21 | 13/21 | 13/21 | 2/10 | 6/10 | 2/10 |
+| turn_switch | 13/20 | 15/20 | 12/20 | 4/10 | 5/10 | 7/10 |
+| **total** | **721/1015** | **719/1015** | **738/1015** | **355/499** | **372/499** | **356/499** |
 
 ## FLUX 3 Action continuation (flux3_mix200_b512_cont6k), update 9,000, vs step 3,000 and Cosmos 5,000 (same seeds)
 

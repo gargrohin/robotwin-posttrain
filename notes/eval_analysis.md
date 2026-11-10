@@ -4,12 +4,14 @@ Started 2026-11-02; kept up to date as the analysis goes. What goes well and wha
 our models, to decide what to improve next. Part 1 is the current best model, Cosmos3-Nano;
 part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 
-## Conclusions so far (updated 2026-11-09)
+## Conclusions so far (updated 2026-11-10)
 
-- **Head-native canvas (head camera not upscaled) matches the DROID canvas at Flux update 3,000** (Nov 10): 70.8 / 74.5
-  (weight 50) and 72.7 / 71.3 (weight 41.18) vs 71.0 / 71.1; no significant difference (p ≥ 0.16), while training ~28%
-  faster per update. Cosmos mix500 finished training; its evals are being submitted (no scores yet).
-  have been established in this status audit, so the measured rankings below are unchanged.
+- **Native-resolution Flux (checked Nov 10, 13:06 ET):** at update 3,000, weight 50 scores
+  **70.8% randomized / 74.5% clean**; weight 41.18 scores **72.7% / 71.3%**; original **71.0% / 71.1%**.
+  All use exactly the same 1,015 randomized and 499 clean scenes. No paired comparison detects a difference
+  (all p >= 0.155). The smaller canvas remains a speed option; equivalence and a preferred loss weight are
+  not established. Earlier timing: 38.6 vs 52.4 seconds per update, 26.3% less time, without compilation.
+- **Cosmos mix500:** training finished. Milestone evals are being submitted; no full score yet.
 
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
@@ -418,10 +420,10 @@ policy has no good sense of where the other arm and the object are at the same t
 2. The short tasks that score low (section 2.1), where length can't be the reason: lift_pot,
    place_fan, place_mouse_pad, place_object_scale, stamp_seal, turn_switch.
 
-## Part 3: FLUX 3 Action, continuation from step 3,000 (in progress)
+## Part 3: FLUX 3 Action, continuation from step 3,000 (completed)
 
 Same 50 tasks and exact seeds as the other models (1,015 randomized, 499 clean). Full evals every 1,000 updates
-plus the 500s; the run is going to 9,000.
+plus the 500s; the run completed at 9,000.
 
 | checkpoint | randomized | clean |
 |---|---|---|
@@ -487,21 +489,42 @@ Reading:
   policy calls 2.4 s vs 0.79 s), so GPU time per action was unchanged (0.54 s) and the eval cost 75.7 GPU-hours
   vs 72.6–72.9 for the 1-stream evals. Packing two streams per GPU does not save GPU time.
 
-### Part 3b: head-native canvas at update 3,000 (Nov 10)
+## Part 4: FLUX 3 Action, native head-camera resolution
 
-Same recipe and data as Flux step 3,000; the head camera stays at its native 240×320 (canvas 448×640) instead of being
-upscaled ~3× into the DROID canvas. Two loss weights (50, 41.18). Full 50-task evals, same seeds.
+Collected and checked Nov 10 at 13:06 ET. All 24 eval slices completed. Both variants trained on mix200
+and use EMA 0.10 exports. All 50 tasks and both settings were evaluated. All 540 submitted stream queues
+and seed lists across the two models match the original update-3,000 inputs byte for byte, including stream
+episode counts. Planned: 1,017 randomized and 500 clean scenes per model. Completed: 1,015 and 499,
+exactly the original model's completed seed sets, with no duplicate or extra scenes; every stream's parsed
+outcomes agree with its final success count.
 
-| model | randomized | clean |
+The same expert-check failures skipped randomized open_microwave seed 300004 and put_bottles_dustbin 300001,
+and clean place_object_basket 100006. The logs identify the two target-pose assertion failures and one
+list-index error. These were simulator setup failures before policy evaluation, not missing eval slices.
+
+| Flux at update 3,000 | randomized (1,015) | clean (499) |
 |---|---|---|
-| Flux step 3,000 (DROID canvas) | 71.0% | 71.1% |
-| head-native, weight 50 | 70.8% | 74.5% |
-| head-native, weight 41.18 | 72.7% | 71.3% |
+| Original canvas, action weight 50 | 721/1015 = **71.0%** | 355/499 = **71.1%** |
+| Native head-camera resolution, weight 50 | 719/1015 = **70.8%** | 372/499 = **74.5%** |
+| Native head-camera resolution, weight 41.18 | 738/1015 = **72.7%** | 356/499 = **71.3%** |
 
-- No significant difference in any pairing (episode sign tests p = 0.16–0.95). At 1,500 the 10-task checks also tied.
-- So the upscaling buys nothing measurable, and dropping it makes training ~28% faster per update. A candidate default
-  for the next Flux run (mix500), together with the compile speedups (combined speed not yet measured).
-- Tables and sign tests: `notes/results.md`.
+Exact two-sided paired sign tests (scenes solved by only the first model / only the second):
+
+| comparison | randomized | clean |
+|---|---|---|
+| native w50 vs original | 129 / 131; p = 0.951 | 72 / 55; p = 0.155 |
+| native w41.18 vs original | 133 / 116; p = 0.311 | 63 / 62; p = 1.000 |
+| native w50 vs native w41.18 | 103 / 122; p = 0.230 | 64 / 48; p = 0.156 |
+
+No comparison detects a difference in success at the 5% significance level. This supports the smaller
+canvas as a speed option; it does not establish equivalence or show that either action weight is better.
+The earlier same-node timing was 38.6 vs 52.4 seconds per update (26.3% less time), without compilation.
+The smaller canvas and compiled speed stack have not been benchmarked together. The original trained on
+two nodes and the native-camera runs on one; the run cards document this remaining comparison limitation.
+
+The original 10-task randomized subset, read from the same full-eval logs: original 73/100, native w50
+75/100, native w41.18 79/100. Against the original, p = 0.824 and 0.286. On the older 99-scene paired
+subset the counts are 72/99, 74/99 and 78/99. No new GPU run was needed for these subsets.
 
 ## Appendix A: is the median a fair summary of a task's length?
 

@@ -8,11 +8,12 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-10, 12:51 ET)
+## Start here: current state (2026-11-10, 13:06 ET)
 
 Cosmos mix500 finished on two nodes; its proposed move to one node is superseded. The remaining one-node
 plan concerns failed validation jobs, after checking their failure evidence. Hill-climbing experiments remain
-paused under the user's instruction. Full head-native eval results are ready for collection and seed checks.
+paused under the user's instruction. Full head-native evals are collected and seed-checked: no detectable
+accuracy change from the original canvas at update 3,000; the speed benefit remains the reason to consider it.
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
@@ -33,8 +34,11 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - **Cosmos mix500:** completed all 6,000 iterations on two nodes. The final cloud pointer and completion marker
   were written at 05:27 ET; the status observer first saw completion at 05:31 ET. The borrowed duplicate was
   cancelled while queued when the quota copy started on Nov 9 at 20:16 ET.
-- **Head-native Flux:** both training jobs and all 24 update-3,000 full-eval slices are complete. Collect the
-  results and verify completed seeds before reporting scores or choosing the canvas.
+- **Head-native Flux (results checked 13:06 ET):** weight 50 scores 70.8% randomized / 74.5% clean;
+  weight 41.18 scores 72.7% / 71.3%; original at update 3,000 scores 71.0% / 71.1%. All use the same
+  1,015 randomized and 499 clean scenes. All paired comparisons have p >= 0.155. The smaller canvas is a
+  speed option with no detected accuracy change; neither equivalence nor a better action weight is established.
+  Earlier timing: 38.6 vs 52.4 seconds per update on one node; combined compilation speed remains unmeasured.
 - **Validation jobs:** both Cosmos speed jobs completed; their measurements still need analysis. Both Flux
   rehearsals, its two-node 16-vs-32-per-GPU test, and the Cosmos resume test failed during GPU allocation on the
   same host. The node reported that a GPU requires reset. The containers never started; these tests do not
@@ -44,7 +48,8 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
   but stopped at 12:52 ET: the image registry returned HTTP 403 when Docker requested the base image. No eval
   job was submitted by that attempt. Refreshed the registry token using existing AWS credentials and verified
   access to the exact base image. At 12:59 ET, after confirming no matching jobs and preserving failure records,
-  restarted the guarded submitter. Read failures now have bounded retries; partial or ambiguous launches halt.
+  restarted the guarded submitter. By 13:06 ET, three iteration-4,000 slices were submitted. No full mix500
+  score yet. Read failures have bounded retries; partial or ambiguous launches halt.
 - **Finished:** the Flux continuation, 3,000 → 9,000. The final 75.6% / 77.8% is +4.5 / +6.6 over step 3,000;
   success plateaued from 6,500, and the cool-down added nothing.
 - **Next, the user decides after the speed tests:** a Flux run on mix500 with the compiled speed stack (~2× faster).

@@ -96,9 +96,39 @@ Held-out arm error at 1,500 (train randomized / train clean / unseen randomized;
 does not line up across runs, so information only): w50 0.0365 / 0.0290 / 0.0300, w41 0.0368 / 0.0286 / 0.0306,
 baseline 0.0366 / 0.0274 / 0.0296. Policy calls 0.83–1.05 s on the devbox GPU (baseline canvas: 1.95 s).
 
-### Update 3,000 (status checked 2026-11-10 12:51 ET)
+### Update 3,000 (collected and checked 2026-11-10 13:06 ET)
 
-Training and all 12 full-eval slices are complete; the last completion was first observed Nov 9 at 18:55 ET.
-The EMA 0.10 export manifest is present in cloud storage.
-They use the baseline update-3,000 queues and per-stream seed lists: all 50 tasks, 1,017 planned randomized
-episodes and 500 clean episodes. Result collection and completed-seed checks are pending; the same logs will provide the 10-task comparison.
+Collected and checked Nov 10 at 13:06 ET. All 24 eval slices completed. Both variants trained on mix200
+and use EMA 0.10 exports. All 50 tasks and both settings were evaluated. All 540 submitted stream queues
+and seed lists across the two models match the original update-3,000 inputs byte for byte, including stream
+episode counts. Planned: 1,017 randomized and 500 clean scenes per model. Completed: 1,015 and 499,
+exactly the original model's completed seed sets, with no duplicate or extra scenes; every stream's parsed
+outcomes agree with its final success count.
+
+The same expert-check failures skipped randomized open_microwave seed 300004 and put_bottles_dustbin 300001,
+and clean place_object_basket 100006. The logs identify the two target-pose assertion failures and one
+list-index error. These were simulator setup failures before policy evaluation, not missing eval slices.
+
+| Flux at update 3,000 | randomized (1,015) | clean (499) |
+|---|---|---|
+| Original canvas, action weight 50 | 721/1015 = **71.0%** | 355/499 = **71.1%** |
+| Native head-camera resolution, weight 50 | 719/1015 = **70.8%** | 372/499 = **74.5%** |
+| Native head-camera resolution, weight 41.18 | 738/1015 = **72.7%** | 356/499 = **71.3%** |
+
+Exact two-sided paired sign tests (scenes solved by only the first model / only the second):
+
+| comparison | randomized | clean |
+|---|---|---|
+| native w50 vs original | 129 / 131; p = 0.951 | 72 / 55; p = 0.155 |
+| native w41.18 vs original | 133 / 116; p = 0.311 | 63 / 62; p = 1.000 |
+| native w50 vs native w41.18 | 103 / 122; p = 0.230 | 64 / 48; p = 0.156 |
+
+No comparison detects a difference in success at the 5% significance level. This supports the smaller
+canvas as a speed option; it does not establish equivalence or show that either action weight is better.
+The earlier same-node timing was 38.6 vs 52.4 seconds per update (26.3% less time), without compilation.
+The smaller canvas and compiled speed stack have not been benchmarked together. The original trained on
+two nodes and the native-camera runs on one; the run cards document this remaining comparison limitation.
+
+The original 10-task randomized subset, read from the same full-eval logs: original 73/100, native w50
+75/100, native w41.18 79/100. Against the original, p = 0.824 and 0.286. On the older 99-scene paired
+subset the counts are 72/99, 74/99 and 78/99. No new GPU run was needed for these subsets.
