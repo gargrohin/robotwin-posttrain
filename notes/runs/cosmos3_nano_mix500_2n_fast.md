@@ -141,3 +141,14 @@ randomized all seeds, clean first 10 per task), triggered as the saves land.
 - 2026-11-10 12:59 ET: refreshed the registry token with the existing AWS credentials and verified the exact
   base-image manifest. Confirmed no matching eval jobs, preserved the failure log/state, and cleared only the
   failed build's inflight marker under the watcher lock. Detached recovery submissions resumed.
+- 2026-11-10 13:54 ET: all four milestones have 12 confirmed eval submissions each. The recovered
+  submitter finished its submission task.
+- 2026-11-10 afternoon: ten slices failed at startup with a missing seed file, before evaluating any
+  episode. All cloud queue bytes and seed-file name sets match the approved inputs. The ten failed
+  slices' 234 queue/config/seed objects also match by SHA-256. The incomplete container download's
+  underlying cause is unresolved. Recovery copies verified image seed files directly, retaining the
+  original image, checkpoint, settings and two-GPU borrowed allocation. Existing per-stream seed-count
+  checks remain. Full checkpoint scores await completion and collection.
+- 2026-11-10 17:06 ET: all ten replacements submitted; four have passed cluster seed validation.
+  Current slices: iteration 4,000 has 4 complete / 8 running; 5,000 has 12 running; 5,500 has
+  11 running / 1 queued; 6,000 has 7 running / 5 queued. No full checkpoint score yet.

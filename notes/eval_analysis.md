@@ -11,7 +11,9 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
   All use exactly the same 1,015 randomized and 499 clean scenes. No paired comparison detects a difference
   (all p >= 0.155). The smaller canvas remains a speed option; equivalence and a preferred loss weight are
   not established. Earlier timing: 38.6 vs 52.4 seconds per update, 26.3% less time, without compilation.
-- **Cosmos mix500:** training finished. Milestone evals are being submitted; no full score yet.
+- **Cosmos mix500:** training finished and all four milestone evals were submitted. Ten slices failed
+  before evaluating episodes because seed files were missing after download; recovery jobs use verified
+  copies from their original images. No full score yet. Details: investigations section 19.
 - **New research reviewed Nov 10:** the [CoRL and release survey](robotics_recent_corl_2026-11-10.md)
   adds evidence about training on successful rollouts, correction data and RL. Some successful-rollout
   methods improve familiar tasks while hurting new-object performance; GR00T 2's self-imitation gains

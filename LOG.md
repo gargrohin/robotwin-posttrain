@@ -2733,3 +2733,23 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Updated investigations, the project guide and eval analysis with evidence about successful-rollout
   training, correction data and RL. SimuGuard's simulator version matches ours, but no project failure
   has been traced to its reported bug. No experiment, model migration or physics change was performed.
+
+**17:06 EST (Tue Nov 10)** **Cosmos eval status checked; ten startup failures recovered.**
+- All 48 original milestone slices were submitted by 13:54 ET. Ten later failed before evaluating an
+  episode: required seed files were absent after download. All cloud queue bytes and seed-file name sets
+  are complete; the ten failed slices' 234 queue/config/seed objects match approved local copies by hash.
+- Replacements submitted at 17:01–17:05 ET on borrowed two-GPU allocations. They reuse the original
+  images and checkpoints, verify input and entrypoint hashes, and copy seeds directly from the image.
+  The input-copy check, generated-script comparison and shell checks passed. Four replacements have
+  already passed the cluster's full per-stream seed validation. No running job was stopped or restarted.
+- Current jobs, counting each replacement in place of its failed original:
+
+  | Cosmos checkpoint | completed | running | queued |
+  |---|---:|---:|---:|
+  | 4,000 | 4 | 8 | 0 |
+  | 5,000 | 0 | 12 | 0 |
+  | 5,500 | 0 | 11 | 1 |
+  | 6,000 | 0 | 7 | 5 |
+
+- No full mix500 score yet. All 24 head-native Flux slices remain complete and their results collected.
+  The cause of the incomplete wildcard download is still unresolved; future builds use image seeds.

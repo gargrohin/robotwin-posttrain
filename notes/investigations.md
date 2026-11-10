@@ -1184,6 +1184,33 @@ earlier belief that was wrong. **Open** = not yet answered.
   recovery methods and cause of our simulator anomalies. No experiments, migrations or physics changes
   were made. Hill-climbing experiments remain paused.
 
+## 19. Cosmos milestone evals: missing seed files at startup (Nov 10)
+
+- **Q (user):** what is the status of the evaluation runs?
+- **Checked at 16:54 ET:** all 48 Cosmos milestone slices were submitted by 13:54 ET. Four completed,
+  33 were in progress, three queued and eight failed. Both head-native Flux evals remain fully completed.
+  A later refresh found two further original Cosmos failures. No full Cosmos mix500 score is available.
+- **Failure evidence:** all ten failed containers report a missing per-stream seed file during startup,
+  before evaluating any episode. These failures occurred after input download and normalizer setup.
+- **Input audit:** all 48 cloud queues match the approved local queues byte for byte, and their cloud
+  seed-file name sets are complete. For the ten failed jobs, all 234 queue/config/seed objects
+  also match their approved contents by SHA-256. Local image-input copies match the reference seeds.
+  The underlying cause of the incomplete container download remains unresolved; successful transfer
+  exit status did not establish that every required file was present.
+- **Correction:** recovery jobs stage the seeds already packaged in their original images. Before doing
+  so, they check hashes of the original entrypoint, queue, config, action stats and every seed file.
+  Only the seed-staging block changes. The existing per-stream count check still runs before evaluation.
+  The same change is prepared in the local launcher for future builds.
+- **Validation:** checked generated recovery scripts against the intended entrypoint change, shell syntax,
+  and copying the complete seed set with cloud operations disabled. All source seed bytes are preserved.
+  Replacement jobs retain their original images, checkpoints, settings and two-GPU borrowed allocations.
+  Only failed jobs are eligible; a fresh status check rejects an existing live copy before each submission.
+- **Next:** confirm recovery startup and collect complete checkpoint results with the usual seed audit.
+  No running job was cancelled or restarted, and no evaluation setting was changed.
+- **Recovery checked at 17:06 ET:** all ten replacements were submitted between 17:01 and 17:05 ET.
+  Current Cosmos jobs, replacing each failed original: four completed, 38 running and six queued.
+  Four replacements' cluster logs already confirm input hashes and full per-stream seed validation.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

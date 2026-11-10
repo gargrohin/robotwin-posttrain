@@ -5,9 +5,10 @@ randomized = cluttered tables, random backgrounds/lighting/table height, unseen
 instruction wording. 20 episodes per task ≈ ±20% per task; the 50-task mean pools
 1,000 episodes (≈ ±3%).
 
-Status at 2026-11-10 13:15 ET: head-native Flux update-3,000 evals collected (below). Cosmos mix500 training finished at
-iteration 6,000; its 4,000 / 5,000 / 5,500 / 6,000 evals are being submitted (recovery after a missed watcher). No Cosmos
-mix500 scores yet.
+Status on 2026-11-10 afternoon: head-native Flux update-3,000 evals collected (below). Cosmos mix500 training
+finished at iteration 6,000, and all 48 slices of its 4,000 / 5,000 / 5,500 / 6,000 evals were submitted by
+13:54 ET. Ten slices failed before evaluating episodes because required seed files were missing after
+download. Recovery uses verified seeds from the original images. No full Cosmos mix500 score yet.
 
 ## FLUX 3 Action: native head-camera resolution, update 3,000
 

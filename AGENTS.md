@@ -8,12 +8,22 @@ cancelling/restarting running GPU jobs or doing anything outward-facing or destr
 The R1 Pro whole-body controller is a separate assignment (`/mnt/efs/rohingarg/cri/r1pro-wbc`),
 not in this repo.
 
-## Start here: current state (2026-11-10, 13:06 ET)
+## Start here: current state (2026-11-10)
 
 Cosmos mix500 finished on two nodes; its proposed move to one node is superseded. The remaining one-node
 plan concerns failed validation jobs, after checking their failure evidence. Hill-climbing experiments remain
 paused under the user's instruction. Full head-native evals are collected and seed-checked: no detectable
 accuracy change from the original canvas at update 3,000; the speed benefit remains the reason to consider it.
+
+**Eval follow-up, Nov 10 afternoon:** all 48 Cosmos milestone slices were submitted by 13:54 ET.
+The 16:54 check found four completed, 33 in progress, three queued and eight failed; two further original
+slices then reported the same startup failure. Each failed before evaluating an episode because a required
+seed file was missing after download. Cloud input names and queues are complete; failed-job input hashes
+match the approved copies. Recovery uses the exact seed files packaged in each original image, with hash
+checks before startup. Results still require full collection and seed verification. See investigations
+section 19 and the run card; current replacement IDs are recorded only in the local handoff.
+At 17:06 ET, counting replacements instead of failed originals: four completed, 38 running and six
+queued. All ten replacements are submitted; four have passed cluster seed validation. No full score yet.
 
 **Best result per model.** 50 tasks, on GR00T's exact eval seeds. Randomized uses all of
 GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and sign tests are in
