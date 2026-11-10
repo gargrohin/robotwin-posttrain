@@ -1164,6 +1164,9 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Authorship follow-up (user):** HumanWAM's paper lists PKU, NUS, MIT, UCSB and NVIDIA; releases are under
   DAGroup-PKU. Checked the paper's author block: equal-contribution first authors Juncheng Ma, Jiaxin Li,
   Jiankai Tu and Bo Liang; corresponding author Daquan Zhou. Added the attribution to the survey.
+- **MR0 authorship follow-up (user):** the paper credits the Meituan Robotics Team. Section 7 marks Jie Hu
+  as project leader; its 37 contributors are listed alphabetically by first name. Added this attribution
+  to the survey rather than inferring leadership from author order.
 - **Leaderboard check:** the official RoboTwin data still says October 30, with PICA-WAM and EWAM the
   additions inside the window. MR0's 93.88% randomized / 93.22% clean is a new paper result using 50 clean
   plus 500 randomized demos/task, absent from this board's 50-clean-demo snapshot. HumanWAM-Goal adds
