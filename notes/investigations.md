@@ -1148,6 +1148,36 @@ earlier belief that was wrong. **Open** = not yet answered.
 - **Open:** whether the larger dataset benefits from a longer schedule. Keeping the previous 6,000-update
   recipe does not establish that mix500 has converged. No training extension was submitted.
 
+## 18. Recent robotics releases, CoRL and leaderboards (Nov 10)
+
+- **Q (user):** what changed during the past two weeks, including Dream Labs, open projects and leaderboards?
+- **Checked:** official conference and author pages, papers, repository/release metadata, model cards,
+  package timestamps and the public RoboTwin/RoboChallenge leaderboard data. The
+  [survey](robotics_recent_corl_2026-11-10.md) covers October 27–November 10 and records source links,
+  release dates, licenses and access limits. Public performance claims were not reproduced locally.
+- **Available releases:** MR0 provides code, weights and a RoboTwin adapter; LeRobot 0.7 adds Cosmos/Flux
+  integrations; ToyBlocks, DexSuite, CaPtain, ResMerge and Human-1M-100K provide reusable components.
+  Some corresponding papers are new while their artifact repositories predate this window.
+- **Availability correction:** Dream Labs' Dream-1 is hosted. Its SDK and November hackathon tools are open,
+  but public model weights/local training code were not verified. GR00T 2 promises code in December.
+  HumanWAM provides weights with an incomplete broader release; inspected weight cards omit a license.
+- **Leaderboard check:** the official RoboTwin data still says October 30, with PICA-WAM and EWAM the
+  additions inside the window. MR0's 93.88% randomized / 93.22% clean is a new paper result using 50 clean
+  plus 500 randomized demos/task, absent from this board's 50-clean-demo snapshot. HumanWAM-Goal adds
+  generated goal images at evaluation. Neither establishes a matched-protocol improvement over our runs.
+  RoboChallenge's leading v2 submissions have older dates and differing task coverage; no new top-score
+  improvement during this window was established. Dream Labs' independent benchmark source returned 403.
+- **Hill-climbing evidence:** the generalist-improvement paper finds filtered successful-rollout training
+  can hurt new-object performance while improving familiar tasks. Its stronger value-based RL method is
+  pending in the public repository. GR00T 2's self-imitation results follow RL exploration; its five-demo
+  headline uses tasks selected for good five-demo performance. These qualify which claims transfer to us.
+- **Simulator check:** SimuGuard's adapter pins the same SAPIEN package version installed here. Its contact
+  bug is a candidate explanation to investigate; no recorded project failure was attributed to it.
+  Repository numerical summaries disagree, and snapshot replay has documented limitations.
+- **Open:** matched-seed performance of the new models, actual release of announced code, compatibility of
+  recovery methods and cause of our simulator anomalies. No experiments, migrations or physics changes
+  were made. Hill-climbing experiments remain paused.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

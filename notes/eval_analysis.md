@@ -12,6 +12,10 @@ part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
   (all p >= 0.155). The smaller canvas remains a speed option; equivalence and a preferred loss weight are
   not established. Earlier timing: 38.6 vs 52.4 seconds per update, 26.3% less time, without compilation.
 - **Cosmos mix500:** training finished. Milestone evals are being submitted; no full score yet.
+- **New research reviewed Nov 10:** the [CoRL and release survey](robotics_recent_corl_2026-11-10.md)
+  adds evidence about training on successful rollouts, correction data and RL. Some successful-rollout
+  methods improve familiar tasks while hurting new-object performance; GR00T 2's self-imitation gains
+  follow RL exploration. These are external results. Our improvement experiments remain paused.
 
 - **Cosmos3-Nano after its learning-rate decay (iteration 5,500) is the best model:** 85.0%
   randomized, 88.6% clean, on GR00T's exact scenes. GR00T 150k: 45.3% / 45.5%. Both trained on
@@ -178,10 +182,18 @@ Two reviews: 13 failures I looked at frame by frame (one randomized failure per 
   the head-camera video. Recording full rollouts (all cameras, joint positions, actions) would,
   and every hill-climbing method needs that data anyway.
 
-### 1.8 Next steps for hill climbing (updated 2026-11-09)
+### 1.8 Next steps for hill climbing (updated 2026-11-10)
 
 **Goal:** make success less random on scenes Cosmos can already do, and teach it to recover after
 a mistake. Nothing below is running; most of it waits for GPUs.
+
+**Reading update, Nov 10:** the [recent robotics survey](robotics_recent_corl_2026-11-10.md) adds three
+useful checks on this plan. Generalist-improvement studies training on successful rollouts and finds
+losses on new objects in some settings; preserve a separate generalization check when evaluating that
+idea. MR0's Rollback pairs corrections with the policy segments they replace. GR00T 2 trains on successful
+rollouts after RL has explored new behavior, so its gains do not measure the proposed first experiment
+alone. The strongest generalist-improvement RL code and GR00T 2 code are still pending. The selected
+experiment order and the user's pause remain in effect.
 
 **Recording Cosmos's runs:** to train on its own runs, they must be saved in the same form as the
 training demos: at every step, the images from all three cameras Cosmos sees (head and both

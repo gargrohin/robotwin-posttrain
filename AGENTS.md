@@ -77,6 +77,11 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 - Set aside: test-time setting changes, choosing among sampled plans with a scorer, and synthetic mistake demos.
 - Speed measurements are separate: Flux's approximately 2x compiled speedup used the original image canvas;
   the smaller head-native canvas was tested without those speedups. Their combined gain is unmeasured.
+- **Research checked Nov 10:** `notes/robotics_recent_corl_2026-11-10.md` surveys October 27–November 10
+  releases, Dream Labs, CoRL and official leaderboards. MR0 has code/weights and a RoboTwin adapter;
+  Dream-1 offers hosted access plus open tools; GR00T 2 code is announced for December. New work on
+  training from successful rollouts, correction data and RL informs section 1.8 of the eval analysis.
+  Public scores use differing protocols. This research does not authorize the paused experiments.
 
 **Where things are**
 - `LOG.md`: plain-language worklog with ET times, newest at the bottom. Read its last entries

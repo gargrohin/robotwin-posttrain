@@ -2719,3 +2719,17 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   mix500 combines those stages. The original 16,000-cycle setting controls the learning-rate slope.
 - Same 12.288M sampled examples, with 27,250 demos instead of 12,500. Whether mix500 needs longer
   training is open. Updated investigations and the run card; no new run submitted.
+
+**13:58 EST (Tue Nov 10)** **Surveyed recent robotics releases, CoRL and leaderboards.**
+- Added `notes/robotics_recent_corl_2026-11-10.md`, covering October 27–November 10. Checked public papers,
+  author pages, code/model releases, licenses and official leaderboard feeds. Performance claims are
+  attributed to their sources; no external benchmark was reproduced locally.
+- MR0 has code, weights and a RoboTwin adapter. Dream Labs has open SDK/collection tools around hosted
+  Dream-1; public model weights were not verified. GR00T 2 code is announced for December. Other releases
+  include LeRobot 0.7, ToyBlocks, DexSuite, HumanWAM weights and Human-1M data.
+- RoboTwin's official data still ends October 30; EWAM and PICA-WAM are the dated additions in this window.
+  MR0 and HumanWAM's paper scores use different protocols. RoboChallenge's leading v2 submissions have
+  older dates and differing task coverage. Dream Labs' independent benchmark source was inaccessible.
+- Updated investigations, the project guide and eval analysis with evidence about successful-rollout
+  training, correction data and RL. SimuGuard's simulator version matches ours, but no project failure
+  has been traced to its reported bug. No experiment, model migration or physics change was performed.
