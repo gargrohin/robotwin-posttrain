@@ -95,6 +95,8 @@ The [release notes](https://github.com/huggingface/lerobot/releases/tag/v0.7.0) 
 
 **HumanWAM-Goal.** The reported 84.60% randomized / 92.70% clean uses 50 clean downstream demos/task and visual-goal conditioning. [Full text](https://arxiv.org/html/2611.06817v1) adds refined augmentation and a generated-goal pipeline: most training goals come from GPT Image 2.5, reviewed using ChatGPT; evaluation supplies a generated goal per scene. This is additional conditioning and a partly closed upstream generation process. Vanilla reports 68.88% randomized / 92.08% clean. The README also notes a 50-versus-100-trials discrepancy between the released Vanilla evaluation and the report. Neither result is a direct substitute for our protocol.
 
+**Who made HumanWAM:** the paper lists PKU (Peking University), NUS, MIT, UCSB and NVIDIA, with releases under DAGroup-PKU. Its equal-contribution first authors are Juncheng Ma, Jiaxin Li, Jiankai Tu and Bo Liang; Daquan Zhou is the corresponding author. The checked HTML title is Open-HumanScale.
+
 ## New policy-improvement and failure-analysis research
 
 All gains below are author-reported unless stated otherwise. Most papers do not use our model, all 50 RoboTwin tasks and our exact seeds simultaneously.
