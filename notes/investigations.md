@@ -1226,6 +1226,21 @@ earlier belief that was wrong. **Open** = not yet answered.
   requires a separately authorized force-push and the usual public-history scan. A subsequent ordinary
   documentation commit records this check and the instruction to omit future Claude coauthor trailers.
 
+## 21. Public-history scan before the authorized force-push (Nov 10, 23:44 ET)
+
+- **Request:** publish the history with Claude coauthor trailers removed.
+- **Found:** the pre-push scan identified an internal queue name in an older commit message and worklog
+  entry, plus three internal experiment-tracking IDs in the worklog and run notes.
+- **Corrected:** backed up main again, replaced those identifiers with plain descriptions throughout
+  history, and preserved every commit's author, committer, dates and parent relationships. This second
+  rewrite changes 179 commit IDs, one message and three documentation paths; code and results are unchanged.
+  The signed initial commit remains untouched.
+- **Verified:** all 339 reachable commits and 618 historical file objects pass the internal-identifier,
+  storage-path, credential-pattern and Claude-coauthor checks; URL hosts were reviewed separately. The
+  worktree is clean after rewriting. Backups and audit reports remain outside the public repository.
+- **Publication:** the user authorized the force-push. Use an explicit expected remote commit to refuse
+  overwriting any newer GitHub changes, and push only main; backup branches must remain local.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.

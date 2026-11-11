@@ -2760,3 +2760,10 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   is unchanged. The resulting main has zero Claude coauthor trailers; 337 commit IDs changed.
 - Added the instruction to omit future Claude coauthor trailers. These documentation updates are a new
   commit after the rewrite. GitHub and backup refs remain unchanged; nothing was pushed.
+
+**23:44 EST (Tue Nov 10)** **Prepared the user-authorized force-push after the public-history scan.**
+- Found and replaced an internal queue name and three internal experiment-tracking IDs throughout
+  commit history. Only three documentation paths and one commit message change; code and results are
+  unchanged. Verified authors, committers, dates, parent relationships and the signed initial commit.
+- The full historical-content scan passes. Saved another local backup and recorded the audit. Publishing
+  only main with a check against the previously verified remote commit; backup branches stay local.

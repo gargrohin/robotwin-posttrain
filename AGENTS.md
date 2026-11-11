@@ -222,6 +222,8 @@ GR00T's seeds (~20 per task); clean uses GR00T's first 10 per task. Tables and s
 ## Version control
 Commit every fine-tuning or bug-fix change so it can be reverted (user request).
 - Do not add Claude coauthor trailers to commits.
+- Before publishing, scan commit messages and historical file contents for internal identifiers.
+  Keep internal experiment-tracking IDs in local notes alongside cluster job IDs.
 - This repo (`main`): our scripts, notes and configs.
 - `RoboTwin/XPolicyLab`: local branch `local/aloha-gr00t` holds our adapter edits (not
   pushed). Revert with `git -C RoboTwin/XPolicyLab revert <sha>`, or switch back to
