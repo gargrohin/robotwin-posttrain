@@ -2753,3 +2753,10 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 
 - No full mix500 score yet. All 24 head-native Flux slices remain complete and their results collected.
   The cause of the incomplete wildcard download is still unresolved; future builds use image seeds.
+
+**20:52 EST (Tue Nov 10)** **Removed Claude coauthor trailers from local main.**
+- Saved a verified history backup and removed trailers from 327 of 338 commits. Checked every historical
+  file tree, author, committer, date and parent relationship; all are preserved. The signed initial commit
+  is unchanged. The resulting main has zero Claude coauthor trailers; 337 commit IDs changed.
+- Added the instruction to omit future Claude coauthor trailers. These documentation updates are a new
+  commit after the rewrite. GitHub and backup refs remain unchanged; nothing was pushed.

@@ -1211,6 +1211,21 @@ earlier belief that was wrong. **Open** = not yet answered.
   Current Cosmos jobs, replacing each failed original: four completed, 38 running and six queued.
   Four replacements' cluster logs already confirm input hashes and full per-stream seed validation.
 
+## 20. Remove Claude coauthor attribution from commit history (Nov 10, 20:52 ET)
+
+- **Q (user):** can the Claude coauthorship be removed from this repository's commits?
+- **Checked:** local main had 338 commits; 327 contained a Claude coauthor trailer. Of the 194 commits
+  already on the remote main branch, 193 contained the trailer.
+- **Changed locally:** saved and verified a complete backup, then removed those 327 trailers and their
+  trailing blank lines. Rewriting parent references changes 337 commit IDs. The sole signed commit
+  needed no edit and retains its original ID and signature.
+- **Verified across every historical commit:** identical file trees, authors, committers, dates and
+  mapped parent relationships, including the merge. The rewritten tip has the same file tree, no Claude
+  coauthor trailers remain on main, and the worktree was clean immediately after rewriting.
+- **Scope:** the remote branch and existing backup refs are unchanged. Publishing the rewritten history
+  requires a separately authorized force-push and the usual public-history scan. A subsequent ordinary
+  documentation commit records this check and the instruction to omit future Claude coauthor trailers.
+
 ## Lessons
 - **Check before stating.** Several confident statements about the run were wrong until checked (sections
   5, 6, 8). State which claims are measured and which are assumed.
