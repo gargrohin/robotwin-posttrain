@@ -2767,3 +2767,20 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   unchanged. Verified authors, committers, dates, parent relationships and the signed initial commit.
 - The full historical-content scan passes. Saved another local backup and recorded the audit. Publishing
   only main with a check against the previously verified remote commit; backup branches stay local.
+
+### 2026-11-11 10:40 ET: Flux mix500 run launched (9,000 updates, head-native canvas)
+
+- Built the Flux index for mix500 the same way as mix200's: 27,250 episodes, 6,019,158 frames, 5,119,908
+  valid window starts, none rejected. The action and state statistics are within 0.9% of mix200's range.
+  The mix500 files already in cloud storage match the local folder in name and size (109,008 files).
+- Trainer branch `mix500-run`: head-native canvas merged with the speedups (compiled encoders and DiT, camera
+  staging, encode thread, loader spanning epochs), plus a new option for extra saves at chosen updates.
+  258 CPU tests pass (one known ffmpeg-version failure deselected). A config comparison against the
+  head-native run shows only the intended differences. `loader_spans_epochs` is exact for this data
+  (208 batches per GPU per epoch, a multiple of the 8 loader workers).
+- Schedule: BFL's DROID shape scaled to 9,000 (trunk frozen 300, warm-ups 600 / 300, constant, cool-down
+  7,500 → 9,000), no gradient clipping, metrics every update, action loss weight 50.
+- No devbox GPU was free, so there was no small GPU smoke run of the combination; the cluster run is its
+  first GPU test.
+- Submitted at 10:37 ET to the team quota and the shared pool at once; the team-quota copy started at
+  10:38 ET, the shared-pool copy was cancelled while still queued. Run card: `notes/runs/flux3_mix500_hn_9k.md`.
