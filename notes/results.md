@@ -10,6 +10,30 @@ finished at iteration 6,000, and all 48 slices of its 4,000 / 5,000 / 5,500 / 6,
 13:54 ET. Ten slices failed before evaluating episodes because required seed files were missing after
 download. Recovery uses verified seeds from the original images. No full Cosmos mix500 score yet.
 
+## Cosmos3-Nano on mix500 (50 clean + 495 randomized per task), vs Cosmos on mix200 (same seeds)
+
+Same recipe and schedule as the best Cosmos run (5,000 iterations + decay to 6,000), now on mix500 and with the
+Cosmos speedups; trained 2026-11-08/10 on two nodes (cancelled once at ~1,750 by the cluster, resumed from 1,500).
+Evaluated with GR00T's exact seeds; completed seeds match the earlier Cosmos evals (usual expert-check skips; 6,000
+randomized is missing 5 episodes, so its pairs are 1,010).
+
+| model | randomized | clean |
+|---|---|---|
+| mix500, iteration 4,000 | 80.0% | 82.0% |
+| mix500, iteration 5,000 | 83.3% | 87.0% |
+| mix500, iteration 5,500 (mid-decay) | 85.1% | 87.0% |
+| **mix500, iteration 6,000 (end of decay)** | **87.1%** | **88.4%** |
+| mix200, iteration 5,000 | 82.1% | 84.4% |
+| mix200, iteration 5,500 (previous best) | 85.0% | 88.6% |
+| mix200, iteration 6,000 | 84.7% | 88.2% |
+
+Sign tests at matched checkpoints (scenes only one model solves):
+- 6,000: randomized 89 vs 64 (p = 0.052; by task 25 ahead, 10 behind, p = 0.017); clean 35 vs 34 (p = 1.0).
+- 5,500: randomized 88 vs 87 (p = 1.0); clean 29 vs 37 (p = 0.39).
+- 5,000 vs mix200 5,000: randomized 97 vs 85 (p = 0.42); clean 55 vs 42 (p = 0.22).
+- Reading: more randomized data helps the randomized score by ~2.5 points at the end of the decay (borderline by
+  episode, significant by task); clean is unchanged. New best randomized: 87.1% (mix500 6,000).
+
 ## FLUX 3 Action: native head-camera resolution, update 3,000
 
 Collected and checked Nov 10 at 13:06 ET. All 24 eval slices completed. Both variants trained on mix200

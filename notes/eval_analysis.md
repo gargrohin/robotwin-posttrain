@@ -4,7 +4,11 @@ Started 2026-11-02; kept up to date as the analysis goes. What goes well and wha
 our models, to decide what to improve next. Part 1 is the current best model, Cosmos3-Nano;
 part 2 is the earlier GR00T analysis; part 3 is the FLUX 3 Action continuation.
 
-## Conclusions so far (updated 2026-11-10)
+## Conclusions so far (updated 2026-11-12)
+
+- **Cosmos on mix500 (Nov 12): 87.1% randomized, 88.4% clean at iteration 6,000**, vs 84.7 / 88.2 for the same
+  checkpoint on mix200: +2.5 randomized (episode p = 0.052; by task 25 ahead, 10 behind, p = 0.017), clean unchanged.
+  New best randomized score. Tables: `notes/results.md`.
 
 - **Native-resolution Flux (checked Nov 10, 13:06 ET):** at update 3,000, weight 50 scores
   **70.8% randomized / 74.5% clean**; weight 41.18 scores **72.7% / 71.3%**; original **71.0% / 71.1%**.
