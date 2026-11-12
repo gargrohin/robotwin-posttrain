@@ -85,6 +85,22 @@ Full 50-task evals, GR00T's exact seeds (the same protocol and seed lists as eve
 updates 2,250, 4,500, 6,750 and 9,000; the head-native adapter and eval image; compared with the Cosmos mix500 run
 and with Flux at update 9,000 on mix200 (75.6% randomized / 77.8% clean).
 
+## Restart at update 2,500 (2026-11-12 03:54 ET)
+
+The first job ran from 2026-11-11 10:42 ET to update about 3,100 at 19.7 s per update. Two problems were found at
+update 2,500:
+- The in-job export of update 2,250 failed: a checkpoint written with `dit_compile` names the DiT block weights with
+  a `_orig_mod` segment, and the exporter looked for the plain names. The failed export kept the older save slot
+  reserved, so no save after 2,500 could upload.
+- The permanent copy at update 100 failed (server-side copy of objects over 5 GB), so no permanent copy exists.
+
+Fixes: the exporter now loads weights under the names stored in the checkpoint (same results for checkpoints without
+the segment; branch `mix500-run` @ `f456b5f`, with a CPU test), and the permanent-copy list is empty. Resume was
+checked before cancelling: the model keys the compiled and checkpoint-wrapped DiT produces equal the saved keys
+(451 of 451). The run then resumed from the update-2,500 save with the same run name, config and schedule; the
+updates after 2,500 of the first job (about 600) were discarded. As on any resume, the data order is redrawn from the
+run seed.
+
 ## Results
 
 Not yet available.

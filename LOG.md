@@ -2784,3 +2784,13 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   first GPU test.
 - Submitted at 10:37 ET to the team quota and the shared pool at once; the team-quota copy started at
   10:38 ET, the shared-pool copy was cancelled while still queued. Run card: `notes/runs/flux3_mix500_hn_9k.md`.
+
+### 2026-11-12 03:54 ET: Flux mix500 run restarted from update 2,500
+
+- The export of update 2,250 failed because checkpoints written with `dit_compile` name the DiT block weights
+  with a `_orig_mod` segment. That kept a save slot reserved, so nothing after update 2,500 could upload.
+  The permanent copy at update 100 also failed (server-side copy limit of 5 GB per object).
+- Fixed the exporter (loads weights under the names saved in the checkpoint; CPU test added) and checked
+  that resume produces the saved key names (451 of 451). Cancelled the job at about update 3,100 and resubmitted
+  the same run from the update-2,500 save to the team quota and the shared pool; the team-quota copy
+  started within a minute. About 600 updates were discarded.
