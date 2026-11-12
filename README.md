@@ -25,25 +25,61 @@ Best results so far (all 50 tasks, every model on GR00T's exact eval scenes):
 - All results: [notes/results.md](notes/results.md).
 - Training runs: [notes/runs/README.md](notes/runs/README.md).
 
-## What's ours and what's upstream
+## What we added
 
-This repo holds only our own code. Everything else is upstream code, used as published:
+Each model trains with its maker's own code: GR00T's fine-tuning code,
+[NVIDIA cosmos-framework](https://github.com/NVIDIA/cosmos-framework) and
+[BFL flux-action](https://github.com/black-forest-labs/flux-action). The benchmark is
+[RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin) with [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab).
+On top of that, this repo has:
+- **Data:** converters for RoboTwin's demos into each trainer's format, including the randomized demos RoboTwin
+  ships only in raw form (`gr00t/fetch_randomized.py`), and the mix200 / mix500 builds with per-episode checks.
+- **Eval adapters** for Cosmos3-Nano and FLUX 3 Action in XPolicyLab, each checked to feed the model exactly what it
+  saw in training (`cosmos3/check_adapter.py`, `flux3/check_adapter.py`).
+- **Train and eval launchers, job queues and analysis scripts:** [`gr00t/`](gr00t/), [`cosmos3/`](cosmos3/),
+  [`flux3/`](flux3/), [`analysis/`](analysis/).
+- **Our edits to upstream code, one patch per commit:** [`patches/`](patches/).
 
-| Code | Source | Where |
-|---|---|---|
-| Benchmark, simulator, eval client (`scripts/eval_policy_xpolicylab.py`) | [RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin); one edit: a per-episode record file (`patches/robotwin/0001`) | `RoboTwin/` (cloned by `setup/install_robotwin.sh`, not in this repo) |
-| Policy adapters and data converters | [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab) | `RoboTwin/XPolicyLab/` |
-| GR00T N1.7 model, training loop, data loading | NVIDIA Isaac GR00T, vendored in XPolicyLab | `RoboTwin/XPolicyLab/policy/GR00T_N17/gr00t_n17/` |
-| Motion planner | [cuRobo](https://github.com/NVlabs/curobo) v0.7.8 | `RoboTwin/envs/curobo/` |
-| Cosmos3-Nano model and trainer | [NVIDIA cosmos-framework](https://github.com/NVIDIA/cosmos-framework), local branch `robotwin` | outside this repo |
-| FLUX 3 Action model and trainer | [BFL flux-action](https://github.com/black-forest-labs/flux-action), local branch `robotwin` | outside this repo |
-| **Our scripts**: data prep, train/eval launchers, job queues, checks | **ours** | [`gr00t/`](gr00t/), [`cosmos3/`](cosmos3/), [`flux3/`](flux3/), [`setup/`](setup/) |
-| **Our edits to upstream code**: aloha_agilex robot alias, faster GR00T data loading, Cosmos and Flux eval adapters, episode records, cuRobo H100 fix | **ours** | [`patches/`](patches/) (one file per commit) |
+## How evals are run
 
-Each model trains with its maker's own code (GR00T's fine-tuning code, NVIDIA cosmos-framework,
-BFL flux-action); our launchers only set the knobs (data, steps, batch size, GPUs). Evaluation uses RoboTwin's official eval script, whose
-scoring is unchanged (our only edit writes a record file per episode), so scores are comparable
-to the leaderboard.
+- All 50 tasks, robot `aloha_agilex`, in two settings: **randomized** (cluttered tables, random backgrounds, lighting
+  and table height, unseen instruction wording; ~20 scenes per task, 1,015 total) and **clean** (10 scenes per task,
+  499 total).
+- Every model runs on **exactly the same scenes**: GR00T's eval seeds, replayed seed by seed, with the same
+  instruction sentence per scene. A seed check confirms the completed set after each eval.
+- Scoring uses RoboTwin's official eval script unchanged. Our only edit writes a record file per episode.
+- Models are compared scene by scene with sign tests (scenes only one model solves), not just by the averages.
+- Evals run on cluster GPUs, one simulator stream per GPU. The simulator's ray-traced rendering, not the policy, is
+  the bottleneck: ~75–90 GPU-hours per full eval.
+- Results: [notes/results.md](notes/results.md). Failure analysis: [notes/eval_analysis.md](notes/eval_analysis.md).
+
+## Infrastructure fixes
+
+- **cuRobo on H100:** every RoboTwin task crashed in the motion planner's L-BFGS kernel, because of a warp-shuffle
+  mask bug. Fixed and validated ([notes/curobo_h100_lbfgs_bug.md](notes/curobo_h100_lbfgs_bug.md)).
+- **Rendering:** only RoboTwin's ray-tracing shader works on these GPUs; the raster shaders hang.
+- **Dataset conversion:** dropped video frames and silently truncated parts on a shared filesystem. Fixed, with a
+  check that decodes every video and compares every episode with its source.
+- **GR00T data loading:** CPU per sample went from 114 ms to 32 ms, with bit-identical samples.
+- **Cluster training:** two-node save markers that survive re-admission, and checkpoint slots that work without
+  delete rights.
+- **FLUX 3 Action:** export of checkpoints trained with the compiled model.
+
+## Training speedups
+
+Profiling showed where each update's time went. The fixes keep the model's math the same, up to tiny rounding
+differences from compiling:
+- **FLUX 3 Action: ~2× faster per update** (52 s → 26 s on one 8-GPU node).
+  - The video encoder now runs alongside the model; before, data preparation blocked it.
+  - Wasted padding frames are dropped, gradients are sharded to free memory, the encoders and the model are
+    compiled, and a data-loader stall every 24 updates is fixed.
+  - Keeping the head camera at native resolution saves another ~27% of time per update.
+- **Cosmos3-Nano: 34% less time per update** (20.0 s → 13.2 s on one node; 1.48× on a two-node run).
+  - The GPU sat idle during video encoding because the CPU couldn't issue work fast enough. A captured CUDA graph of
+    the encoder, overlapped with the model, fixes that.
+  - The backward pass stops at the frozen text half, and spare memory keeps more activations instead of
+    recomputing them.
+- Details and measurements: [notes/investigations.md](notes/investigations.md).
 
 ## Setup (`setup/`)
 
@@ -56,12 +92,3 @@ to the leaderboard.
 
 Note: the current `RoboTwin/.venv` was built from public PyPI while the company pip
 mirror token was expired; versions are pinned, so the packages are the same.
-
-## Environment checks (2026-10-23, H100)
-
-- RoboTwin env: torch 2.4.1+cu121, sapien 3.0.0b1, mplib (patched), cuRobo,
-  pytorch3d all import.
-- GR00T env: torch 2.7.1+cu128, flash-attn 2.7.4, gr00t, XPolicyLab import.
-- SAPIEN 2 (SimplerEnv) does not render on these GPUs: the minimal scene comes back
-  empty and SimplerEnv hangs on its first camera frame. SAPIEN 3 (RoboTwin) is
-  not tested yet.
