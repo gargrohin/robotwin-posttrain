@@ -25,20 +25,19 @@ Best results so far (all 50 tasks, every model on GR00T's exact eval scenes):
 - All results: [notes/results.md](notes/results.md).
 - Training runs: [notes/runs/README.md](notes/runs/README.md).
 
-## What we added
+## What's in this repo
 
-Each model trains with its maker's own code: GR00T's fine-tuning code,
-[NVIDIA cosmos-framework](https://github.com/NVIDIA/cosmos-framework) and
-[BFL flux-action](https://github.com/black-forest-labs/flux-action). The benchmark is
-[RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin) with [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab).
-On top of that, this repo has:
 - **Data:** converters for RoboTwin's demos into each trainer's format, including the randomized demos RoboTwin
   ships only in raw form (`gr00t/fetch_randomized.py`), and the mix200 / mix500 builds with per-episode checks.
 - **Eval adapters** for Cosmos3-Nano and FLUX 3 Action in XPolicyLab, each checked to feed the model exactly what it
   saw in training (`cosmos3/check_adapter.py`, `flux3/check_adapter.py`).
 - **Train and eval launchers, job queues and analysis scripts:** [`gr00t/`](gr00t/), [`cosmos3/`](cosmos3/),
   [`flux3/`](flux3/), [`analysis/`](analysis/).
-- **Our edits to upstream code, one patch per commit:** [`patches/`](patches/).
+- **Edits to upstream code, one patch per commit:** [`patches/`](patches/).
+- Models train with their makers' code: GR00T's fine-tuning code,
+  [cosmos-framework](https://github.com/NVIDIA/cosmos-framework) and
+  [flux-action](https://github.com/black-forest-labs/flux-action). The benchmark is
+  [RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin) with [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab).
 
 ## How evals are run
 
