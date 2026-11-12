@@ -2794,3 +2794,9 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
   that resume produces the saved key names (451 of 451). Cancelled the job at about update 3,100 and resubmitted
   the same run from the update-2,500 save to the team quota and the shared pool; the team-quota copy
   started within a minute. About 600 updates were discarded.
+
+**13:50 EST (Thu Nov 12)** **Cosmos on mix500: best randomized score so far.**
+- Full 50-task evals at 4,000 / 5,000 / 5,500 / 6,000 collected (one shard's logs had been missed; re-fetched).
+- Iteration 6,000: 87.1% randomized, 88.4% clean vs 84.7 / 88.2 on mix200 at the same checkpoint (randomized
+  +2.5, p = 0.052 by episode, p = 0.017 by task; clean unchanged). Tables in `notes/results.md`.
+- The ten "failed" eval jobs had all been rerun to completion by the cluster; no resubmission was needed.
