@@ -2800,3 +2800,14 @@ Per task, on the seeds all three models ran (randomized 20-22 per task, clean 10
 - Iteration 6,000: 87.1% randomized, 88.4% clean vs 84.7 / 88.2 on mix200 at the same checkpoint (randomized
   +2.5, p = 0.052 by episode, p = 0.017 by task; clean unchanged). Tables in `notes/results.md`.
 - The ten "failed" eval jobs had all been rerun to completion by the cluster; no resubmission was needed.
+
+**16:20 EST (Thu Nov 12)** **Cosmos mix500 6,000, retried on its 188 failed scenes: 47% succeed on retry.**
+- Same method as the 11-05 rerun of mix200 5,500 (same checkpoint, seeds, each stream's original episode
+  count passed so the instruction sentence is unchanged). 8 borrowed 2-GPU slices, about 4 h from submit
+  (14:29 ET) to the last job finishing; label `cosmos3_nano_mix500_2n_fast_rerun1`.
+- 187 of 188 scenes ran (put_bottles_dustbin randomized seed 300015 raised an expert-check IndexError on
+  the retry). All 187 got the original instruction sentence. **88 succeed (47%): randomized 54/129, clean
+  34/58** (mix200 5,500: 43%).
+- Counting either try: randomized 92.5%, clean 95.2% (mix200 5,500 after its rerun: 91.4% / 93.4%).
+- Of the 82 scenes mix200 5,500 failed in all three tries, mix500 6,000 solves 35 of 81 on its first try.
+  hanging_mug fails again in 19 of 21. Details in `notes/eval_analysis.md` section 1.4.

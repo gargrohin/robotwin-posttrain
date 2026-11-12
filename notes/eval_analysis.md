@@ -145,6 +145,25 @@ Checkpoints 5,500 and 6,000 on the 1,514 scenes both ran:
     the most that choosing the best of the three attempts could reach.
   - Reproduce: `analysis/.venv/bin/python analysis/retry_split.py cosmos3_nano_mix200_2n_decay:5500
     cosmos3_nano_mix200_2n_decay_rerun1:5500 cosmos3_nano_mix200_2n_decay:6000`
+- **Same retry for Cosmos mix500 6,000** (2026-11-12, cluster; label
+  `cosmos3_nano_mix500_2n_fast_rerun1`): the 188 scenes it failed (randomized 130, clean 58), rerun
+  with the same checkpoint, seeds and method as the 5,500 rerun (each stream's original episode count
+  passed along, so the instruction sentence is the original one).
+  - Every episode that ran got its original sentence (187 of 187, checked against each episode record).
+    One scene did not run: put_bottles_dustbin randomized seed 300015, whose expert check raised an
+    IndexError on the retry (it ran in the original eval).
+  - **88 of 187 succeed on retry (47%):** randomized 54/129 (42%), clean 34/58 (59%). For 5,500 on mix200
+    it was 43% (randomized 43%, clean 42%).
+  - Counting a scene as solved if either try worked: randomized 934/1,010 = 92.5%, clean 475/499 = 95.2%
+    (one try: 87.1% / 88.4%; 5,500 on mix200 after its rerun: 91.4% / 93.4%).
+  - Failures that repeated (failed again / failed scenes): hanging_mug 19/21 (clean 6/6, randomized
+    13/15), place_can_basket 8/12, put_bottles_dustbin 8/12, handover_block 7/13, pick_diverse_bottles 5/7,
+    turn_switch 5/11.
+  - Against the mix200 tries: of the 82 scenes mix200 5,500 failed in all three tries, mix500 6,000 solved
+    35 of the 81 it ran (randomized 24, clean 11). Of the 209 scenes mix200 5,500 failed, it solved 123 of
+    the 207 it ran (88 randomized, 35 clean). On mix500's own 188 failures, the retry succeeded on 57 of
+    103 scenes that mix200 5,500 solved, and on 31 of 84 that it failed (15 of 58 that it failed twice).
+  - Source: LOG.md 2026-11-12; the per-scene table is in the local eval package.
 
 ### 1.5 What the failures look like
 
