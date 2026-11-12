@@ -5,11 +5,19 @@ benchmark them, then hill-climb.
 
 Best results so far (all 50 tasks, every model on GR00T's exact eval scenes):
 
-| model | randomized scenes | clean scenes |
-|---|---|---|
-| Cosmos3-Nano, iteration 5,500 | 85.0% | 88.6% |
-| FLUX 3 Action, update 9,000 (continuation) | 75.6% | 77.8% |
-| GR00T N1.7, checkpoint-150000 | 45.3% | 45.5% |
+| model | training data | randomized scenes | clean scenes |
+|---|---|---|---|
+| Cosmos3-Nano, iteration 6,000 | mix500 | **87.1%** | 88.4% |
+| Cosmos3-Nano, iteration 5,500 | mix200 | 85.0% | **88.6%** |
+| FLUX 3 Action, update 9,000 (continuation) | mix200 | 75.6% | 77.8% |
+| GR00T N1.7, checkpoint-150000 | mix200 | 45.3% | 45.5% |
+
+- Training data per task: mix200 = 50 clean + 200 randomized demos; mix500 = 50 clean + 495 randomized (close to
+  the 50 + 500 most published RoboTwin results use). On the same Cosmos recipe, mix500 adds +2.5 points randomized
+  at iteration 6,000 (by task 25 better, 10 worse); clean is unchanged.
+- FLUX 3 Action with the head camera at native resolution (no upscaling) matches the original canvas at update 3,000
+  (70.8–72.7% / 71.3–74.5% vs 71.0 / 71.1%) and trains faster. A Flux run on mix500 with this canvas is in progress.
+- Training speedups (same model math up to rounding): Flux about 2× faster per update, Cosmos 34% less time per update.
 
 - Current state, how things work and the rules for agents: [AGENTS.md](AGENTS.md) (start with
   "Start here").
