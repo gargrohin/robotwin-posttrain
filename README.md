@@ -25,19 +25,25 @@ Best results so far (all 50 tasks, every model on GR00T's exact eval scenes):
 - All results: [notes/results.md](notes/results.md).
 - Training runs: [notes/runs/README.md](notes/runs/README.md).
 
-## What's in this repo
+## Models
 
-- **Data:** converters for RoboTwin's demos into each trainer's format, including the randomized demos RoboTwin
-  ships only in raw form (`gr00t/fetch_randomized.py`), and the mix200 / mix500 builds with per-episode checks.
-- **Eval adapters** for Cosmos3-Nano and FLUX 3 Action in XPolicyLab, each checked to feed the model exactly what it
-  saw in training (`cosmos3/check_adapter.py`, `flux3/check_adapter.py`).
-- **Train and eval launchers, job queues and analysis scripts:** [`gr00t/`](gr00t/), [`cosmos3/`](cosmos3/),
-  [`flux3/`](flux3/), [`analysis/`](analysis/).
-- **Edits to upstream code, one patch per commit:** [`patches/`](patches/).
-- Models train with their makers' code: GR00T's fine-tuning code,
-  [cosmos-framework](https://github.com/NVIDIA/cosmos-framework) and
-  [flux-action](https://github.com/black-forest-labs/flux-action). The benchmark is
-  [RoboTwin 2.0](https://github.com/RoboTwin-Platform/RoboTwin) with [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab).
+Each model is trained with its maker's code: GR00T's fine-tuning code,
+[cosmos-framework](https://github.com/NVIDIA/cosmos-framework) (Cosmos3-Nano) and
+[flux-action](https://github.com/black-forest-labs/flux-action) (FLUX 3 Action). Eval adapters for Cosmos3-Nano and
+FLUX 3 Action plug them into [XPolicyLab](https://github.com/XPolicyLab/XPolicyLab), and checks confirm each adapter
+feeds the model exactly what it saw in training (`cosmos3/check_adapter.py`, `flux3/check_adapter.py`).
+
+## Data
+
+- mix200: 50 clean + 200 randomized demos per task. mix500: 50 clean + 495 randomized (5 per task held out).
+- RoboTwin ships its randomized demos only in raw form; `gr00t/fetch_randomized.py` pulls and converts them.
+- Every build is checked: every video decoded, every episode compared with its source.
+
+## Code
+
+- [`gr00t/`](gr00t/), [`cosmos3/`](cosmos3/), [`flux3/`](flux3/): data prep, training and eval launchers, job queues.
+- [`analysis/`](analysis/): eval analysis scripts.
+- [`patches/`](patches/): edits to upstream code, one patch per commit.
 
 ## How evals are run
 
